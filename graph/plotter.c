@@ -980,29 +980,29 @@ set_graph_parameters (Multigrapher *multigrapher, double frame_line_width, const
   /* fill in the Transform and Axis elements for each coordinate */
   prepare_axis (&multigrapher->x_axis, &multigrapher->x_trans,
 		x_min, x_max, x_spacing,
-		x_font_name, x_font_size, x_label, 
+		x_font_name, x_font_size, x_label,
 		x_subsubtick_spacing,
-		(bool)(user_specified_subsubticks & X_AXIS), 
+		(bool)(user_specified_subsubticks & X_AXIS),
 		(bool)(round_to_next_tick & X_AXIS),
-		(bool)(log_axis & X_AXIS), 
+		(bool)(log_axis & X_AXIS),
 		(bool)(reverse_axis & X_AXIS),
 		(bool)(switch_axis_end & X_AXIS),
 		(bool)(omit_ticks & X_AXIS));
   prepare_axis (&multigrapher->y_axis, &multigrapher->y_trans,
 		y_min, y_max, y_spacing,
-		y_font_name, y_font_size, y_label, 
+		y_font_name, y_font_size, y_label,
 		y_subsubtick_spacing,
-		(bool)(user_specified_subsubticks & Y_AXIS), 
+		(bool)(user_specified_subsubticks & Y_AXIS),
 		(bool)(round_to_next_tick & Y_AXIS),
-		(bool)(log_axis & Y_AXIS), 
+		(bool)(log_axis & Y_AXIS),
 		(bool)(reverse_axis & Y_AXIS),
 		(bool)(switch_axis_end & Y_AXIS),
 		(bool)(omit_ticks & Y_AXIS));
-  
+
   /* fill in additional parameters in the two Transform structures */
   multigrapher->x_trans.squeezed_min = right;
   multigrapher->x_trans.squeezed_max = right + width;
-  multigrapher->x_trans.squeezed_range = width;  
+  multigrapher->x_trans.squeezed_range = width;
   multigrapher->y_trans.squeezed_min = up;
   multigrapher->y_trans.squeezed_max = up + height;
   multigrapher->y_trans.squeezed_range = height;
@@ -1011,7 +1011,7 @@ set_graph_parameters (Multigrapher *multigrapher, double frame_line_width, const
   multigrapher->x_trans.output_min = 0.0;
   multigrapher->x_trans.output_max = (double)PLOT_SIZE;
   multigrapher->x_trans.output_range = multigrapher->x_trans.output_max - multigrapher->x_trans.output_min;
-  multigrapher->x_trans.output_min = 0.0;
+  multigrapher->y_trans.output_min = 0.0;
   multigrapher->y_trans.output_max = (double)PLOT_SIZE;
   multigrapher->y_trans.output_range = multigrapher->y_trans.output_max - multigrapher->y_trans.output_min;
 
