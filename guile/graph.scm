@@ -217,7 +217,7 @@ the input lists with #f.  For example,
      (if fill-fraction
 	 (fill-fraction! gr fill-fraction))
      (if toggle-use-color
-	 (toggle-use-color! gr toggle-use-color))
+	 (toggle-use-color! gr))
      (if symbol-font-name
 	 (symbol-font-name! gr symbol-font-name))
      (if portable-output
