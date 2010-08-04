@@ -239,11 +239,6 @@ the input lists with #f.  For example,
   (let ((gr (new-graph)))
     (unpack-keys)
 
-    (display "arg1: ") (write arg1) (newline)
-    (display "arg2: ") (write arg2) (newline)
-    (display "arg3: ") (write arg3) (newline)
-    (display "arg4: ") (write arg4) (newline)
-
     (cond
 
      ;; arg1 is the ordinate.  There is no abscissa.
