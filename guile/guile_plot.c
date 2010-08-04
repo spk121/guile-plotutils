@@ -411,7 +411,7 @@ _scm_is_exact_integer (SCM x)
   return (scm_is_integer (x) && scm_is_false (scm_inexact_p (x)));
 }
 
-INT_FUNC_PL_INT_INT_STRING (gupl_alabel_x, "alabel!", pl_alabel_r);
+INT_FUNC_PL_INT_INT_STRING (gupl_alabel_x, "%alabel!", pl_alabel_r);
 INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_arc_x, "arc!", pl_arc_r, pl_farc_r)
 INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_arcrel_x, "arcrel!", pl_arcrel_r, pl_farcrel_r)
 INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_bezier2_x, "bezier2!", pl_bezier2_r, pl_fbezier2_r)
@@ -534,7 +534,7 @@ gupl_plot_init (void)
       scm_c_define_gsubr ("plotter?", 1, 0, 0, gupl_is_plotter_p);
       scm_c_define_gsubr ("newpl", 4, 0, 0, gupl_newpl);
 
-      scm_c_define_gsubr ("alabel!", 4, 0, 0, gupl_alabel_x);
+      scm_c_define_gsubr ("%alabel!", 4, 0, 0, gupl_alabel_x);
       scm_c_define_gsubr ("arc!", 7, 0, 0, gupl_arc_x);
       scm_c_define_gsubr ("arcrel!", 7, 0, 0, gupl_arcrel_x);
       scm_c_define_gsubr ("bezier2!", 7, 0, 0, gupl_bezier2_x);

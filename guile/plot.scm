@@ -69,5 +69,11 @@
 	    translate!
 	    ))
 
+(define (alabel! plotter horiz-justify vert-justify str)
+  (%alabel! plotter
+	    (char->integer (string-ref (symbol->string horiz-justify) 0))
+	    (char->integer (string-ref (symbol->string vert-justify) 0))
+	    str))
+
 (load-extension "libguile-plotutils" "gupl_plot_init")
 
