@@ -27,7 +27,7 @@ endif
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = m4 lib spline double ode ode-examples libplot $(ADD_LIBXMI) plot tek2plot plotfont graph hersheydemo $(ADD_LIBPLOTTER) include info doc fonts test
+SUBDIRS = m4 lib spline double ode ode-examples libplot $(ADD_LIBXMI) plot tek2plot plotfont graph hersheydemo $(ADD_LIBPLOTTER) include info doc fonts guile test
 
 # files with nonstandard names in this directory
 EXTRA_DIST = COMPAT INSTALL.pkg INSTALL.fonts KNOWN_BUGS ONEWS PROBLEMS

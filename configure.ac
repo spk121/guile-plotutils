@@ -395,5 +395,5 @@ int main()
   fi
 fi
 
-AC_CONFIG_FILES([Makefile m4/Makefile double/Makefile graph/Makefile hersheydemo/Makefile pic2plot/Makefile pic2plot/doc/Makefile pic2plot/libgroff/Makefile pic2plot/include/Makefile info/Makefile lib/Makefile libplot/Makefile libplotter/Makefile libxmi/Makefile libxmi/info/Makefile plot/Makefile tek2plot/Makefile tek2plot/teksamples/Makefile plotfont/Makefile spline/Makefile ode/Makefile ode-examples/Makefile include/Makefile doc/Makefile fonts/Makefile fonts/bdf/Makefile fonts/pcf/Makefile fonts/pfb/Makefile test/Makefile])
+AC_CONFIG_FILES([Makefile m4/Makefile double/Makefile graph/Makefile hersheydemo/Makefile pic2plot/Makefile pic2plot/doc/Makefile pic2plot/libgroff/Makefile pic2plot/include/Makefile info/Makefile lib/Makefile libplot/Makefile libplotter/Makefile libxmi/Makefile libxmi/info/Makefile plot/Makefile tek2plot/Makefile tek2plot/teksamples/Makefile plotfont/Makefile spline/Makefile ode/Makefile ode-examples/Makefile include/Makefile doc/Makefile fonts/Makefile fonts/bdf/Makefile fonts/pcf/Makefile fonts/pfb/Makefile guile/Makefile test/Makefile])
 AC_OUTPUT
