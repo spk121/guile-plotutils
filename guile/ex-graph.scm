@@ -7,6 +7,7 @@
 (define y (map (lambda (x) (* (sin x) (exp (- x)))) x))
 (define miny (apply min y))
 (define y2 (map (lambda (a) (- a miny)) y))
+(define y3 (map (lambda (x) (* (cos x) (exp (- x)))) x))
 
 ;; If 1.8.7 is being used, there is a critical bug in optargs
 ;; that makes using (graph) much less neat.
@@ -18,6 +19,13 @@
 (graph x y #f #f
        #:top-label "Default style")
 (read-line)
+
+(format #t "Two data sets")
+(graph (merge x x) (merge y y3) #f #f
+       #:toggle-use-color #t
+       #:top-label "Two data sets")
+(read-line)
+
 
 (format #t "toggle-axis-end \"x\"")
 (graph x y #f #f

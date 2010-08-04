@@ -1,7 +1,8 @@
 (define-module (plotutils graph)
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 optargs)
-  #:export (graph))
+  #:export (merge
+	    graph))
 
 ;; The C library provides the following, which are not currently exported
 
