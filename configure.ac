@@ -5,6 +5,8 @@
 AC_INIT([GNU plotutils],[2.6],[bug-plotutils@gnu.org])
 AC_PREREQ(2.59)
 AC_CONFIG_SRCDIR(graph/graph.c)
+AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([plotutils],[2.6])
 AM_CONFIG_HEADER(config.h:config.hin)
 
@@ -63,12 +65,13 @@ fi
 # AC_PROG_MAKE_SET, or equivalents, so we don't perform them explicitly.
 # Note: this can apparently alter CFLAGS, on a few platforms, e.g., on
 # SCO OpenServer 5 (i.e. *-*-sco3.2v5*), "-belf" is added.
-AC_PROG_LIBTOOL
+LT_INIT
 
 # Determine extension (e.g. ".exe") on executables, if any.
 AC_EXEEXT
 
 # Compiler characteristics and typedefs.
+AC_PROG_CXX
 AC_C_CONST
 AC_TYPE_SIZE_T
 AC_TYPE_PID_T
@@ -392,5 +395,5 @@ int main()
   fi
 fi
 
-AC_CONFIG_FILES([Makefile double/Makefile graph/Makefile hersheydemo/Makefile pic2plot/Makefile pic2plot/doc/Makefile pic2plot/libgroff/Makefile pic2plot/include/Makefile info/Makefile lib/Makefile libplot/Makefile libplotter/Makefile libxmi/Makefile libxmi/info/Makefile plot/Makefile tek2plot/Makefile tek2plot/teksamples/Makefile plotfont/Makefile spline/Makefile ode/Makefile ode-examples/Makefile include/Makefile doc/Makefile fonts/Makefile fonts/bdf/Makefile fonts/pcf/Makefile fonts/pfb/Makefile test/Makefile])
+AC_CONFIG_FILES([Makefile m4/Makefile double/Makefile graph/Makefile hersheydemo/Makefile pic2plot/Makefile pic2plot/doc/Makefile pic2plot/libgroff/Makefile pic2plot/include/Makefile info/Makefile lib/Makefile libplot/Makefile libplotter/Makefile libxmi/Makefile libxmi/info/Makefile plot/Makefile tek2plot/Makefile tek2plot/teksamples/Makefile plotfont/Makefile spline/Makefile ode/Makefile ode-examples/Makefile include/Makefile doc/Makefile fonts/Makefile fonts/bdf/Makefile fonts/pcf/Makefile fonts/pfb/Makefile test/Makefile])
 AC_OUTPUT
