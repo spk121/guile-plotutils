@@ -15,6 +15,8 @@
 ;; Until then, I'm just going to have to insert #f for the 3rd
 ;; and 4th optional argument
 
+#!
+
 (format #t "Default style")
 (graph x y #f #f
        #:top-label "Default style")
@@ -146,15 +148,150 @@
        #:top-label "right-shift 0.0")
 (read-line)
 
-(format #t "x-limits (list -0.4 11.1 0.1)")
+(format #t "x-limits (list 0 11.1 2.0); toggle-round-to-next-tick \"x\"")
 (graph x y #f #f
-       #:x-limits (list -0.4 11.1 0.1)
-       #:top-label "x-limits (list -0.4 11.1 0.1)")
-(read-line)
-
-(format #t "x-limits (list -0.4 11.1 0.1); toggle-round-to-next-tick \"x\"")
-(graph x y #f #f
-       #:x-limits (list -0.4 11.1 0.1)
+       #:x-limits (list 0 11.1 2.0)
        #:toggle-round-to-next-tick "x"
        #:top-label "toggle-round-to-next-tick \"x\"")
 (read-line)
+
+(format #t "y-limits (list 0 0.5 0.2); toggle-round-to-next-tick \"y\"")
+(graph x y #f #f
+       #:y-limits (list 0 0.5 0.2)
+       #:toggle-round-to-next-tick "y"
+       #:top-label "toggle-round-to-next-tick \"y\"")
+(read-line)
+
+(format #t "y-limits (list 0 0.5 0.2); toggle-round-to-next-tick \"xy\"")
+(graph x y #f #f
+       #:x-limits (list 0 11.1 2.0)
+       #:y-limits (list 0 0.5 0.2)
+       #:toggle-round-to-next-tick "xy"
+       #:top-label "toggle-round-to-next-tick \"xy\"")
+(read-line)
+
+(format #t "toggle-transpose-axes #t")
+(graph x y #f #f
+       #:toggle-transpose-axes #t
+       #:top-label "toggle-transpose-axes #t")
+(read-line)
+
+(format #t "upward-shift 0.0")
+(graph x y #f #f
+       #:upward-shift 0.0
+       #:top-label "upward-shift 0.0")
+(read-line)
+
+(format #t "width of plot 0.4")
+(graph x y #f #f
+       #:width-of-plot 0.4
+       #:top-label "width of plot 0.4")
+(read-line)
+
+(format #t "x-limits #t")
+(graph x y #f #f
+       #:x-limits #t
+       #:top-label "x-limits #t")
+(read-line)
+
+(format #t "x-limits 1")
+(graph x y #f #f
+       #:x-limits 1
+       #:top-label "x-limits 1")
+(read-line)
+
+(format #t "x-limits (list 1)")
+(graph x y #f #f
+       #:x-limits '(1)
+       #:top-label "x-limits '(1)")
+(read-line)
+
+(format #t "x-limits (list 1 2)")
+(graph x y #f #f
+       #:x-limits '(1 2)
+       #:top-label "x-limits '(1 2)")
+(read-line)
+
+(format #t "x-limits (list 1 2 0.1)")
+(graph x y #f #f
+       #:x-limits '(1 2 0.1)
+       #:top-label "x-limits '(1 2 0.1)")
+(read-line)
+
+(format #t "x-label \"units\"")
+(graph x y #f #f
+       #:x-label "units"
+       #:top-label "x-label \"units\"")
+(read-line)
+
+(format #t "y-limits #t")
+(graph x y #f #f
+       #:y-limits #t
+       #:top-label "y-limits #t")
+(read-line)
+
+(format #t "y-limits 1")
+(graph x y #f #f
+       #:y-limits -1
+       #:top-label "y-limits -1")
+(read-line)
+
+(format #t "y-limits (list -1)")
+(graph x y #f #f
+       #:y-limits '(-1)
+       #:top-label "y-limits '(-1)")
+(read-line)
+
+(format #t "y-limits (list -1 2)")
+(graph x y #f #f
+       #:y-limits '(-1 2)
+       #:top-label "y-limits '(-1 2)")
+(read-line)
+
+(format #t "y-limits (list -1 2 0.1)")
+(graph x y #f #f
+       #:y-limits '(-1 2 0.1)
+       #:top-label "y-limits '(-1 2 0.1)")
+(read-line)
+
+(format #t "y-label \"units\"")
+(graph x y #f #f
+       #:y-label "units"
+       #:top-label "y-label \"units\"")
+(read-line)
+
+(format #t "bg-color \"green\"")
+(graph x y #f #f
+       #:bg-color "green"
+       #:top-label "bg-color \"green\"")
+(read-line)
+
+(format #t "bitmap-size \"200x200\"")
+(graph x y #f #f
+       #:bitmap-size "200x200"
+       #:top-label "bitmap-size \"200x200\"")
+(read-line)
+
+(format #t "bg-color \"green\"; emulate-color \"yes\"")
+(graph x y #f #f
+       #:bg-color "green"
+       #:emulate-color "yes"
+       #:top-label "bg-color \"green\"; emulate-color \"yes\"")
+(read-line)
+
+!#
+
+(format #t "frame-color \"green\"")
+(graph x y #f #f
+       #:frame-color "green"
+       #:top-label "frame-color \"green\"")
+(read-line)
+
+(format #t "frame-line-width 0.01")
+(graph x y #f #f
+       #:frame-line-width 0.01
+       #:top-label "frame-line-width 0.01")
+(read-line)
+
+
+
