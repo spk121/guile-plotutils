@@ -15,11 +15,19 @@
 ;; Until then, I'm just going to have to insert #f for the 3rd
 ;; and 4th optional argument
 
-#!
 
-(format #t "Default style")
+(format #t "Default style, y data only")
+(graph y #f #f #f
+       #:top-label "Default style, y data only")
+(newline)
+(display "Press <enter> to continue")
+(read-line)
+
+(format #t "Default style, x y data")
 (graph x y #f #f
-       #:top-label "Default style")
+       #:top-label "Default style, x y data")
+(newline)
+(display "Press <enter> to continue")
 (read-line)
 
 (format #t "Two data sets")
@@ -278,8 +286,6 @@
        #:emulate-color "yes"
        #:top-label "bg-color \"green\"; emulate-color \"yes\"")
 (read-line)
-
-!#
 
 (format #t "frame-color \"green\"")
 (graph x y #f #f
