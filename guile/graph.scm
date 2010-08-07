@@ -137,24 +137,24 @@ the input lists with #f.  For example,
      (if x-limits
 	 (cond
 	  ((and (not (list? x-limits)) (eq? x-limits #t)
-		(x-limits! gr))
-	   ((and (not (list? x-limits)) (real? x-limits))
-	    (x-limits! gr x-limits))
-	   ((and (list? x-limits) (= 1 (length x-limits)))
-	    (x-limits! gr (first x-limits)))
-	   ((and (list? x-limits) (= 2 (length x-limits)))
-	    (x-limits! gr (first x-limits) (second x-limits)))
-	   ((and (list? x-limits) (= 3 (length x-limits)))
-	    (x-limits! gr (first x-limits) (second x-limits) (third x-limits)))
-	   (else
-	    (x-limits! gr)))))
+		(x-limits! gr)))
+	  ((and (not (list? x-limits)) (real? x-limits))
+	   (x-limits! gr x-limits))
+	  ((and (list? x-limits) (= 1 (length x-limits)))
+	   (x-limits! gr (first x-limits)))
+	  ((and (list? x-limits) (= 2 (length x-limits)))
+	   (x-limits! gr (first x-limits) (second x-limits)))
+	  ((and (list? x-limits) (= 3 (length x-limits)))
+	   (x-limits! gr (first x-limits) (second x-limits) (third x-limits)))
+	  (else
+	   (x-limits! gr))))
      (if x-label
 	 (x-label! gr x-label))
      (if y-limits
 	 (cond
-	  ((eq? y-limits #t)
-	   (y-limits! gr))
-	  ((real? y-limits)
+	  ((and (not (list? y-limits)) (eq? y-limits #t)
+		(y-limits! gr)))
+	  ((and (not (list? y-limits)) (real? y-limits))
 	   (y-limits! gr y-limits))
 	  ((and (list? y-limits) (= 1 (length y-limits)))
 	   (y-limits! gr (first y-limits)))
@@ -186,9 +186,9 @@ the input lists with #f.  For example,
 	 (title-font-name! gr title-font-name))
      (if auto-abscissa
 	 (cond
-	  ((eq? auto-abscissa #t)
+	  ((and (not (list? auto-abscissa)) (eq? auto-abscissa #t))
 	   (auto-abscissa! gr))
-	  ((real? auto-abscissa)
+	  ((and (not (list? auto-abscissa)) (real? auto-abscissa))
 	   (auto-abscissa! gr auto-abscissa))
 	  ((and (list? auto-abscissa) (= 1 (length auto-abscissa)))
 	   (auto-abscissa! gr (first auto-abscissa)))
@@ -202,9 +202,9 @@ the input lists with #f.  For example,
 	 (line-mode! gr line-mode))
      (if symbol
 	 (cond
-	  ((eq? symbol #t)
+	  ((and (not (list? symbol)) (eq? symbol #t))
 	   (symbol! gr))
-	  ((real? symbol)
+	  ((and (not (real? symbol)) (real? symbol))
 	   (symbol! gr symbol))
 	  ((and (list? symbol) (= 1 (length symbol)))
 	   (symbol! gr (first symbol)))
