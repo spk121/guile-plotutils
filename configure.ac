@@ -7,7 +7,7 @@ AC_PREREQ(2.59)
 AC_CONFIG_SRCDIR(graph/graph.c)
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
-AM_INIT_AUTOMAKE([plotutils],[2.6])
+AM_INIT_AUTOMAKE([subdir-objects])
 AM_CONFIG_HEADER(config.h:config.hin)
 
 # The following will be defined in config.h, if appropriate.
