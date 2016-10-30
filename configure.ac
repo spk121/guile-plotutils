@@ -2,7 +2,7 @@
 # Copyright (C) 1989-2009 Free Software Foundation, Inc.
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([GNU plotutils],[2.6],[bug-plotutils@gnu.org])
+AC_INIT([GNU plotutils],[2.6.1],[bug-plotutils@gnu.org])
 AC_PREREQ(2.59)
 AC_CONFIG_SRCDIR(graph/graph.c)
 AC_CONFIG_AUX_DIR([build-aux])
