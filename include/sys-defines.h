@@ -33,15 +33,6 @@
 # define __C_LINKAGE		/* empty */
 #endif
 
-/* config.h, built by `configure', includes a definition of RETSIGTYPE, the
-   return value for signal().  But `configure' may get it wrong in C++. */
-#ifdef __cplusplus
-#ifdef RETSIGTYPE
-#undef RETSIGTYPE
-#endif
-#define RETSIGTYPE void
-#endif
-
 /**********************************************************************/
 /* Include all the C headers we'll need.  Because many platforms lack one
    or more standard headers or function declarations, there are numerous

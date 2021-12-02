@@ -5,7 +5,7 @@ bin_PROGRAMS = plot
 plot_SOURCES = plot.c fontlist.c
 plot_LDADD = ../lib/libcommon.a ../libplot/libplot.la
 
-INCLUDES = -I$(srcdir)/../include
+plot_CPPFLAGS = -I$(srcdir)/../include
 
 CLEANFILES = fontlist.c
 

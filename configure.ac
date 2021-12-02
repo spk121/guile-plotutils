@@ -1,5 +1,6 @@
 # Configure template for the GNU plotutils package.
 # Copyright (C) 1989-2009 Free Software Foundation, Inc.
+# Copyright (C) 2021 Michael L. Gran
 # Process this file with autoconf to produce a configure script.
 
 AC_INIT([GNU plotutils],[2.6.1],[bug-plotutils@gnu.org])
@@ -8,7 +9,8 @@ AC_CONFIG_SRCDIR(graph/graph.c)
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([subdir-objects])
-AM_CONFIG_HEADER(config.h:config.hin)
+AC_CONFIG_HEADERS([config.h:config.hin])
+AM_PROG_AR
 
 # The following will be defined in config.h, if appropriate.
 
@@ -39,6 +41,9 @@ AH_TEMPLATE([INCLUDE_PNG_SUPPORT],
 	[Define to request PNG support (requires HAVE_LIBPNG, HAVE_PNG_H).])
 
 # Guile-related
+GUILE_PKG([3.0 2.2 2.0])
+GUILE_PROGS
+GUILE_SITE_DIR
 GUILE_FLAGS
 
 # Fonts supported by Plotters of various types.
@@ -78,7 +83,6 @@ AC_PROG_CXX
 AC_C_CONST
 AC_TYPE_SIZE_T
 AC_TYPE_PID_T
-AC_TYPE_SIGNAL
 
 # Check whether fflush(NULL) works
 AC_MSG_CHECKING(whether flushing a null FILE pointer works)

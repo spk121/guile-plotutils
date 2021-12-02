@@ -14,16 +14,15 @@ libguile_plotutils_la_SOURCES += ../lib/compat.c ../lib/display.c	\
 	../lib/getopt.c ../lib/getopt1.c ../lib/xmalloc.c		\
 	../lib/xstrdup.c
 
-libguile_plotutils_la_CPPFLAGS = $(GUILE_CFLAGS)
+libguile_plotutils_la_CPPFLAGS = $(GUILE_CFLAGS) \
+	-I$(srcdir)/../include -I$(srcdir)/../graph
 
 libguile_plotutils_la_LDFLAGS = -module -no-undefined -version-info 1:0:0 \
 	$(GUILE_LDFLAGS) -Xlinker -Map=output.map
 
-libguile_plotutils_la_LIBADD = ../libplot/libplot.la -lguile
+libguile_plotutils_la_LIBADD = ../libplot/libplot.la $(GUILE_LDFLAGS)
 
-INCLUDES = -I$(srcdir)/../include -I$(srcdir)/../graph
-
-guilesitedir = ${datadir}/guile/site
+guilesitedir = ${datadir}/guile/site/${GUILE_EFFECTIVE_VERSION}
 pkgguilesitedir = $(guilesitedir)/$(PACKAGE)
 dist_pkgguilesite_DATA = plot.scm graph.scm
 ETAGS_ARGS = plot.scm graph.scm
