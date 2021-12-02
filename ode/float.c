@@ -15,7 +15,7 @@
 /*
  * arithmetic exceptions (e.g., floating point errors) come here
  */
-RETSIGTYPE
+void
 fptrap (int sig)
 {
   rterror ("arithmetic exception");

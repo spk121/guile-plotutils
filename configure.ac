@@ -78,7 +78,6 @@ AC_PROG_CXX
 AC_C_CONST
 AC_TYPE_SIZE_T
 AC_TYPE_PID_T
-AC_TYPE_SIGNAL
 
 # Check whether fflush(NULL) works
 AC_MSG_CHECKING(whether flushing a null FILE pointer works)

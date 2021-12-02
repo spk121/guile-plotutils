@@ -2,6 +2,7 @@
 
 /*
  * Copyright (C) 1982-1994, Nicholas B. Tufillaro.  All rights reserved.
+ * Copyright (C) 2021 Michael L Gran
  *
  * GNU enhancements Copyright (C) 1996, 1997, 1998, 1999, 2005, 2008, Free
  * Software Foundation, Inc.
@@ -80,7 +81,7 @@ struct expr * ealloc (void);
 struct prt * palloc (void);
 struct sym * lookup (const char *nam);
 struct sym * salloc (void);
-RETSIGTYPE fptrap (int sig);
+void fptrap (int sig);
 
 /* in scanner or parser */
 int yyerror (const char *msg);
