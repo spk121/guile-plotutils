@@ -8,7 +8,7 @@
 	(draw-c-curve plotter (* 0.5 (- dx dy)) (* 0.5 (+ dx dy)) (+ order 1))
 	(draw-c-curve plotter (* 0.5 (+ dx dy)) (* 0.5 (- dy dx)) (+ order 1)))))
 
-(define fp (open-output-file "tmp.png"))
+(define fp (open-output-file "tmp.png" #:binary #t))
 (define param (newplparams))
 (setplparam! param "BITMAPSIZE" "400x400")
 (define plotter (newpl "png" fp (current-error-port) param))

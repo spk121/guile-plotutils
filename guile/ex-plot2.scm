@@ -16,7 +16,7 @@
 
 (define plotter-params (newplparams))
 (setplparam! plotter-params "PAGESIZE" "letter")
-(define fp (open-output-file "tmp.png"))
+(define fp (open-output-file "tmp.png" #:binary #t))
 (define plotter (newpl "png"
 		       fp
 		       (current-error-port)
