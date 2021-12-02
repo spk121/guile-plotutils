@@ -1,5 +1,6 @@
 # Configure template for the GNU plotutils package.
 # Copyright (C) 1989-2009 Free Software Foundation, Inc.
+# Copyright (C) 2021 Michael L. Gran
 # Process this file with autoconf to produce a configure script.
 
 AC_INIT([GNU plotutils],[2.6.1],[bug-plotutils@gnu.org])
@@ -8,7 +9,7 @@ AC_CONFIG_SRCDIR(graph/graph.c)
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([subdir-objects])
-AM_CONFIG_HEADER(config.h:config.hin)
+AC_CONFIG_HEADERS([config.h:config.hin])
 
 # The following will be defined in config.h, if appropriate.
 
