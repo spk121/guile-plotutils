@@ -10,6 +10,7 @@ AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_HEADERS([config.h:config.hin])
+AM_PROG_AR
 
 # The following will be defined in config.h, if appropriate.
 
