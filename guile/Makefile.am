@@ -14,14 +14,13 @@ libguile_plotutils_la_SOURCES += ../lib/compat.c ../lib/display.c	\
 	../lib/getopt.c ../lib/getopt1.c ../lib/xmalloc.c		\
 	../lib/xstrdup.c
 
-libguile_plotutils_la_CPPFLAGS = $(GUILE_CFLAGS)
+libguile_plotutils_la_CPPFLAGS = $(GUILE_CFLAGS) \
+	-I$(srcdir)/../include -I$(srcdir)/../graph
 
 libguile_plotutils_la_LDFLAGS = -module -no-undefined -version-info 1:0:0 \
 	$(GUILE_LDFLAGS) -Xlinker -Map=output.map
 
 libguile_plotutils_la_LIBADD = ../libplot/libplot.la -lguile
-
-INCLUDES = -I$(srcdir)/../include -I$(srcdir)/../graph
 
 guilesitedir = ${datadir}/guile/site
 pkgguilesitedir = $(guilesitedir)/$(PACKAGE)
