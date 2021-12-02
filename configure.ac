@@ -41,6 +41,9 @@ AH_TEMPLATE([INCLUDE_PNG_SUPPORT],
 	[Define to request PNG support (requires HAVE_LIBPNG, HAVE_PNG_H).])
 
 # Guile-related
+GUILE_PKG([3.0 2.2 2.0])
+GUILE_PROGS
+GUILE_SITE_DIR
 GUILE_FLAGS
 
 # Fonts supported by Plotters of various types.

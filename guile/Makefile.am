@@ -20,9 +20,9 @@ libguile_plotutils_la_CPPFLAGS = $(GUILE_CFLAGS) \
 libguile_plotutils_la_LDFLAGS = -module -no-undefined -version-info 1:0:0 \
 	$(GUILE_LDFLAGS) -Xlinker -Map=output.map
 
-libguile_plotutils_la_LIBADD = ../libplot/libplot.la -lguile
+libguile_plotutils_la_LIBADD = ../libplot/libplot.la $(GUILE_LDFLAGS)
 
-guilesitedir = ${datadir}/guile/site
+guilesitedir = ${datadir}/guile/site/${GUILE_EFFECTIVE_VERSION}
 pkgguilesitedir = $(guilesitedir)/$(PACKAGE)
 dist_pkgguilesite_DATA = plot.scm graph.scm
 ETAGS_ARGS = plot.scm graph.scm
