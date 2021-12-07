@@ -1,0 +1,2979 @@
+\input texinfo @c -*-texinfo-*-
+@c %**start of header
+@setfilename guile-plotutils.info
+@settitle Guile Plotutils
+@c %**end of header
+@syncodeindex fn cp
+@include version.texi
+
+@copying
+Copyright @copyright{} 1989,
+1990, 1991, 1995, 1996, 1997, 1998, 1999, 2000, 2005, 2008, 2009 Free
+Software Foundation
+Copyright @copyright{} 2018, 2019, 2020, 2021 Michael L. Gran
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3
+or any later version published by the Free Software Foundation;
+with no Invariant Sections, no Front-Cover Texts, and no Back-Cover
+Texts.  A copy of the license is included in the section entitled ``GNU
+Free Documentation License''.
+@end copying
+
+@titlepage
+@title Guile Plotutils
+@subtitle Version @value{VERSION}
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@contents
+
+@c @ifnottex
+@node Top, Abstract, (dir), (dir)
+@top Guile-Plotutils
+
+This manual is for Guile Plotutils @value{VERSION}.
+@c @end ifnottex
+
+@menu
+* Abstract::
+* Introduction::
+* Tutorial::
+* Reference Guide::
+* Apendices::
+* Color Names::
+* Page and Viewport Sizes::
+* Further Resources and Contact Info::
+* GNU Free Documentation License::
+* The Index::
+@end menu
+
+@node Abstract, Introduction, Top, Top
+@unnumbered Abstract
+
+@display
+Guile Plotutils is a Guile package provides access to some
+of the functionality of GNU Plotutils.
+
+It supports GNU/Linux, and has been tested with Guile-2.2 and
+Guile-3.0. Guile Plotutils is licensed under the GPL3+. This
+documentation is licensed under the FDLv1.3+.
+
+If you want to write a Guile application for that creates scientific
+plots that look straight out of the late 1990s, this is the way to go.
+@end display
+
+@node Introduction, Tutorial, Abstract, Top
+@chapter Introduction
+
+@quotation Warning
+This is based on GNU Plotutils, which is venerable but unmaintained
+software last updated decades ago.
+@end quotation
+
+Guile Plotutils has two main components: plot and graph.
+
+The plot component expresses GNU Plotutils's plotting library, which
+basically does vector graphics onto image surfaces. You might compare
+it to SVG or the Cairo library.
+
+The graph component expresses GNU Plotutils's graphing capabilities,
+which can plot data or functions on a set of xy axes.
+
+@menu
+* The Concept of Operations::
+* Installation::
+@end menu
+
+@node The Concept of Operations, Installation, Introduction, Introduction
+@section The Concept of Operations
+
+Guile Plotutils has two components: one which basically does vector
+graphics onto image surfaces, and the other which graphs data.
+
+For the plot component, the concept of operations is this
+@enumerate
+@item
+Open a Guile port which will receive the output plot
+@item
+Create a <plparams> object, and use methods to set parameters
+that describe the output surface upon which graphics will be drawn.
+@item
+Create a <plotter> object, initialized with the <plparams> object,
+and then use its methods to draw upon the surface.
+@item
+Use appropriate methods to close the <plotter> object and the port,
+which writes the file.
+@end enumerate
+
+A simple example could be this below, which opens a bitmap surface,
+creates a virtual pen, and then draws on the surface. Upon
+completion, a PNG file is created.
+
+@lisp
+(use-modules (plotutils plot))
+(define fp (open-output-file "tmp.png" #:binary #t))
+(define param (newplparams))
+(setplparam! param "BITMAPSIZE" "400x400")
+(define plotter (newpl "png" fp (current-error-port) param))
+(openpl! plotter)
+(space! plotter 0.0 0.0 1000.0 1000.0)
+(linewidth! plotter 0.25)
+(pencolorname! plotter "red")
+(erase! plotter)
+(move! plotter 600.0 300.0)
+(closepl! plotter)
+(close fp)
+@end lisp
+
+The graph component expresses GNU Plotutils's graphing capabilities,
+which can plot data or functions on a set of xy axes.  
+
+@lisp
+(use-modules (plotutils graph))
+(define xvalues (iota 101 0 0.1))
+(with-output-to-port ``tmp.png''
+  (lambda ()
+    (graph xvalues yvalues
+           #:output-format ``png''
+           #:top-label ``Title''))
+  #:binary #t)
+@end lisp 
+
+@node Installation,  , The Concept of Operations, Introduction
+@section Installation
+
+In some happy future, you might be able to get this from whatever method
+your operating system normally uses to download free software.
+
+If you are trying to build this from the Git repository, use
+@command{git clone} to copy the tree onto your computer. After cloning
+the repository, manually invoke @command{autoreconf}
+to create a @file{configure} file.
+
+If you are building from a @file{guile-plotutils.tar.gz}, unpack the file.
+
+From there, running @command{configure}, then @command{make}, then
+@command{sudo make install} will give you a running system.
+
+In the file archives, look for a file named @file{INSTALL} for detailed
+instructions.
+
+@node Tutorial, Reference Guide, Introduction, Top
+@chapter Tutorial
+
+@menu
+* Graphing Tutorial::
+* Plotting Tutorial::
+@end menu
+
+@node Graphing Tutorial, Plotting Tutorial, Tutorial, Tutorial
+@section Graphing Tutorial
+
+In @code{(plotutils graph)}, there is one monolithic graphing function
+called @code{graph} with dozens of options.  We'll demonstrate a couple
+of them in this tutorial.
+
+@subsection Graphing Functions
+
+First let's explore how to graph mathematical functions. Let's say
+you have a mathematical function to plot such as ``sin(x)''. This example
+script calls graph with three arguments.
+@enumerate
+@item
+A procedure of one numerical argument that returns a numerical value
+@item
+The start of the X range
+@item
+The end of the X range
+@end enumerate
+
+@example
+@include ex-sine-wave.scm
+@end example
+
+The script samples a few hundred points of the procedure and plots the
+result.
+
+@image{sine-wave,,,,.png}
+
+You can also call @code{graph} with four arguments. In that case, the
+fourth argument is the step size on the x-axis.
+
+Here's the same plot with just a dozen sample points
+
+@example
+@include ex-sine-wave2.scm
+@end example
+
+@image{sine-wave2,,,,.png}
+
+@subsection Graphing Data
+
+In the previous section, we explored how to call @code{graph} when
+the first argument was a function.
+
+In this section we'll be calling @code{graph} using lists of data. When
+using data, you either call @code{graph} with a single list of data, or
+create an xy plot using two lists of data.
+
+@lisp
+(define x (list -1 0 1 2 3 4 5))
+(define y (list 1 2 1 2 1 2 1))
+;; Plot the y data with an automatic abscissa
+(graph y)
+;; Plot the x,y pairs
+(graph x y)
+@end lisp
+
+You can also plot multiple graphs on the same axes using the @code{merge}
+helper procedure.
+
+@lisp
+(define x1 (list -1 0 1 2 3 4 5))
+(define y2 (list  1 2 1 2 1 2 1))
+(define x2 (list -1 0 1 2 3 4 5))
+ Plotting Tutorial
+(define y2 (list  8 7 6 5 4 3 3))
+(graph (merge x1 x2) (merge y1 y2))
+@end lisp
+
+@node Plotting Tutorial,  , Graphing Tutorial, Tutorial
+@section Plotting Tutorial
+
+The @code{(plotutils plot)} library has a set of graphing primitives
+that are used by the graphing library. They can be used on their own
+for drawing.
+
+@example
+@include ex-plot-curve.scm
+@end example
+
+The script draws a fractal pattern of c curves.
+
+@image{plot-curve,,,,.png}
+
+@node Reference Guide, Apendices, Tutorial, Top
+@chapter Reference Guide
+
+The @code{guile-plotutils} project provides two Guile modules:
+@file{(plotutils plot)} and @file{(plotutils graph)}.
+
+@c -----------------------------------------------------------------
+@menu
+* The Plotting Library::
+* Plotter Parameters::
+* The Graphing Library::
+* graph Environment::
+@end menu
+
+@c -----------------------------------------------------------------
+@node The Plotting Library, Plotter Parameters, Reference Guide, Reference Guide
+@section The Plotting Library
+@cindex plotting
+
+The @code{(plotutils plot)} library contains drawing primitives.
+
+There are two important types to note: @code{<plotter>} and
+@code{<plparams>}.  Roughly speaking, @code{<plparams>} describes the
+surface on which you are drawing -- its size and format -- and
+@code{<plotter>} describes the state of the virtual pen being used to
+draw on that surface.
+
+@subsection plparams procedures
+
+@deffn Procedure newplparams
+This procedure returns a newly allocated @code{<plparams>} in a default
+state.
+@end deffn
+
+@deffn Procedure setplparam! plparams parameter value
+This procedure modifies the state of a @code{<plparams>} object. Both
+@var{parameter} and @var{value} are strings.  For the available parameters
+and values @xref{Plotter Parameters}.
+@end deffn
+
+@section plotter procedures
+
+To make a new @code{<plotter>} which is on object that keeps the state
+of the ``pen'' being used to draw on a surface, use the procedure @code{newpl}.
+
+@deffn Procedure newpl type outp errp param
+Creates a new @code{<plotter>} object. @var{type} is the output format
+that will result from this plotting: one of ``X'', ``png'', ``svg'',
+``pcl'', ``gif'', or ``pnm''. Other options may be present depending on
+how @file{libplot} was compiled in the upstrem GNU Plotutils library.
+
+@var{outp} and @var{errp} should be Guile output ports. @var{outp} will
+receive the output produced by the plotter in the format specified by
+@var{type}. @var{errp} will receive error messages.
+
+@var{param} is an object of type @code{<plparams>} that has set up the
+``paper'' upon which we are drawing.
+@end deffn
+
+
+@menu
+* Control Functions::
+* Drawing Functions::
+* Attribute Functions::
+* Mapping Functions::
+@end menu
+
+@node Control Functions, Drawing Functions, The Plotting Library, The Plotting Library
+@subsection Control functions
+
+The following are the ``control functions'' in @code{(plotutils plot)}.
+They are the basic functions that open, initialize, or close an
+already-created Plotter.  They are listed in the approximate order in
+which they would be called.
+
+In the current Guile binding, each of these functions takes
+a @code{<plotter>} as its first argument.
+
+@deffn Procedure openpl! plotter
+@t{openpl} opens a @code{<plotter>}, i.e., begins a page of graphics.
+This resets the Plotter's drawing attributes to their default values.  A
+negative return value indicates the Plotter could not be opened.
+
+Currently, an X Plotter pops up a new window on an X Window
+System display for each page of graphics, i.e., with each invocation of
+@code{openpl!}.
+@end deffn
+
+@deffn Procedure bgcolor! plotter red green blue
+Given a plotter and three integers
+@code{bgcolor!} sets the background color for the Plotter's graphics
+display, using a 48-bit RGB color model.  The arguments @var{red},
+@var{green} and @var{blue} specify the red, green and blue intensities
+of the background color.  Each is an integer in the range
+@t{0x0000}@dots{}@t{0xffff}, i.e., 0@dots{}65535.  The choice @w{(0, 0,
+0)} signifies black, and the choice (65535, 65535, 65535) signifies
+white.
+
+@t{bgcolor} affects only Plotters that have a notion of background
+color, i.e., @w{X Plotters}, X Drawable Plotters, PNG Plotters, PNM
+Plotters, and GIF Plotters (all of which produce bitmaps), CGM Plotters,
+ReGIS Plotters and Metafile Plotters.  Its effect is simple: the next
+time the @t{erase} operation is invoked on such a Plotter, its display
+will be filled with the specified color.
+@end deffn
+
+@deffn Procedure bgcolorname! plotter name
+@t{bgcolorname!} sets the background color for the the graphics display
+to be @var{name}.  Unrecognized colors are interpreted as "white".  For
+information on what color names are recognized, see @ref{Color Names}.
+@w{A 24-bit} RGB color may also be specified as a six-digit hexadecimal
+string, e.g., "#c0c0c0".
+
+@t{bgcolorname!} affects only Plotters that have a notion of background
+color, i.e., @w{X Plotters}, @w{X Drawable} Plotters, PNG Plotters, PNM
+Plotters, and GIF Plotters (all of which produce bitmaps), CGM Plotters,
+ReGIS Plotters, and Metafile Plotters.  Its effect is simple: the next
+time the @t{erase} operation is invoked on such a Plotter, its display
+will be filled with the specified color.
+
+SVG Plotters and CGM Plotters support "none" as a value for the
+background color.  It will @w{turn off} the background: the drawn
+objects will not be backed by anything.  This is useful when the
+generated SVG or WebCGM file is to be placed on a Web page.
+@end deffn
+
+@deffn Procedure erase! plotter
+@t{erase!} begins the next frame of a multiframe page, by clearing all
+previously plotted objects from the graphics display, and filling it
+with the background color @w{(if any)}.
+
+It is frequently useful to invoke @t{erase!} at the beginning of each
+page, i.e., immediately after invoking @t{openpl!}.  That is because some
+Plotters are persistent, in the sense that objects drawn within an
+@code{openpl!}@dots{}@code{closepl!} pair remain on the graphics display
+even after a new page is begun by a subsequent invocation of
+@code{openpl!}.  Currently, only @w{X Drawable} Plotters and Tektronix
+Plotters are persistent.  Future releases may support optional
+persistence for @w{X Plotters} also.
+
+On X Plotters and X Drawable Plotters the effects of invoking @t{erase}
+will be altogether different if the Plotter parameter
+@code{USE_DOUBLE_BUFFERING} is set to "yes".  @w{In this} case, objects
+will be written to an off-screen buffer rather than to the graphics
+display, and invoking @t{erase} will @w{(1) copy} the contents of this
+buffer to the display, and @w{(2) erase} the buffer by filling it with
+the background color.  This `double buffering' feature facilitates
+smooth animation.  @xref{Plotter Parameters}.
+@end deffn
+
+@deffn Procedure space! plotter x0 y0 x1 y1
+@t{space!} takes two pairs of arguments, specifying the
+positions of the lower left and upper right corners of a rectangular
+window in the user coordinate system that will be mapped to the
+`viewport': the rectangular portion of the output device that graphics
+will be @w{drawn in}.  The default window is a square, with opposite
+corners (0,0) @w{and (1,1)}.
+
+In mathematical terms, calling @t{space!} sets the affine
+transformation from user coordinates to device coordinates.  That is, it
+sets the transformation matrix attribute for each object subsequently
+drawn on the display. @t{space!} would usually be
+invoked at the beginning of each page of graphics, i.e., immediately
+after the call to @t{openpl!}.  Additional calls to @t{space!} 
+are allowed, and there are several ``mapping functions'' that
+also affect the transformation matrix attribute.  See @ref{Mapping
+Functions}.
+
+Note that the size and location of the viewport depend on the type of
+Plotter, and on the Plotter parameters that are specified at Plotter
+creation time.  For example, the default viewport used by any
+Illustrator, Postscript, Fig, PCL, and HP-GL Plotter is a square whose
+size depends on the Plotter's page type.  See @ref{Page and Viewport
+Sizes}.
+@end deffn
+
+@deffn Procedure space2! plotter x0 y0 x1 y1 x2 y2
+@t{space2!} is an extended version of @t{space!}.
+The arguments are the three defining vertices of an
+parallelogram-shaped window in the user coordinate system.  The
+specified vertices are the lower left, the lower right, and the upper
+left.  This window will be mapped affinely onto the viewport: the
+rectangular portion of the output device that graphics will be @w{drawn
+in}.
+@end deffn
+
+@deffn Procedure havecap plotter s
+@t{havecap} is not really a control function: it is a query function.
+@w{It tests} whether or not a Plotter, which need not be open, has a
+specified capability.  The return value is @w{0, 1}, @w{or 2},
+signifying no/yes/maybe.  For unrecognized capabilities the return value
+is zero.  Recognized capabilities include "WIDE_LINES" (i.e., the
+ability to draw lines with a non-default thickness), "DASH_ARRAY" (the
+ability to draw in arbitrary dashing styles, as requested by the
+@t{linedash} function), "SETTABLE_BACKGROUND" (the ability to set the
+color of the background), and "SOLID_FILL".  The "HERSHEY_FONTS",
+"PS_FONTS", "PCL_FONTS", and "STICK_FONTS" capabilities indicate whether
+or not fonts of a particular class are supported.  @xref{Text Fonts}.
+
+All Plotters except Tektronix Plotters have the "SOLID_FILL" capability,
+meaning they can fill paths with solid color.  Each such Plotter has at
+least one of the "EVEN_ODD_FILL" and "NONZERO_WINDING_NUMBER_FILL"
+capabilities.  These indicate the supported rules for determining the
+`inside' of a path.
+
+The `maybe' value is returned for most capabilities by Metafile
+Plotters, which do no drawing themselves.  The output of a Metafile
+Plotter must be translated to another format, or displayed, by invoking
+@code{plot}.
+@end deffn
+
+@deffn Procedure flushpl! plotter
+@t{flushpl!} flushes (i.e., pushes onward) all previously plotted objects
+to the graphics display.  This is useful only if the affected Plotter is
+one that does real-time plotting (@w{X Plotters}, @w{X Drawable}
+Plotters, ReGIS Plotters, Tektronix Plotters, and Metafile Plotters).
+@w{It ensures} that all previously plotted objects are visible to the
+user.  @w{On Plotters} that do not do real-time plotting, this operation
+has no effect.
+@end deffn
+
+@deffn Procedure closepl! plotter
+@t{closepl!} closes a Plotter, i.e., ends a page of graphics.  If a path
+is in progress, it is first ended and plotted, as if @t{endpath} had
+been called.  @w{A negative} return value indicates the Plotter could
+not be closed.
+
+In the present release of @code{(plotutils plot)}, some Plotters output each page
+of graphics immediately after it is plotted, i.e., when @t{closepl!} is
+invoked to end the page.  That is the case with PCL and HP-GL Plotters,
+in particular.  Plotters that can output only a single page of graphics
+(PNG, PNM, GIF, SVG, Illustrator, and Fig Plotters) do so immediately
+after the first page is plotted, i.e., when @t{closepl} is invoked for
+the first time.  Postscript and CGM Plotters store all pages of graphics
+internally, and do not produce output until they are deleted.
+@end deffn
+
+@node Drawing Functions, Attribute Functions, Control Functions, The Plotting Library
+@subsection Object-drawing functions
+
+The following are the ``drawing functions'' in @code{(plotutils plot)}.  When
+invoked on a Plotter, these functions cause it to draw objects (paths,
+text strings, marker symbols, and points [i.e., pixels]) on the
+associated graphics display.
+
+Paths may be simple or compound.  @w{A simple} path is a sequence of
+contiguous line segments, arc segments (either circular or elliptic),
+and/or Bezier curve segments (either quadratic or cubic).  Such simple
+paths are drawn incrementally, one segment at a time.  @w{A simple} path
+may also be a circle, rectangle, or ellipse.  @w{A compound} path
+consists of multiple simple paths, which must be nested.
+
+You do not need to begin a path by calling any special function.  You
+should, @w{at least} in theory, end a path under construction, and
+request that it be drawn on the graphics display, by calling
+@code{endpath!}.  But the @code{endpath!} function is automatically called
+when any other object is drawn, and at the end of each page of graphics.
+@w{It is} also called automatically when any path-related attribute is
+changed: for example, when @code{move!} is called to change the graphics
+cursor position.  So @code{endpath!} seldom needs to be invoked
+explicitly.
+
+When drawing a compound path, you would end each of its constituent
+simple paths by calling @code{endsubpath!}, and the compound path as a
+whole by calling @code{endpath!}.  After each call to @code{endsubpath!},
+you are allowed to call @code{move!} to reposition the graphics cursor,
+prior to beginning the next simple path.  Such a call to @code{move!}
+will not automatically invoke @code{endpath!}.  This is an exception to
+the above rule.
+
+In the current @w{Guile binding}, each of these functions takes a pointer to
+a @code{<plotter>} as its first argument.
+
+@deffn Procedure plotter horiz-justify vert-justify s
+@t{alabel} takes three arguments @var{horiz_justify} (a symbol),
+@var{vert_justify} (a symbol), and @var{s} (a string), which specify an `adjusted label,'
+i.e., a justified text string.  The path under construction (@w{if any})
+is ended and drawn, as if @t{endpath} had been called, and the string
+@var{s} is drawn according to the specified justifications.  If
+@var{horiz_justify} is equal to the symbols @samp{l}, @samp{c}, or @samp{r}, then
+the string will be drawn with left, center or right justification,
+relative to the current graphics cursor position.  If @var{vert_justify}
+is equal to symbols @samp{b}, @samp{x}, @samp{c}, @samp{C}, or @samp{t}, then
+the bottom, baseline, center, cap line, or top of the string will be
+placed even with the current graphics cursor position.  The graphics
+cursor is moved to the right end of the string if left justification is
+specified, and to the left end if right justification is specified.
+
+The string may contain escape sequences of various sorts (see @ref{Text
+String Format}), though it should not contain line feeds or carriage
+returns.  @w{In fact} it should include only printable characters, from
+the byte ranges @t{0x20}@dots{}@t{0x7e} and @t{0xa0}@dots{}@t{0xff}.
+The string may be plotted at a nonzero angle, if @code{textangle} has
+been called.
+@end deffn
+
+@deffn Procedure arc! plotter xc yc x0 y0 x1 y1
+@deffnx Procedure arcrel! plotter xc yc x0 y0 x1 y1
+@t{arc!} takes six arguments specifying the beginning
+(@var{x0}, @var{y0}), end (@var{x1}, @var{y1}), and center (@var{xc},
+@var{yc}) of a circular arc.  @w{If the} graphics cursor is at
+(@var{x0}, @var{y0}) and a path is under construction, then the arc is
+added to the path.  Otherwise the current path (@w{if any}) is ended and
+drawn, as if @t{endpath} had been called, and the arc begins a new
+path.  In all cases the graphics cursor is moved to (@var{x1},
+@var{y1}).
+
+The direction of the arc (clockwise or counterclockwise) is determined
+by the convention that the arc, centered at (@var{xc}, @var{yc}), sweep
+through an angle of at most 180 degrees.  @w{If the} three points appear
+to be collinear, the direction is taken to be counterclockwise.  If
+(@var{xc}, @var{yc}) is not equidistant from (@var{x0}, @var{y0}) and
+(@var{x1}, @var{y1}) as it @w{should be}, @w{it is} corrected by being
+moved to the closest point on the perpendicular bisector of the line
+segment joining (@var{x0}, @var{y0}) and (@var{x1}, @var{y1}).
+@t{arcrel} and @t{farcrel} are similar to @code{arc} and @code{farc},
+but use cursor-relative coordinates.
+@end deffn
+
+@deffn Procedure bezier2! plotter x0 y0 x1 y1 x2 y2
+@deffnx Procedure bezier2rel! plotter x0 y0 x1 y1 x2 y2
+@t{bezier2!} takes six arguments specifying the beginning
+@code{p0}=(@var{x0}, @var{y0}) and end @code{p2}=(@var{x2}, @var{y2}) of
+a quadratic Bezier curve, and its intermediate control point
+@code{p1}=(@var{x1}, @var{y1}).  @w{If the} graphics cursor is @w{at
+@code{p0}} and a path is under construction, then the curve is added to
+the path.  Otherwise the current path (@w{if any}) is ended and drawn,
+as if @t{endpath!} had been called, and the curve begins a new path.
+@w{In all} cases the graphics cursor is moved @w{to @code{p2}}.
+@t{bezier2rel!} are similar to @code{bezier2!}
+but use cursor-relative coordinates.
+
+The quadratic Bezier curve is tangent at @code{p0} to the line segment
+joining @code{p0} @w{to @code{p1}}, and is tangent @w{at @code{p2}} to
+the line segment joining @code{p1} @w{to @code{p2}}.  @w{So it} fits
+snugly into a triangle with vertices @code{p0}, @code{p1}, @w{and
+@code{p2}}.
+
+When using a PCL Plotter to draw Bezier curves on a LaserJet III, you
+should set the parameter @code{PCL_BEZIERS} to "no".  That is because
+the LaserJet III, which was Hewlett--Packard's first @w{PCL 5} printer,
+does not recognize the Bezier instructions supported by later @w{PCL 5}
+printers.  See @ref{Plotter Parameters}.
+@end deffn
+
+@deffn Procedure bezier3! plotter x0 y0 x1 y1 x2 y2 x3 y3
+@deffnx Procedure bezier3rel! plotter x0 y0 x1 y1 x2 y2 x3 y3
+@t{bezier3!} take eight arguments specifying the
+beginning @code{p0}=(@var{x0}, @var{y0}) and end @code{p3}=(@var{x3},
+@var{y3}) of a cubic Bezier curve, and its intermediate control points
+@code{p1}=(@var{x1}, @var{y1}) and @code{p2}=(@var{x2}, @var{y2}).
+@w{If the} graphics cursor is @w{at @code{p0}} and a path is under
+construction, then the curve is added to the path.  Otherwise the
+current path (@w{if any}) is ended and drawn, as if @t{endpath!} had been
+called, and the curve begins a new path.  @w{In all} cases the graphics
+cursor is moved @w{to @code{p3}}.  @t{bezier3rel!}
+are similar to @code{bezier3!}, but use
+cursor-relative coordinates.
+
+The cubic Bezier curve is tangent at @code{p0} to the line segment
+joining @code{p0} @w{to @code{p1}}, and is tangent @w{at @code{p3}} to
+the line segment joining @code{p2} @w{to @code{p3}}.  @w{So it} fits
+snugly into a quadrangle with vertices @code{p0}, @code{p1}, @code{p2},
+@w{and @code{p3}}.
+
+When using a PCL Plotter to draw Bezier curves on a LaserJet III, you
+should set the parameter @code{PCL_BEZIERS} to "no".  That is because
+the LaserJet III, which was Hewlett--Packard's first @w{PCL 5} printer,
+does not recognize the Bezier instructions supported by later @w{PCL 5}
+printers.  See @ref{Plotter Parameters}.
+@end deffn
+
+@deffn Procedure box! plotter x1 y1 x2 y2
+@deffnx Procedure boxrel! plotter x1 y1 x2 y2
+@t{box!} takes four arguments specifying the starting corner
+(@var{x1}, @var{y1}) and opposite corner (@var{x2}, @var{y2}) of a
+`box', or rectangle.  The path under construction (@w{if any}) is ended,
+and the box is drawn as a new path.  This path is also ended, and the
+graphics cursor is moved to the midpoint of the box.  @t{boxrel!}
+is similar to @t{box!}, but use cursor-relative
+coordinates.
+@end deffn
+
+@deffn Procedure circle! plotter xc yc r
+@deffnx Procedure circlerel! plotter xc yc r
+@t{circle!} takes three arguments specifying the center
+(@var{xc}, @var{yc}) and radius (@var{r}) of a circle.  The path under
+construction (@w{if any}) is ended, and the circle is drawn as a new
+path.  This path is also ended, and the graphics cursor is moved to
+(@var{xc}, @var{yc}).  @t{circlerel!} is similar to
+@t{circle!}, but uses cursor-relative coordinates for
+@var{xc} and @var{yc}.
+@end deffn
+
+@deffn Procedure cont! plotter x y
+@deffnx Procedure contrel! plotter x y
+@t{cont!} take two arguments specifying the coordinates
+(@var{x}, @var{y}) of a point.  If a path is under construction, the
+line segment from the current graphics cursor position to the point
+(@var{x}, @var{y}) is added to it.  Otherwise the line segment begins a
+new path.  In all cases the graphics cursor is moved to (@var{x},
+@var{y}).  @t{contrel!} is similar to @t{cont!}, but uses cursor-relative coordinates.
+@end deffn
+
+@deffn Procedure ellarc! plotter xc yc x0 y0 x1 y1
+@deffnx Procedure ellarcrel! plotter xc yc x0 y1 x1 y1
+@t{ellarc!} takes six arguments specifying the three
+points @code{pc}=(@var{xc},@var{yc}), @code{p0}=(@var{x0},@var{y0}), and
+@code{p1}=(@var{x1},@var{y1}) that define a so-called quarter ellipse.
+This is an elliptic arc from @code{p0} to @code{p1} with @w{center
+@code{pc}}.  @w{If the} graphics cursor is at point @code{p0} and a path
+is under construction, the quarter-ellipse is added to it.  Otherwise
+the path under construction (@w{if any}) is ended and drawn, as if
+@t{endpath} had been called, and the quarter-ellipse begins a new path.
+@w{In all} cases the graphics cursor is moved to @code{p1}.
+
+The quarter-ellipse is an affinely transformed version of a quarter
+circle.  @w{It is} drawn so as to have control points @code{p0},
+@code{p1}, and @math{@code{p0}+@code{p1}-@code{pc}}.  This means that it
+is tangent at @code{p0} to the line segment joining @code{p0} to
+@math{@code{p0}+@code{p1}-@code{pc}}, and is tangent at @code{p1} to the
+line segment joining @code{p1} to @math{@code{p0}+@code{p1}-@code{pc}}.
+@w{So it} fits snugly into a triangle with these three control points as
+vertices.  Notice that the third control point is the reflection of
+@code{pc} through the line joining @code{p0} @w{and @code{p1}}.
+@t{ellarcrel!}is similar to @t{ellarc!} and
+@t{fellarc}, but use cursor-relative coordinates.
+@end deffn
+
+@deffn Procedure ellipse! plotter xc yc rx ry angle
+@deffnx Procedure ellipserel! plotter xc yc rx ry angle
+@t{ellipse!} takes five arguments specifying the center
+(@var{xc}, @var{yc}) of an ellipse, the lengths of its semiaxes
+(@var{rx} and @var{ry}), and the inclination of the first semiaxis in
+the counterclockwise direction from the @w{@math{x} axis} in the user
+coordinate system.  The path under construction (@w{if any}) is ended,
+and the ellipse is drawn as a new path.  This path is also ended, and
+the graphics cursor is moved to (@var{xc}, @var{yc}).  @t{ellipserel!}
+is similar to @t{ellipse!}, but uses
+cursor-relative coordinates.
+@end deffn
+
+@deffn Procedure endpath! plotter
+@t{endpath!} terminates the path under construction, @w{if any}, and
+@w{draws it}.  @w{It also} removes the path from the current graphics
+context, so that a new path may be constructed.
+
+The path under construction may be a simple path, or a compound path
+constructed with the aid of @t{endsubpath!} (see below).  @w{A simple}
+path is constructed by one or more successive calls to @t{cont!},
+@t{line1}, @t{arc!}, @t{ellarc!}, @t{bezier2!}, @t{bezier3!}.
+@w{A simple} path may also be constructed
+by a single call to @t{circle!}, @t{ellipse!}, or @t{box!}.
+
+It is often not necessary to call @t{endpath!} explicitly, since it is
+frequently called automatically.  It will be called if any non-path
+object is drawn, if any path-related drawing attribute is set, or if
+@t{move} or @t{fmove} is invoked to set the cursor position.  @w{It
+will} also be called if @t{restorestate} is called to pop a graphics
+context off the stack, and if @t{closepl} is called to end a page of
+graphics.  So it is seldom necessary to call @t{endpath} explicitly.
+However, if a Plotter plots objects in real time, calling @t{endpath}
+will ensure that a completed path is drawn on the graphics display
+without delay.
+@end deffn
+
+@deffn Procedure endsubpath! plotter
+@t{endsubpath!} terminates the simple path under construction, @w{if
+any}, and signals that the construction of the next simple path in a
+compound path is to begin.  Immediately after @t{endsubpath!} is called,
+it is permissible to call @t{move!} to reposition the
+graphics cursor.  (At other times in the drawing of a compound path,
+calling @t{move!} would force a premature end to the path,
+by automatically invoking @t{endpath!}.)
+@end deffn
+
+@deffn Procedure label! plotter s
+@t{label!} takes a single string argument @var{s} and draws the text
+contained in @var{s} at the current graphics cursor position.  The text
+is left justified, and the graphics cursor is moved to the right end of
+the string.  This function is provided for backward compatibility; the
+function call @t{label!}(@var{s}) is equivalent to @t{alabel!}(`l',`x',@var{s}).
+@end deffn
+
+@deffn Procedure labelwidth! plotter s
+@t{labelwidth!} is not really an object-drawing
+function: it is a query functions.  It computes and returns the width
+of a string in the current font, in the user coordinate system.  The
+string is not drawn.
+@end deffn
+
+@deffn Procedure line! plotter x1 y1 x2 y2
+@deffnx Procedure linerel! plotter x1 y1 x2 y2
+@t{line!} takes four arguments specifying the start point
+(@var{x1}, @var{y1}) and end point (@var{x2}, @var{y2}) of a line
+segment.  @w{If the} graphics cursor is at (@var{x1}, @var{y1}) and a
+path is under construction, the line segment is added to it.  Otherwise
+the path under construction (@w{if any}) is ended and drawn, as if
+@t{endpath} had been called, and the line segment begins a new path.
+@w{In all} cases the graphics cursor is moved to (@var{x2}, @var{y2}).
+@t{linerel!} is similar to @t{line!}, but
+use cursor-relative coordinates.
+@end deffn
+
+@deffn Procedure marker! plotter x y type size
+@deffnx Procedure markerrel! plotter x y type size
+@t{marker!} takes four arguments specifying the position
+(@var{x},@var{y}) of a marker symbol, its type, and its font size in
+user coordinates.  The path under construction (@w{if any}) is ended and
+drawn, as if @t{endpath!} had been called, and the marker symbol is
+plotted.  The graphics cursor is moved to (@var{x},@var{y}).
+@t{markerrel!} are similar to @t{marker!} and
+@t{fmarker}, but use cursor-relative coordinates for the position
+(@var{x},@var{y}).
+
+A marker symbol is a visual representation of a point, which is visible
+on all types of Plotter.  @w{In this} it differs from the points
+produced by the @t{point!} function (see below).  Marker symbol types
+0@dots{}31 are taken from a standard set, and marker symbol types 32 and
+above are interpreted as the index of a character in the current text
+font.  @xref{Marker Symbols}.
+@end deffn
+
+@deffn Procedure point! plotter x y
+@deffnx Procedure pointrel! plotter x y
+@t{point!} takes two arguments specifying the coordinates
+(@var{x}, @var{y}) of a point.  The path under construction @w{(if any)}
+is ended and drawn, as if @t{endpath!} had been called, and the point is
+plotted.  The graphics cursor is moved to (@var{x}, @var{y}).
+@t{pointrel!} is similar to @t{point!},
+but use cursor-relative coordinates.
+
+`Point' is a misnomer.  Any Plotter that produces a bitmap, i.e., an
+@w{X Plotter}, an @w{X Drawable} Plotter, @w{a PNG} Plotter, @w{a PNM}
+Plotter, or @w{a GIF} Plotter, draws a point as a single pixel.  Most
+other Plotters draw a point as a small solid circle, usually @w{so
+small} @w{as to} be invisible.  @w{So @t{point}} should really be called
+@t{pixel}.
+@end deffn
+
+@node Attribute Functions, Mapping Functions, Drawing Functions, The Plotting Library
+@subsection Attribute-setting functions
+
+The following are the ``attribute functions'' in @code{(plotutils plot)}.  When
+invoked on a Plotter, these functions set its drawing attributes, or
+save them or restore them.  Path-related attributes include graphics
+cursor position, pen color, fill color, fill rule, line thickness, line
+style, cap style, join style, miter limit, and transformation matrix.
+Text-related attributes include pen color, font name, font size, text
+angle, and transformation matrix.
+
+Setting any path-related drawing attribute automatically terminates and
+draws the path under construction (@w{if any}), @w{as if} the
+@code{endpath!} operation had been invoked.  The `orientation' attribute
+(clockwise/counterclockwise), which affects circles, ellipses, and
+boxes, is an exception to this.  The exception allows a compound path to
+include circles, ellipses, and boxes with different orientations.
+
+In the current @w{Guile binding}, each of these functions takes
+a @code{<plotter>} as its first argument.
+
+@deffn Procedure capmod! plotter s
+@t{capmod!} terminates and draws the path under construction (@w{if
+any}), as if @t{endpath!} had been called, and sets the cap mode (i.e.,
+cap style) for all paths subsequently drawn on the graphics display.
+Recognized styles are "butt" (the default), "round", and "projecting".
+The three styles are visibly distinct only if the line thickness is
+fairly large.  Butt caps @w{do not} extend beyond the end of the path.
+The other two kinds do, however.  Round caps are filled semicircles, and
+projecting caps are filled rectangular regions that extend a distance
+equal to half the line width beyond the end of the path.
+
+PNG, PNM, GIF, PCL, and HP-GL Plotters support a fourth cap mode,
+"triangular".  (For all but PCL and HP-GL Plotters, the support is
+currently only partial.)  Plotters other than these treat "triangular"
+as equivalent to "round".
+
+This function has no effect on ReGIS or Tektronix Plotters.  Also, it
+has no effect on HP-GL Plotters if the parameter @code{HPGL_VERSION} is
+set to a value less @w{than "2"} (the default), or on CGM Plotters if
+the parameter @code{CGM_MAX_VERSION} is set to a value less @w{than
+"3"}.  @xref{Plotter Parameters}.
+@end deffn
+
+@deffn Procedure color! plotter red green blue
+@t{color!} is a convenience function.  Calling @t{color!} is equivalent to
+calling both @t{pencolor!} and @t{fillcolor!}, to set both the the pen
+color and fill color of all objects subsequently drawn on the graphics
+display.  Note that the physical fill color depends also on the fill
+level, which is specified by calling @t{filltype!}.
+@end deffn
+
+@deffn Procedure colorname! plotter name
+@t{colorname!} is a convenience function.  Calling @t{colorname!} is
+equivalent to calling both @t{pencolorname!} and @t{fillcolorname!}, to
+set both the the pen color and fill color of all objects subsequently
+drawn on the graphics display.  Note that the physical fill color
+depends also on the fill level, which is specified by calling
+@t{filltype!}.
+@end deffn
+
+@deffn Procedure fillcolor! plotter red green blue
+@t{fillcolor!} terminates and draws the path under construction (@w{if
+any}), as if @t{endpath!} had been called, and sets the fill color for
+all paths subsequently drawn on the graphics display, using a 48-bit RGB
+color model.  The arguments @var{red}, @var{green} and @var{blue}
+specify the red, green and blue intensities of the fill color.  Each is
+an integer in the range @t{0x0000}@dots{}@t{0xffff}, i.e.,
+0@dots{}65535.  The choice @w{(0, 0, 0)} signifies black, and the choice
+(65535, 65535, 65535) signifies white.  Note that the physical fill
+color depends also on the fill level, which is specified by calling
+@t{filltype!}.
+@end deffn
+
+@deffn Procedure fillcolorname! plotter name
+@t{fillcolorname!} sets the fill color of all paths subsequently drawn on
+the graphics display to be @var{name}.  Unrecognized colors are
+interpreted as "black".  For information on what color names are
+recognized, see @ref{Color Names}.  @w{A 24-bit} RGB color may also be
+specified as a six-digit hexadecimal string, e.g., "#c0c0c0".
+
+Note that the physical fill color depends also on the fill level, which
+is specified by calling @t{filltype!}.
+@end deffn
+
+@deffn Procedure fillmod! plotter s
+@t{fillmod!} terminates and draws the path under construction (@w{if
+any}), as if @t{endpath!} had been called, and sets the fill mode, i.e.,
+fill rule, for all paths subsequently drawn on the graphics display.
+The fill rule affects only compound paths and self-intersecting simple
+paths: it determines which points are `inside'.  Two rules are
+supported: "even-odd" (the default for all Plotters), and
+"nonzero-winding".  For the distinction, see the @cite{Postscript
+Language Reference Manual}.  "alternate" is an alias for "even-odd" and
+"winding" is an alias for "nonzero-winding".
+
+CGM, Fig, and ReGIS Plotters do not support the "nonzero-winding" rule,
+because the CGM, Fig, and ReGIS vector graphics formats do not
+@w{support it}.  Also, HP-GL Plotters do not support "nonzero-winding"
+if @code{HPGL_VERSION} is set to a value less than "2" (the default).
+@xref{Plotter Parameters}.
+
+The LaserJet III, which was Hewlett--Packard's first @w{PCL 5} printer,
+did not support the nonzero-winding fill rule.  However, all later
+@w{PCL 5} printers from Hewlett--Packard @w{support it}.
+@end deffn
+
+@deffn Procedure filltype! plotter level
+@t{filltype!} terminates and draws the path under construction (@w{if
+any}), as if @t{endpath!} had been called, and sets the fill level for
+all subsequently drawn paths.  @w{A value} @w{of 0} for @var{level}
+specifies no filling.  This is the default.  @w{A value} @w{of 1}
+specifies 100% filling: the fill color will be the color previously
+specified by calling @t{fillcolor!} or @t{fillcolorname!}.
+
+As a convenience to the user, @var{level} may be set to any value in the
+range @t{0x0000}@dots{}@t{0xffff}, i.e., 0@dots{}65535.  Any nonzero
+value will produce filling.  If @var{level}=@t{0xffff}, the fill color
+will be white.  Values in the range @t{0x0001}@dots{}@t{0xffff} are
+interpreted as specifying a desaturation, or gray level.  @w{For
+example}, @t{0x8000} specifies 50% filling (the fill color will be
+half-way between the color specified by calling @t{fillcolor} or
+@t{fillcolorname}, and white).
+
+To draw the region bounded by a path in an edgeless way, you would call
+@t{filltype} to @w{turn on} the filling of the interior, and @t{pentype}
+to @w{turn off} the drawing of the boundary.
+
+Tektronix Plotters do not support filling, and HP-GL Plotters support
+filling of arbitrary paths only if the parameter @code{HPGL_VERSION} is
+equal to "1.5" @w{or "2"} (the default).  (If the version @w{is "1"}
+then only circles and rectangles aligned with the coordinate axes may be
+filled.)  @emph{Opaque} filling, including white filling, is supported
+only if the parameter @code{HPGL_VERSION} @w{is "2"} and the parameter
+@code{HPGL_OPAQUE_MODE} is "yes" (the default).  @xref{Plotter
+Parameters}.
+@end deffn
+
+@deffn Procedure miterlimit! plotter limit
+@t{miterlimit!} terminates and draws the path under construction (@w{if
+any}), as if @t{endpath!} had been called, and sets the miter limit for
+all paths subsequently drawn on the graphics display.  The miter limit
+controls the treatment of corners, if the join mode is set to "miter"
+(the default).  @w{At a} join point of a path, the `miter length' is
+defined to be the distance between the inner corner and the outer
+corner.  The miter limit is the maximum value that will be tolerated for
+the miter length divided by the line thickness.  If this value is
+exceeded, the miter will be @w{cut off}: the "bevel" join mode will be
+used instead.
+
+Examples of typical values for @var{limit} are 10.43 (the default, which
+cuts off miters if the join angle is less than 11 degrees), 2.0 (the
+same, for 60 degrees), and 1.414 (the same, for 90 degrees).  @w{In
+general}, the miter limit is the cosecant of one-half the minimum angle
+for mitered joins.  The minimum meaningful value for @var{limit} @w{is
+1.0}, which converts all mitered joins to beveled joins, irrespective of
+join angle.  Specifying a value less than 1.0 resets the limit to the
+default.
+
+This function has no effect on @w{X Drawable} Plotters or @w{X
+Plotters}, since the @w{X Window} System miter limit, which is also
+10.43, cannot be altered.  It also has no effect on Tektronix, ReGIS, or
+Fig Plotters, or on HP-GL Plotters if the parameter @code{HPGL_VERSION}
+is set to a value less @w{than "2"} (the default).  @xref{Plotter
+Parameters}.  The miter limit used by HP-GL or PCL Plotters is always
+rounded to the closest integer, downward.
+@end deffn
+
+@deffn Procedure fontname! plotter font-name
+@t{fontname!} takes a single case-insensitive string
+argument, @var{font-name}, specifying the name of the font to be used
+for all text strings subsequently drawn on the graphics display.  (The
+font for plotting strings is fully specified by calling @t{fontname!},
+@t{fontsize!}, and @t{textangle!}.)  The size of the font in user
+coordinates is returned.
+
+The default font name depends on the type of Plotter.  @w{It is}
+"Helvetica" for all Plotters except for PCL Plotters, for which it is
+"Univers", and PNG, PNM, GIF, HP-GL, ReGIS, Tektronix and Metafile
+Plotters, for which it is "HersheySerif".  @w{If the} argument
+@var{font-name} is NULL or the empty string, or the font is not
+available, the default font name will be used.  Which fonts are
+available also depends on the type of Plotter; for a list of all
+available fonts, see @ref{Text Fonts}.
+@end deffn
+
+@deffn Procedure fontsize! plotter size
+@t{fontsize!} takes a single argument, interpreted as
+the size, in the user coordinate system, of the font to be used for all
+text strings subsequently drawn on the graphics display.  (The font for
+plotting strings is fully specified by calling @t{fontname!},
+@t{fontsize!}, and @t{textangle!}.)  The size of the font in user
+coordinates is returned.  
+
+@w{A negative} value for @var{size} sets the size to the default, which
+depends on the type of Plotter.  Typically, the default font size is
+1/50 times the size (i.e., minimum dimension) of the display.  The
+interpretation of zero font size is also Plotter-dependent (most
+Plotters do not draw text strings if the font size is zero).
+@end deffn
+
+@deffn Procedure joinmod! plotter s
+@t{joinmod!} terminates and draws the path under construction (@w{if
+any}), as if @t{endpath!} had been called, and sets the join mode (i.e.,
+join style) for all paths subsequently drawn on the graphics display.
+Recognized styles are "miter" (the default), "round", and "bevel".  The
+three styles are visibly distinct only if the line thickness is fairly
+large.  Mitered joins are sharp, rounded joins are round, and beveled
+joins are @w{squared off}.  However, unusually sharp joins are never
+mitered: instead, they are beveled.  The angle at which beveling
+replaces mitering may be specified by calling @t{miterlimit!}.
+
+PNG, PNM, GIF, PCL, and HP-GL Plotters support a fourth join mode,
+"triangular".  Other Plotters treat "triangular" as equivalent to
+"round".
+
+This function has no effect on ReGIS or Tektronix Plotters.  Also, it
+has no effect on HP-GL Plotters if the parameter @code{HPGL_VERSION} is
+set to a value less @w{than "2"} (the default), or on CGM Plotters if
+the parameter @code{CGM_MAX_VERSION} is set to a value less @w{than
+"3"}.  @xref{Plotter Parameters}.
+@end deffn
+
+@deffn Procedure linedash! plotter n dashes offset
+@t{linedash!} terminates and draws the path under
+construction (@w{if any}), as if @t{endpath!} had been called, and set
+the line style for all paths subsequently drawn on the graphics display.
+They provide much finer control of dash patterns than the @t{linemod!}
+function (see below) provides.  @var{dashes} should be an array of
+@w{length @var{n}}.  Its elements, which should be positive, are
+interpreted as distances in the user coordinate system.  Along any path,
+circle, or ellipse, the elements
+@var{dashes}[0]@dots{}@var{dashes}[@var{n}-1] alternately specify the
+length of a dash and the length of a gap between dashes.  When the end
+of the array is reached, the reading of the array wraps around to the
+beginning.  If the array is empty, i.e., @var{n} equals zero, there is
+no dashing: the drawn line is solid.
+
+The @var{offset} argument specifies the `phase' of the dash pattern
+relative to the start of the path.  It is interpreted as the distance
+into the dash pattern at which the dashing should begin.  For example,
+if @var{offset} equals zero then the path will begin with a dash, of
+length @var{dashes}[0] in user space.  @w{If @var{offset}} equals
+@var{dashes}[0] then the path will begin with a gap of length
+@var{dashes}[1], and @w{so forth}.  @var{offset} is allowed to be
+negative.
+@end deffn
+
+Not all Plotters fully support @t{linedash!}.  PCL and
+HP-GL Plotters cannot dash with a nonzero offset, and in the dash
+patterns used by @w{X and} @w{X Drawable} Plotters, each dash or gap has
+a maximum length of 255 pixels.  @t{linedash} and @t{flinedash} have no
+effect @w{at all} on Tektronix, ReGIS, and Fig Plotters.  Also, they
+have no effect on HP-GL Plotters for which the parameter
+@code{HPGL_VERSION} is less @w{than "2"} (the default), or on CGM
+Plotters for which the parameter @code{CGM_MAX_VERSION} is less @w{than
+"3"}.  For information on Plotter parameters, see @ref{Plotter
+Parameters}.
+
+@strong{Warning}: If the transformation from the user coordinate system
+to the device coordinate system is anisotropic, each dash pattern should
+ideally be drawn on the graphics display with a length that depends on
+its direction.  But currently, only SVG and Postscript Plotters @w{do
+this}.  Other Plotters always draw any specified dash pattern with the
+same length, irrespective of its direction.  The length that is used is
+the minimum length, in the device coordinate system, that can correspond
+to the specified dash pattern length in the user coordinate system.
+
+@deffn Procedure linemod! plotter s
+@t{linemod!} terminates and draws the path under construction (@w{if
+any}), as if @t{endpath!} had been called, and sets the line style for
+all paths subsequently drawn on the graphics display.  The supported
+line styles are "solid", "dotted", "dotdashed", "shortdashed",
+"longdashed", "dotdotdashed", "dotdotdotdashed", and "disconnected".
+@end deffn
+
+The first seven correspond to the following dash patterns:
+
+@example
+@group
+"solid"             --------------------------------
+"dotted"            -   -   -   -   -   -   -   -   
+"dotdashed"         ----   -   ----   -   ----   -
+"shortdashed"       ----    ----    ----    ----    
+"longdashed"        -------    -------    -------    
+"dotdotdashed"      ----   -   -   ----   -   -
+"dotdotdotdashed"   ----   -   -   -   ----   -   -   -
+@end group
+@end example
+
+@noindent
+@w{In the} preceding patterns, each hyphen stands for one line
+thickness.  This is the case for sufficiently thick lines, @w{at least}.
+@w{So for} sufficiently thick lines, the distance over which a dash
+pattern repeats is scaled proportionately to the line thickness.
+
+The "disconnected" line style is special.  A "disconnected" path is
+rendered as a set of filled circles, each of which has diameter equal to
+the nominal line thickness.  One of these circles is centered on each of
+the juncture points of the path (i.e., the endpoints of the line
+segments or arcs from which it is constructed).  Circles and ellipses
+with "disconnected" line style are invisible.  Disconnected paths are
+not filled; this includes circles and ellipses.
+
+All line styles are supported by all Plotters, with the following
+exceptions.  HP-GL Plotters do not support the "dotdotdotdashed" style
+unless the parameter @code{HPGL_VERSION} is set to "2" (the default).
+Tektronix Plotters do not support the "dotdotdotdashed" style, and do
+not support the "dotdotdashed" style unless the parameter @code{TERM} is
+set to "kermit".  @xref{Plotter Parameters}.
+
+@deffn Procedure linewidth! plotter size
+@t{linewidth!} terminates and draws the path under
+construction (@w{if any}), as if @t{endpath!} had been called, and set
+the thickness, in the user coordinate system, of all paths subsequently
+drawn on the graphics display.  @w{A negative} value resets the
+thickness to the default.  The default thickness depends on the type of
+Plotter.  For most Plotters, it is 1/850 times the size of the viewport,
+i.e., the drawn-on portion of the display.  (Here `size' means minimum
+dimension.)  But for Plotters that produce bitmaps, i.e., @w{X
+Plotters}, @w{X Drawable} Plotters, PNG Plotters, PNM Plotters, and GIF
+Plotters, @w{it is} zero.
+
+By convention, a zero-thickness line is the thinnest line that can be
+drawn.  However, the drawing editors @code{idraw} and @code{xfig} treat
+zero-thickness lines as invisible.  @w{So when} producing editable
+graphics with a Postscript or Fig Plotter, using a zero line thickness
+may not be desirable.
+
+Tektronix and ReGIS Plotters do not support drawing with other than a
+default thickness, and HP-GL Plotters do not support doing so if the
+parameter @code{HPGL_VERSION} is set to a value less @w{than "2"} (the
+default; see @ref{Plotter Parameters}).
+@end deffn
+
+@strong{Warning}: If the transformation from the user coordinate system
+to the device coordinate system is anisotropic, each line segment in a
+polygonal path should ideally be drawn on the graphics display with a
+thickness that depends on its direction.  But currently, only SVG and
+Postscript Plotters @w{do this}.  Other Plotters draw all line segments
+in a path with the same thickness.  The thickness that is used is the
+minimum thickness, in the device coordinate system, that can correspond
+to the specified line thickness in the user coordinate system.
+
+@deffn move! plotter x y
+@deffnx moverel! plotter x y
+@t{move!} takes two arguments specifying the coordinates
+(@var{x}, @var{y}) of a point to which the graphics cursor should be
+moved.  The path under construction @w{(if any)} is ended and drawn, as
+if @t{endpath} had been called, and the graphics cursor is moved to
+(@var{x}, @var{y}).  This is equivalent to lifting the pen on a plotter
+and moving it to a new position, without drawing any line.  @t{moverel!}
+is similar to @t{move!}, but use
+cursor-relative coordinates.
+
+When a new page of graphics is begun by invoking @t{openpl!}, the cursor
+is initially at the point (0,0) in user space.  Most of the drawing
+functions reposition the cursor.  @xref{Drawing Functions}.
+@end deffn
+
+@deffn Procedure orientation! plotter direction
+@t{orientation!} sets the orientation for all circles, ellipses, and
+boxes subsequently drawn on the graphics display.  @var{direction} must
+@w{be 1}, meaning counterclockwise, @w{or @minus{}1}, meaning clockwise.
+The default @w{is 1}.
+
+@t{orientation!} will have a visible effect on a circle, ellipse, or box
+only if it is dashed, or if it is one of the simple paths in a filled
+compound path.  Its effects on filling, when the "nonzero-winding" fill
+rule is used, are dramatic, since it is the orientation of each simple
+path in a compound path that determines which points are `inside' and
+which are `outside'.
+@end deffn
+
+@deffn Procedure pencolor! plotter red green blue
+@t{pencolor!} terminates and draws the path under construction (@w{if
+any}), as if @t{endpath!} had been called, and sets the pen color for all
+objects subsequently drawn on the graphics display, using a 48-bit RGB
+color model.  The arguments @var{red}, @var{green} and @var{blue}
+specify the red, green and blue intensities of the pen color.  Each is
+an integer in the range @t{0x0000}@dots{}@t{0xffff}, i.e.,
+0@dots{}65535.  The choice @w{(0, 0, 0)} signifies black, and the choice
+(65535, 65535, 65535) signifies white.
+
+HP-GL Plotters support drawing with a white pen only if the value of the
+parameter @code{HPGL_VERSION} @w{is "2"} (the default), and the value of
+the parameter @code{HPGL_OPAQUE_MODE} is "yes" (the default).
+@xref{Plotter Parameters}.
+@end deffn
+
+@deffn Procedure pencolorname! plotter name
+@t{pencolorname} sets the pen color of all objects subsequently drawn on
+the graphics display to be @var{name}.  Unrecognized colors are
+interpreted as "black".  For information on what color names are
+recognized, see @ref{Color Names}.  @w{A 24-bit} RGB color may also be
+specified as a six-digit hexadecimal string, e.g., "#c0c0c0".
+
+HP-GL Plotters support drawing with a white pen only if the value of the
+parameter @code{HPGL_VERSION} @w{is "2"} (the default) and the value of
+the parameter @code{HPGL_OPAQUE_MODE} is "yes" (the default).
+@xref{Plotter Parameters}.
+@end deffn
+
+@deffn Procedure pentype! plotter level
+@t{pentype!} terminates and draws the path under construction (@w{if
+any}), as if @t{endpath!} had been called, and sets the pen level for all
+subsequently drawn paths.  @w{A value} @w{of 1} for @var{level}
+specifies that an outline of each of these objects should be drawn, in
+the color previously specified by calling @t{pencolor} or
+@t{pencolorname}.  This is the default.  @w{A value} @w{of 0} specifies
+that outlines should not be drawn.
+
+To draw the region bounded by a path in an edgeless way, you would call
+@t{pentype!} to @w{turn off} the drawing of the boundary, and
+@t{filltype!} to @w{turn on} the filling of the interior.
+
+@t{pentype!} also affects the drawing of marker symbols and points, i.e.,
+pixels.  @w{A value} @w{of 0} specifies that they should not be drawn.
+@end deffn
+
+@deffn Procedure restorestate! plotter
+@t{restorestate!} pops the current graphics context off the stack of
+drawing states.  The graphics context consists largely of
+@code{libplot}'s drawing attributes, which are set by the attribute
+functions documented in this section.  So @w{popping off} the graphics
+context restores the drawing attributes to values they previously had.
+@w{A path} under construction is regarded as part of the graphics
+context.  For this reason, calling @t{restorestate} automatically calls
+@t{endpath} to terminate and draw the path under construction, @w{if
+any}.  All graphics contexts on the stack are @w{popped off} when
+@code{closepl!} is called, @w{as if} @code{restorestate!} had been called
+repeatedly.
+@end deffn
+
+@deffn Procedure savestate! plotter
+@t{savestate!} pushes the current graphics context onto the stack of
+drawing states.  The graphics context consists largely of
+@code{libplot}'s drawing attributes, which are set by the attribute
+functions documented in this section.  @w{A path} under construction,
+@w{if any}, is regarded as part of the graphics context.  That is
+because paths may be drawn incrementally, one line segment or arc at a
+time.  The new graphics context created by @t{savestate!} will contain no
+path.  When the previous graphics context is @w{returned to} by calling
+@t{restorestate}, the path previously under construction may be
+continued.
+@end deffn
+
+@deffn Procedure textangle! plotter angle
+@t{textangle!} take one argument, which specifies the
+angle in degrees counterclockwise from the @math{x} (horizontal) axis in
+the user coordinate system, for text strings subsequently drawn on the
+graphics display.  The default angle is zero.  (The font for plotting
+strings is fully specified by calling @t{fontname}, @t{fontsize}, and
+@t{textangle}.)  The size of the font for plotting strings, in user
+coordinates, is returned.
+
+@strong{Warning:} Some X Window System displays do not generate or
+display rotated fonts correctly.  In effect, they only support a zero
+rotation angle.
+@end deffn
+
+@node Mapping Functions,  , Attribute Functions, The Plotting Library
+@subsection Mapping functions
+
+The following are the ``mapping functions'' in @code{(plotutils plot)}.  When
+invoked on a @code{<plotter>}, they affect the affine transformation it employs
+to map the user coordinate system to the device coordinate system.
+@w{That is}, they affect the transformation matrix attribute of objects
+subsequently drawn on the graphics display.
+
+The names of these functions resemble those of the corresponding
+functions in the Postscript language.  For information on how to use
+them to draw graphics efficiently, consult any good book on Postscript
+programming, or the @cite{Postscript Language Reference Manual}.
+
+Each of these functions, if called, terminates and draws the path under
+construction (@w{if any}), as if @t{endpath!} had been called.
+
+In the current @w{Guile binding}, each of these functions takes
+a @code{<plotter>} as its first argument.
+
+@deffn Procedure setmatrix! plotter m0 m1 m2 m3 tx ty
+Use the Postscript-style transformation matrix [@var{m0} @var{m1}
+@var{m2} @var{m3} @var{tx} @var{ty}] as the transformation matrix from
+user space to NDC (normalized device coordinate) space.  This matrix
+determines the transformation matrix from user space to unnormalized
+device space, i.e., sets the transformation matrix attribute that will
+be used when subsequently drawing objects on the graphics display.
+
+In NDC space, the graphics display (i.e., viewport) has corners
+@code{(0,0)}, @code{(1,0)}, @code{(1,1)}, and @code{(0,1)}.  For
+information on the size of the graphics display in physical units, see
+@ref{Page and Viewport Sizes}.
+
+The default transformation matrix from user space to NDC space is 
+@w{[1 0 0 1 0 0]}, which means that by default, user coordinates are the 
+same as NDC coordinates.  This transformation matrix is also altered by
+@t{space!}, @t{space2!}, and by the following
+functions.
+@end deffn
+
+@deffn Procedure concat m0 m1 m2 m3 tx ty
+Modify the transformation matrix from user space to NDC space by
+pre-multiplying it by the matrix [@var{m0} @var{m1} @var{m2} @var{m3}
+@var{tx} @var{ty}].  Equivalently, apply the linear transformation
+defined by the two-by-two matrix [@var{m0} @var{m1} @var{m2} @var{m3}]
+to the user coordinate system, and then translate by @var{tx} units in
+the @w{@math{x} direction} and @w{@var{ty} units} in the @w{@math{y}
+direction}.
+
+@t{concat!} is a wrapper around the more fundamental @t{fsetmatrix}
+function.  The following three functions (@t{frotate}, @t{fscale},
+@t{translate!}) are convenience functions that are special cases of
+@t{concat!}.
+@end deffn
+
+@deffn Procedure rotate! plotter theta
+Modify the transformation matrix from user space to NDC space by
+pre-multiplying it by the matrix [cos(@var{theta}) sin(@var{theta})
+@minus{}sin(@var{theta}) cos(@var{theta}) 0 0].  Equivalently, rotate
+the user coordinate system axes about their origin by @var{theta}
+degrees counterclockwise, with respect to their former orientation.  The
+position of the user coordinate origin and the size of the @math{x}
+@w{and @math{y}} units remain unchanged.
+@end deffn
+
+@deffn Procedure scale! plotter sx sy
+Modify the transformation matrix from user space to NDC space by
+pre-multiplying it by the matrix [@var{sx} 0 0 @var{sy} 0 0].
+Equivalently, make the @math{x} and @math{y} units in the user
+coordinate system be the size of @var{sx} and @var{sy} units in the
+former user coordinate system.  The position of the user coordinate
+origin and the orientation of the coordinate axes are unchanged.
+@end deffn
+
+@deffn Procedure translate! plotter tx ty
+Modify the transformation matrix from user space to NDC space by
+pre-multiplying it by the matrix [0 0 0 0 @var{tx} @var{ty}].
+Equivalently, move the origin of the user coordinate system by @var{tx}
+units in the @w{@math{x} direction} and @w{@var{ty} units} in the
+@w{@math{y} direction}, relative to the former user coordinate system.
+The size of the @math{x} and @w{@math{y} units} and the orientation of
+the coordinate axes are unchanged.
+@end deffn
+
+@node Plotter Parameters, The Graphing Library, The Plotting Library, Reference Guide
+@section Plotter parameters
+
+In designing the @code{libplot} library, every effort was made to make
+the Plotter interface independent of the type of Plotter.  @w{To the}
+extent that Plotters display individual (i.e., instance-specific)
+behavior, that behavior is captured by a manageable number of
+@emph{Plotter parameters}.  For most parameters, the
+value is a string.
+
+The parameter values of any Plotter are constant over the lifetime of
+the Plotter, and are specified when the Plotter is created.  In the @w{Guile
+binding}, @w{a value} for any parameter is specified by calling the
+@code{setplparam!} function.  The @code{setplparam!} function acts
+on a @code{<plparams>} object, which encapsulates Plotter
+parameters.  When a @code{<plotter>} is created by calling @code{newpl},
+a @code{<plparams>} object is passed as the final
+argument.
+
+If at @code{<plotter>} creation time a parameter is @emph{not} specified, its
+default value will be used, unless the parameter is string-valued and
+there is an environment variable of the same name, in which case the
+value of that environment variable will be used.  This rule increases
+run-time flexibility: @w{an application} programmer may allow
+non-critical @code{<plotter>} parameters to be specified by the user via
+environment variables.
+
+The following are the currently recognized parameters (unrecognized ones
+are ignored).  The most important ones are @code{DISPLAY}, which affects
+@w{X Plotters}, @code{BITMAPSIZE}, which affects @w{X Plotters}, PNG
+Plotters, PNM Plotters, and GIF Plotters, @code{PAGESIZE}, which affects
+Illustrator, Postscript, CGM, Fig, and HP-GL Plotters, and
+@code{ROTATION}, which affects all Plotters except Metafile Plotters.
+These four parameters are listed first and the others alphabetically.
+Most of the remaining parameters, such as the several whose names begin
+with "HPGL", affect only a single type of Plotter.
+
+@table @code
+@item @t{DISPLAY}
+(Default NULL@.)  The @w{X Window} System display on which the graphics
+display will be @w{popped up}, as an @w{X window}.  This is relevant
+only to @w{X Plotters}.
+
+@item BITMAPSIZE
+(Default "570x570".)  The size of the graphics display (i.e., the
+viewport) in terms of pixels.  This is relevant only to @w{X Plotters},
+PNG Plotters, PNM Plotters, and GIF Plotters.  For @w{X Plotters}, the
+value of this parameter will automatically, if it is not set, be taken
+from the @w{X resource} @code{Xplot.geometry}.  That is for backward
+compatibility.
+
+X Plotters support precise positioning of the graphics display.  For
+example, if @code{BITMAPSIZE} is "570x570+0+0" then it will be
+positioned in the upper left corner of the @w{X Window} System display.
+
+@item PAGESIZE
+(Default "letter".)  The page type, which determines the size of the
+graphics display (i.e., the viewport) used by the Plotter.  This is
+relevant only to SVG, Illustrator, Postscript, CGM, Fig, PCL, and HP-GL
+Plotters.  "letter" means an 8.5@dmn{in} by 11@dmn{in} page.  Any ISO
+page size in the range "a0"@dots{}"a4" or ANSI page size in the range
+"a"@dots{}"e" may be specified ("letter" is an alias @w{for "a"} and
+"tabloid" is an alias @w{for "b"}).  "legal", "ledger", @w{and "b5"} are
+recognized page sizes also.
+
+For Illustrator, Postscript, PCL and Fig Plotters, the graphics
+display will be, by default, a square region centered on the specified
+page.  (For example, it will be a centered 8@dmn{in} square if
+@code{PAGESIZE} is "letter".)  For HP-GL Plotters, it will be a square
+region of the same size, but will not @w{by default} be centered.  SVG
+format and WebCGM format have no notion of the Web page on which the
+graphics display will ultimately be positioned.  They do have a notion
+of default display size, though this will normally be overridden when
+the SVG or WebCGM file is placed on a Web page.  For this default
+display size, SVG and CGM Plotters will use the same graphics display
+size that is used by other Plotters.
+
+For the default size (and location) of the graphics display for each
+page type, see @ref{Page and Viewport Sizes}.  You do not need to use
+the default size, since either or both of its dimensions can be
+specified explicitly.  For example, @code{PAGESIZE} could be specified
+as "letter,xsize=4in", or "a4,xsize=10cm,ysize=15cm".  The dimensions
+are allowed to be negative (@w{a negative} dimension results in a
+reflection).
+
+For Plotters other than SVG and CGM Plotters, the position of the
+graphics display on the page, relative to its default position, can be
+adjusted by specifying an offset vector.  For example, @code{PAGESIZE}
+could be specified as "letter,yoffset=1.2in", or
+"a4,xoffset=@minus{}5mm,yoffset=2.0cm".  Inches, centimeters, and
+millimeters are the supported units.  The "xoffset" and "yoffset"
+options may be used in conjunction with "xsize" and "ysize".
+
+@w{It is} also possible to position the graphics display precisely, by
+specifying the location of its lower left corner relative to the lower
+left corner of the page.  For example, @code{PAGESIZE} could be
+specified as "letter,xorigin=2in,yorigin=3in", or
+"a4,xorigin=0.5cm,yorigin=0.5cm".  The "xorigin" and "yorigin" options
+may be used in conjunction with "xsize" and "ysize".  SVG and WebCGM
+Plotters ignore the "xoffset", "yoffset", "xorigin", and "yorigin"
+options, since SVG format and WebCGM format have no notion of the Web
+page on which the graphics display will ultimately be positioned.
+
+@item ROTATION
+(Default "0.0".)  Relevant to all Plotters other than Metafile
+Plotters, which have no output device.  The angle, in degrees, by
+which the graphics display (i.e., the viewport) should be rotated,
+relative to its default orientation.  The rotation is
+counterclockwise.
+
+A rotated viewport does not change the position of its four corners.
+Rather, the graphics are rotated @w{within it}.  @w{If the} viewport is
+rectangular rather than square, this `rotation' necessarily includes a
+rescaling.
+
+This parameter is useful for switching between portrait and landscape
+orientations.  Internally, it determines the affine transformation from
+NDC (normalized device coordinate) space to device space.
+
+@item BG_COLOR
+(Default "white".)  The initial background color of the graphics
+display, when drawing each page of graphics.  This is relevant to @w{X
+Plotters}, PNG Plotters, PNM Plotters, GIF Plotters, CGM Plotters, ReGIS
+Plotters, and Metafile Plotters; also to @w{X Drawable Plotters} (for
+the last, the background color @w{shows up} only if @code{erase} is
+invoked).  For information on what color names are recognized, see
+@ref{Color Names}.  The background color may be changed at any later
+time by invoking the @t{bgcolor} (or @t{bgcolorname}) and @t{erase}
+operations.
+
+SVG Plotters and CGM Plotters support "none" as a value for the
+background color.  It will @w{turn off} the background: the drawn
+objects will not be backed by anything.  This is useful when the
+generated SVG or WebCGM file is to be placed on a Web page.
+
+@item CGM_ENCODING
+(Default "binary".)  Relevant only to CGM Plotters.  "binary" means that
+the CGM output should use the binary encoding.  "clear_text" means that
+the CGM output should use a human-readable encoding.  The WebCGM profile
+requires that the binary encoding be used, but many CGM viewers and
+interpreters can also parse the clear text encoding.  The third standard
+CGM encoding, "character", is not currently supported.
+
+@item CGM_MAX_VERSION
+(Default "4".)  Relevant only to CGM Plotters.  An upper bound on the
+version number of CGM format that is produced.  Many older CGM
+interpreters and viewers, such as the ones built into Microsoft Office
+and other commercial software, only support @w{version 1} CGM files.
+For fully adequate handling of fonts and line styles, @w{version 3} is
+necessary.  By default, the present release of @code{libplot} produces
+@w{version 3} CGM files, i.e., it does not use @w{version 4} features.
+
+@item EMULATE_COLOR
+(Default "no".)  Relevant to all Plotters.  "yes" means that each color
+in the output should be replaced by an appropriate shade of gray.  The
+well known formula for CIE luminance, namely @math{0.212671R + 0.715160G
++ 0.072169B}, is used.
+
+This parameter is seldom useful, except when using a PCL Plotter to
+prepare output for a monochrome @w{PCL 5} device.  Many monochrome
+@w{PCL 5} devices, such as monochrome LaserJets, do a poor job of
+emulating color on their own.  They usually map HP-GL/2's seven standard
+pen colors, including even yellow, to black.
+
+@item GIF_ANIMATION
+(Default "yes".)  Relevant only to GIF Plotters.  "yes" means that the
+@code{erase} operation will have special semantics: with the exception
+of its first invocation, it will act as a separator between successive
+images in the written-out pseudo-GIF file.  @w{"no" means} that
+@code{erase} should act as it does on other Plotters that do not write
+graphics in real time, i.e., @w{it should} erase the image under
+construction by filling it with the background color.  @w{If "no"} is
+specified, the pseudo-GIF file will contain only a single image.
+
+@item GIF_DELAY
+(Default "0".)  Relevant only to GIF Plotters.  The delay, in hundredths
+of a second, after each image in a written-out animated pseudo-GIF file.
+The value should be an integer in the range "0"@dots{}"65535".
+
+@item GIF_ITERATIONS
+(Default "0".)  Relevant only to GIF Plotters.  The number of times that
+an animated pseudo-GIF file should be `looped'.  The value should be an
+integer in the range "0"@dots{}"65535".
+
+@item HPGL_ASSIGN_COLORS
+(Default "no".)  Relevant only to HP-GL Plotters, and only if the value
+of @code{HPGL_VERSION} @w{is "2"}.  @w{"no" means} to draw with a fixed
+set of pens, specified by setting the @code{HPGL_PENS} parameter.  "yes"
+means that pen colors will not restricted to the palette specified in
+@code{HPGL_PENS}: colors will be assigned to ``logical pens'' in the
+range #1@dots{}#31, @w{as needed}.  Other than color LaserJet printers
+and DesignJet plotters, not many HP-GL/2 devices allow the assignment of
+colors to logical pens.  In particular, HP-GL/2 pen plotters do not.
+@w{So this} parameter should be used with caution.
+
+@item HPGL_OPAQUE_MODE
+(Default "yes".)  Relevant only to HP-GL Plotters, and only if the value
+of @code{HPGL_VERSION} @w{is "2"}.  "yes" means that the HP-GL/2 output
+device should be switched into opaque mode, rather than transparent
+mode.  This allows objects to be filled with opaque white and other
+opaque colors.  @w{It also} allows the drawing of visible white lines,
+which by convention are drawn with @w{pen #0}.  Not all HP-GL/2 devices
+support opaque mode or the use of @w{pen #0} to draw visible white
+lines.  In particular, HP-GL/2 pen plotters @w{do not}.  Some older
+HP-GL/2 devices reportedly malfunction if asked to switch into opaque
+mode.  @w{If the} output of an HP-GL Plotter is to be sent to such a
+device, @w{a "no"} value is recommended.
+
+@item HPGL_PENS
+(Default "1=black:2=red:3=green:4=yellow:5=blue:6=magenta:7=cyan" if the
+value of @code{HPGL_VERSION} is "1.5" @w{or "2"} and "1=black" if the
+value of @code{HPGL_VERSION} @w{is "1"}.  Relevant only to HP-GL
+Plotters.  The set of available pens; the format should be
+self-explanatory.  The color for any pen in the range #1@dots{}#31 may
+be specified.  For information on what color names are recognized, see
+@ref{Color Names}.  @w{Pen #1} must always be present, though it need
+not be black.  Any pen in the range #2@dots{}#31 may be omitted.
+
+@item HPGL_ROTATE
+(Default "0".)  Relevant only to HP-GL Plotters.  The angle, in degrees,
+by which the graphics display (i.e., the viewport) should be rotated on
+the page relative to the default orientation.  Recognized values are
+"0", "90", "180", and "270"; @w{"no" and} "yes" are equivalent to @w{"0"
+and "90"} respectively.  "180" and "270" are supported only if
+@code{HPGL_VERSION} @w{is "2"}.
+
+The rotation requested by @code{HPGL_ROTATE} is different from the sort
+requested by the @code{ROTATION} parameter.  @code{ROTATION} rotates the
+graphics display @w{in place}, but @code{HPGL_ROTATE} both rotates the
+graphics display and moves its lower left corner toward another corner
+of the page.  Altering the plotting area in such a way is supported by
+the HP-GL language.
+
+The @code{HPGL_ROTATE} parameter facilitates switching between portrait
+and landscape orientations.  For HP-GL devices that is frequently a
+concern, since some HP-GL devices (``plotters'') draw with a default
+landscape orientation, while others (``printers'') draw with a default
+portrait orientation.  There is no programmatic way of determining which
+is which.
+
+@item HPGL_VERSION
+(Default "2".)  Relevant only to HP-GL Plotters.  @w{"1" means} that the
+output should be generic HP-GL, @w{"1.5" means} that the output should
+be suitable for the HP7550A graphics plotter and the HP758x, HP7595A and
+HP7596A drafting plotters (HP-GL with some HP-GL/2 extensions), and
+@w{"2" means} that the output should be modern HP-GL/2.  @w{If the}
+version is less than "2" then the only available fonts will be vector
+fonts, and all paths will be drawn with a default thickness, so that
+invoking @t{linewidth}, @t{capmod}, @t{joinmod}, and @t{fmiterlimit}
+will have no effect.  Also, the `nonzero winding number rule' will not
+be supported when filling paths, so invoking @t{fillmod} will have no
+effect.  Additionally, if the version @w{is "1"} then the filling of
+arbitrary paths will not be supported (circles and rectangles aligned
+with the coordinate axes may be filled, however).
+
+@item INTERLACE
+(Default "no".)  Relevant only to PNG and GIF Plotters.  If the value is
+"yes", the output file will be interlaced.  That means it will be
+displayed in an interlaced (nonlinear) way by many applications.
+
+@item MAX_LINE_LENGTH
+(Default "500".)  The maximum number of defining points that a path may
+have, before it is flushed to the output device.  If this flushing
+occurs, the path will be split into two or more sub-paths, though the
+splitting should not be noticeable.  Splitting will not be performed if
+the path is to be filled.
+
+This parameter is relevant to all Plotters except Tektronix and Metafile
+Plotters.  The reason for splitting long paths is that some display
+devices (e.g., old Postscript printers and HP-GL pen plotters) have
+limited buffer sizes.  @w{It is} not relevant to Tektronix or Metafile
+Plotters, since they draw paths in real time and have no buffer
+limitations.
+
+@item META_PORTABLE
+(Default "no".)  Relevant only to Metafile Plotters.  "yes" means that
+the output metafile should use a portable (human-readable) encoding of
+graphics, rather than the default (binary) encoding.
+
+@item PCL_ASSIGN_COLORS
+(Default "no".)  Relevant only to PCL Plotters.  @w{"no" means} to draw
+with a fixed set of pens.  "yes" means that pen colors will not
+restricted to this palette: colors will be assigned to ``logical pens'',
+@w{as needed}.  Other than color LaserJet printers, not many @w{PCL 5}
+devices allow the assignment of colors to logical pens.  @w{So this}
+parameter should be used with caution.
+
+@item PCL_BEZIERS
+(Default "yes".)  Relevant only to PCL Plotters.  @w{"yes" means} that
+when drawing Bezier curves, the special `Bezier instructions' will be
+used.  @w{"no" means} that these instructions will not be used.
+Instead, each Bezier curve will be approximated and drawn as a polygonal
+line.  Other than the LaserJet III, which was Hewlett--Packard's first
+@w{PCL 5} printer, all Hewlett--Packard's @w{PCL 5} printers support the
+Bezier instructions.
+
+@item PNM_PORTABLE
+(Default "no".)  Relevant only to PNM Plotters.  "yes" means that the
+output should be in a portable (human-readable) version of PBM/PGM/PPM
+format, rather than the default (binary) version.  `Portable' is
+something of a misnomer, since binary PBM/PGM/PPM files are also
+portable, in the sense that they are machine-independent.
+
+@item TERM
+(Default NULL@.)  Relevant only to Tektronix Plotters.  If the value is
+a string beginning with "xterm", "nxterm", or "kterm", @w{it is} taken
+as a sign that the current application is running in an @w{X Window}
+System VT100 terminal emulator: @w{an @code{xterm}}, @code{nxterm}, or
+@code{kterm}.  Before drawing graphics, a Tektronix Plotter will emit an
+escape sequence that causes the terminal emulator's auxiliary Tektronix
+window, which is normally hidden, to @w{pop up}.  After the graphics are
+drawn, an escape sequence that returns control to the original VT100
+window will be emitted.  The Tektronix window will remain on the screen.
+
+If the value is a string beginning with "kermit", "ansi.sys", or
+"nansi.sys", @w{it is} taken as a sign that the current application is
+running in the VT100 terminal emulator provided by the MS-DOS version of
+@code{kermit}.  Before drawing graphics, a Tektronix Plotter will emit
+an escape sequence that switches the terminal emulator to Tektronix
+mode.  Also, some of the Tektronix control codes emitted by the Plotter
+will be @code{kermit}-specific.  There will be a limited amount of color
+support, which is not normally the case (the 16 @code{ansi.sys} colors
+will be supported).  The "dotdotdashed" line style will be supported,
+which is also not normally the case.  After drawing graphics, the
+Plotter will emit an escape sequence that returns the emulator to VT100
+mode.  The key sequence `@w{ALT minus}' may be employed manually within
+@code{kermit} to switch between the two modes.
+
+@item TRANSPARENT_COLOR
+(Default "none".)  Relevant only to PNG and GIF Plotters.  If the value
+is a recognized color name, that color, if it appears in the output
+file, will be treated as transparent by most applications.  For
+information on what names are recognized, see @ref{Color Names}.
+
+If @code{TRANSPARENT_COLOR} is set and an animated pseudo-GIF file is
+produced, the `restore to background' disposal method will be used for
+each image in the file.  Otherwise, the `unspecified' disposal method
+will be used.
+
+@item USE_DOUBLE_BUFFERING
+(Default "no".)  Relevant only to X Plotters and X Drawable Plotters.
+@w{If the} value is "yes", a double buffering scheme will be used when
+drawing graphics.  Each frame of graphics, within a
+@t{openpl}@dots{}@t{closepl} pair, will be written to an off-screen
+buffer rather than to the Plotter's display.  When @t{erase} is invoked
+to end a frame, or when @t{closepl} is invoked, the contents of the
+off-screen buffer will be copied to the Plotter's display, pixel by
+pixel.  If successive frames differ only slightly, this will create the
+illusion of smooth animation.
+
+Some X displays provide special hardware support for double buffering.
+@w{If this} support is available, the @w{X Plotter} will detect its
+presence, and will draw graphics using the appropriate extension to the
+X11 protocol (either DBE or MBX).  In this case the animation will be
+significantly faster; on high-end graphics hardware, @w{at least}.
+
+@item VANISH_ON_DELETE
+(Default "no".)  Relevant only to X Plotters.  If the value is "yes",
+when a Plotter is deleted, the window or windows that it has @w{popped
+up} will vanish.  Otherwise, each such window will remain on the screen
+until it is removed by the user (by typing @samp{q} @w{in it}, or by
+clicking with a mouse).
+
+@item XDRAWABLE_COLORMAP
+(Default NULL@.)  Relevant only to @w{X Drawable Plotters}.  If the
+value is non-NULL, it should be a @code{Colormap *}, @w{a pointer} to a
+colormap from which colors should be allocated.  NULL indicates that the
+colormap to be used should be the default colormap of the default screen
+of the @w{X display}.
+
+@item XDRAWABLE_DISPLAY
+(Default NULL@.)  Relevant only to X Drawable Plotters.  The value
+should be a @code{Display *}, @w{a pointer} to the @w{X display} with
+which the drawable(s) to be @w{drawn in} are associated.
+
+@item XDRAWABLE_DRAWABLE1
+@itemx XDRAWABLE_DRAWABLE2
+(Default NULL@.)  Relevant only to X Drawable Plotters.  If set, the
+value of each of these parameters should be a @code{Drawable *}, a
+pointer to a drawable to be @w{drawn in}.  @w{A `drawable'} is either a
+window or a pixmap.  At the time an @w{X Drawable} Plotter is created,
+@w{at least} one of the two parameters must be set.
+
+@w{X Drawable} Plotters support simultaneous drawing in two drawables
+because it is often useful to be able to draw graphics simultaneously in
+both an @w{X window} and its background pixmap.  If two drawables are
+specified, they must have the same dimensions and depth, and be
+associated with the same screen of the @w{X display}.
+
+@item XDRAWABLE_VISUAL
+(Default NULL@.)  Relevant only to @w{X Drawable Plotters}.  If set, the
+value should be a @code{Visual *}, @w{a pointer} to the `visual' with
+which the colormap (see above) is associated.  Setting this parameter is
+not required, but it is recommended that it be set if
+@code{XDRAWABLE_COLORMAP} is set.  Under some circumstances, that will
+@w{speed up} color cell allocation.
+
+@item X_AUTO_FLUSH
+(Default "yes".)  Relevant only to X Plotters.  If the value is "yes",
+an @code{XFlush} operation is performed after each drawing operation.
+That ensures that graphics are flushed to the @w{X Window} System
+display, and are visible to the user, immediately after they are drawn.
+However, it slows down rendering considerably.  @w{If the} value is
+"no", drawing is faster, since it does not take place in real time.
+@end table
+ The Graphing Library
+@node The Graphing Library, graph Environment, Plotter Parameters, Reference Guide
+@section The Graphing Library
+
+The @code{(plotutils graph)} library is mostly the @code{graph}
+procedure, a single procedure with dozens of options
+
+@deffn Procedure graph ylist
+@deffnx Procedure graph xlist ylist
+@deffnx Procedure graph yproc xstart xend
+@deffnx Procedure graph yproc xstart xend xstep
+@t{graph} can take up to four arguments.
+
+To plot sampled data, @code{graph} is called either with one list or two
+lists of floating point data.  When called with one list, the abscissa
+will be created automatically. When called with two lists, they must be
+equal length with one being the x-data and the other being the y-data.
+
+To plot more than one set of sampled data on a plot, two lists can be
+joined using the @code{merge} procedure.
+@example
+(graph (merge xlist1 xlist2) (merge ylist1 ylist2))
+@end example
+
+To plot a single-valued function -- a procedure that takes one numeric
+argument and returns one numeric argument -- @code{graph} can be called
+with a procedure and two or three arguments that define the x-range of
+the abcissa.  When called with @var{xstart} and @var{xend} but not
+@var{xstep} a default number of samples will be computed from the
+procedure: a few hundred points.  When @var{xstep} is included, it will
+be the step size of the samples.
+
+There are a couple dozen optional parameters.
+@end deffn
+
+@menu
+* Plot Options::
+@end menu
+
+@node Plot Options,  , The Graphing Library, The Graphing Library
+@subsection Plot options
+
+@table @samp
+@item #:output-format  @var{type}
+(String, default "meta".)  Select an output format of type @var{type},
+which may be one of the strings "X", "png", "pnm", "gif", "svg", "ai",
+"ps", "cgm", "fig", "pcl", "hpgl", "regis", "tek", and "meta".  These
+refer respectively to the @w{X Window System}, PNG format, portable
+anymap (PBM/PGM/PPM) format, pseudo-GIF format, the XML-based Scalable
+Vector Graphics format, the format used by Adobe Illustrator,
+@code{idraw}-editable Postscript, the WebCGM format for Web-based
+vector graphics, the format used by the @code{xfig} drawing editor,
+the Hewlett--Packard @w{PCL 5} printer language, the Hewlett--Packard
+Graphics Language (@w{by default}, HP-GL/2), the ReGIS (remote
+graphics instruction set) format developed @w{by DEC}, Tektronix
+format, and device-independent GNU graphics metafile format.
+
+@item #:toggle-axis-end @var{x|y}
+(String)
+Set the position of the indicated axis to be on the other end of the
+plotting box from what is currently the case.  E.g., @samp{#:toggle-axis-end ``y''} will
+cause the @math{y} axis to appear on the right of the plot rather than
+the left, which is the default.  Similarly, @samp{#:toggle-axis-end ``x''} will cause the
+@w{@math{x} axis} to appear at the top of the plot rather than the
+bottom.  Note that if the @w{@math{x} axis} appears at the top, @w{no
+plot} title will be drawn, since there will be no room.
+
+@item #:font-size @var{size}
+(Float, default 0.0525.)  Set the size of the font used for the axis and
+tick labels to be @var{size}.  The size is specified as a fraction of
+the minimum dimension (width or height) of the plotting box.
+
+@item #:font-name @var{font_name}
+(String, default "Helvetica" except for @code{pcl}, for which
+"Univers" is the default, and @code{png}, @code{pnm},
+@code{gif}, @code{hpgl}, @code{regis},
+@code{tek}, and raw @code{graph}, for all of which
+"HersheySerif" is the default.)  Set the font used for the axis and tick
+labels, and for the plot title @w{(if any)}, to be @var{font_name}.  The
+choice of font for the plot title may be overridden with the
+@samp{#:title-font-name} option (see below).  Font names are
+case-insensitive.  @w{If the} specified font is not available, the
+default font will be used.  Which fonts are available depends on which
+@samp{-T} option is used.  For a list of all fonts, see @ref{Text
+Fonts}. 
+
+@item #:grid-style @var{grid_style}
+(Integer in the range 0@dots{}4, default 2.)  Set the grid style for the
+plot to be @var{grid_style}.  Grid styles 0 @w{through 3} are
+progressively more fancy, but @w{style 4} is a somewhat different style.
+
+@enumerate 0
+@item no axes, tick marks or labels.
+@item a pair of axes, with tick marks and labels.
+@item box around plot, with tick marks and labels.
+@item box around plot, with tick marks and labels; also grid lines.
+@item axes intersect at the origin, with tick marks and labels.
+@end enumerate
+
+@item #:height-of-plot @var{height}
+(Float, default 0.6.)  Set the fractional height of the plot with
+respect to the height of the display (or virtual display, in the case of
+a multiplot) to be @var{height}.  @w{A value} of 1.0 will produce a
+plotting box that fills the entire available area.  Since labels and
+tick marks may be placed outside the plotting box, values considerably
+less than 1.0 are normally chosen.
+
+@item #:toggle-frame-on-top
+Toggle whether or not a copy of the plot frame should be drawn on top of
+the plot, @w{as well} as @w{beneath it}.  This option is useful when the
+plotted dataset(s) project slightly beyond the frame, which can happen
+if a large line thickness or symbol size is specified.
+
+@item #:tick-size @var{length}
+(Float, default .02.)  Set the length of the tick marks on each axis to
+be @var{length}.  @w{A value} of 1.0 produces tick marks whose length is
+equal to the minimum dimension (width or height) of the plotting box.
+@w{A negative} @var{length} yields tick marks that extend outside the
+box, rather than inside.
+
+@item #:clip-mode @var{clip_mode}
+(Integer, default 1.)  Set the clip mode for the plot to
+@var{clip_mode}.  The clip mode is relevant only if data points are
+being joined by a line, and the line is not being filled to create a
+filled region (since filled regions are clipped in a fixed way).  
+
+There are three clip modes: 0, 1, @w{and 2}.  They have the same meaning
+as in the @code{gnuplot} plotting program.  Clip @w{mode 0} means that a
+line segment joining two data points will be plotted only if neither
+point is outside the plotting box.  Clip @w{mode 1} means that it will
+be plotted if no more than one of the two points is outside, and clip
+@w{mode 2} means that it will be plotted even if both are outside.
+@w{In all} three clip modes the line segment will be clipped to the
+plotting box.
+
+@item #:toggle-log-axis @var{x|y}
+(String)
+Set the specified axis to be a log axis rather than a linear axis, or
+vice versa.  By default, both axes are linear axes.
+
+@item #:top-label @var{top_label}
+(String, default empty.)  Place the text string @var{top_label} above
+the plot, as its `top label', i.e., title.  The string may include
+escape sequences (@pxref{Text String Format}).  The
+@samp{--title-font-size} option may be used to specify the size of the
+font.  The font is normally the same as the font used for labeling axes
+and ticks, as selected by the @samp{-F} option.  But this can be
+overridden with the @samp{--title-font-name} option.
+
+@item #:toggle-no-ticks @var{x|y}
+(string)
+Toggle the presence of ticks and tick labels on the specified axis.
+This applies to the grid styles that normally include ticks and tick
+labels, i.e., grid styles 1, 2, 3, @w{and 4}.
+
+@item #:toggle-rotate-y-label
+Position the label on the @math{y} axis (which is set with the
+@samp{-Y} option) horizontally instead of vertically, or vice versa.
+By default, the label is rotated, so that it is parallel to the
+@w{@math{y} axis}.  But some output devices (e.g., old @w{X Window}
+System displays, and buggy new ones) cannot handle rotated fonts.  So
+if you specify @samp{-T X}, you may also @w{need @samp{-Q}}.
+
+@item #:right-shift @var{right}
+(Float, default 0.2.)  Move the plot to the right by a fractional amount
+@var{right} with respect to the width of the display (or virtual
+display, in the case of a multiplot).  This produces a margin on the
+left side of the plotting box.  @w{A value} of 0.5 will produce a margin
+half the width of the available area.  Note that the tick marks and
+labels are drawn in the margin.
+
+@item #:toggle-round-to-next-tick @var{x|y}
+(string)
+Toggle whether or not the upper and lower limits of the specified axis
+should be expanded, so that they both become integer multiples of the
+spacing between labeled tick marks.
+
+This option is meaningful whenever the user specifies either or both of
+the limits, by using the @samp{-x} or @samp{-y} option.  @w{If the} user
+leaves both limits unspecified, they will always be chosen to satisfy
+the `integer multiple' constraint.
+
+@item #:save-screen
+Save the screen.  This option requests that @code{graph} not erase the
+output device before it begins to plot.  
+
+This option is relevant only to @code{graph -T tek} and raw
+@code{graph}.  Tektronix displays and emulators are persistent, in the
+sense that previously drawn graphics remain visible.  So by repeatedly
+using @code{graph -T tek -s}, you can @w{build up} a multiplot.
+
+@item #:toggle-transpose-axes
+Transpose the abscissa and ordinate.  This causes the axes to be
+interchanged, and the options that apply to each axis to be applied to
+the opposite axis.  That is, data points are read in as @math{(y, x)}
+pairs, and such options as @samp{-x} and @samp{-X} apply to the
+@w{@math{y} axis} rather than the @w{@math{x} axis}.  @w{If the}
+@samp{#:input-format e} option is in force, so that the data points are read with
+error bars, the orientation of the error bars will be switched between
+vertical and horizontal.
+
+@item #:upward-shift @var{up}
+(Float, default 0.2.)  Move the plot up by a fractional amount @var{up}
+with respect to the height of the display (or virtual display, in the
+case of a multiplot).  This produces a margin below the plotting box.
+@w{A value} of 0.5 will produce a margin half the height of the
+available area.  Note that the tick marks and labels are drawn in the
+margin.
+
+@item #:width-of-plot @var{width}
+(Float, default 0.6.)  Set the fractional width of the plot with respect
+to the width of the display (or virtual display, in the case of a
+multiplot) to be @var{width}.  @w{A value} of 1.0 will produce a
+plotting box that fills the entire available area.  Since labels and
+tick marks may be placed outside the plotting box, values considerably
+less than 1.0 are normally chosen.
+
+@item #:x-limits [@var{lower_limit} [@var{upper_limit} [@var{spacing}]]]
+(Floats.) The arguments @var{lower_limit} and @var{upper_limit} specify
+the limits of the @w{@math{x} axis}, and the optional argument
+@var{spacing} specifies the spacing of labeled ticks along the axis.
+@w{If any} of the three arguments is missing or is supplied @w{as
+@samp{-}} (i.e., as a single hyphen), @w{it is} computed from the data.
+Both arguments @var{lower_limit} and @var{upper_limit} must be present
+if @code{graph} is to act as a real-time filter.
+
+By default, the supplied limit(s) are strictly respected.  However, the
+@samp{#:toggle-round-to-next-tick x} option may be used to request that they be rounded to the
+nearest integer multiple of the spacing between labeled ticks.  The
+lower limit will be rounded downward, and the upper limit upward.
+
+@item #:x-label @var{x_label}
+(String, default empty.)  Set the label for the @math{x} axis to be the text
+string @var{x_label}.  The string may include escape sequences
+(@pxref{Text String Format}).  The @samp{#:font-size} and @samp{#:font-name} options may
+be used to specify the name of the font and the size of the font.
+
+@item #:y-limits [@var{lower_limit} [@var{upper_limit} [@var{spacing}]]]
+(Floats.)  The arguments specify the limits of the @math{y} axis, and
+the spacing of labeled ticks along it, as for the @w{@math{x} axis} (see
+above).  Both arguments @var{lower_limit} and @var{upper_limit} must be
+present if @code{graph} is to act as a real-time filter.
+
+By default, the supplied limit(s) are strictly respected.  However, the
+@samp{#:toggle-round-to-next-tick y} option may be used to request that they be rounded to the
+nearest multiple of the tick spacing.  The lower limit will be rounded
+downward, and the upper limit upward.
+
+@item #:y-label @var{y_label}
+(String, default empty.)  Set the label for the @math{y} axis to be
+the text string @var{y_label}.  The string may include escape
+sequences (@pxref{Text String Format}).  The label will be rotated by
+90 degrees so that it is parallel to the axis, unless the @samp{-Q}
+option is used.  (Some @w{X Window} System displays, both old and new,
+do not properly support rotated labels, so that if you specify
+@samp{#:output-format X}, you may also need @samp{#:toggle-rotate-y-label}.)  The @samp{#:font-size} and
+@samp{#:font-name} options can be used to specify the name of the font and the
+size of the font.
+
+@item #:bg-color @var{name}
+(String, default "white".)  Set the color used for the plot background
+to be @var{name}.  This is relevant only to @code{graph @w{#:output-format ``X''}},
+@code{#:output-format ``png''}, @code{pnm}, @code{gif},
+@code{cgm}, @code{regis}, and @code{meta}.
+@w{An unrecognized} name sets the color to the default.  For information
+on what names are recognized, see @ref{Color Names}.  The environment
+variable @code{BG_COLOR} can equally well be used to specify the
+background color.
+
+If the @samp{#:output-format ``png''} or @samp{#:output-format ``gif''} option is used, a transparent PNG
+file or a transparent pseudo-GIF, respectively, may be produced by
+setting the @code{TRANSPARENT_COLOR} environment variable to the name of
+the background color.  @xref{graph Environment}.  @w{If the}
+@samp{#:output-format ``svg''} or @samp{#:output-format ``cgm''} option is used, an output file without a
+background may be produced by setting the background color to "none".
+
+@item #:bitmap-size @var{bitmap_size}
+(String, default "570x570".)  Set the size of the graphics display in
+which the plot will be drawn, in terms of pixels, to be
+@var{bitmap_size}.  This is relevant only to @code{graph @w{X}},
+@code{png}, @code{pnm}, and @code{gif}, for
+all of which the size can be expressed in terms of pixels.  The
+environment variable @code{BITMAPSIZE} may equally well be used to
+specify the size.
+
+The graphics display used by @code{X} is a popped-up @w{X
+window}.  Command-line positioning of this window on an @w{X Window}
+System display is supported.  For example, if @var{bitmap_size} is
+"570x570+0+0" then the window will be @w{popped up} in the upper left
+corner.
+
+If you choose a rectangular (non-square) window size, the fonts in the
+plot will be scaled anisotropically, i.e., by different factors in the
+horizontal and vertical direction.  Any font that cannot easily be
+anisotropically scaled will be replaced by a default scalable font,
+such as the Hershey vector font "HersheySerif".
+
+For backward compatibility, @code{X} allows the user to set the
+window size and position by setting the @w{X resource}
+@code{Xplot.geometry}, instead of @samp{#:bitmap-size} or
+@code{BITMAPSIZE}@.
+
+@item #:emulate-color @var{option}
+(String, default "no".)  If @var{option} is "yes", replace each color in
+the output by an appropriate shade of gray.  This is seldom useful,
+except when using @samp{#:output-format ``pcl''} to prepare output for a @w{PCL 5}
+device.  (Many monochrome @w{PCL 5} devices, such as monochrome
+LaserJets, do a poor job of emulating color on their own.  They usually
+map HP-GL/2's seven standard pen colors, including even yellow, to
+black.)  You may equally well request color emulation by setting the
+environment variable @code{EMULATE_COLOR} to "yes".
+
+@item #:frame-color @var{name}
+(String, default "black".)  Set the color used for drawing the plot
+frame, and for drawing monochrome datasets @w{(if any)} to be
+@var{name}.  @w{An unrecognized} name sets the color to the default.
+For information on what names are recognized, see @ref{Color Names}.
+
+@item #:frame-line-width @var{frame_line_width}
+(Float, default @minus{}1.0.)  Set the thickness of lines in the plot
+frame, as a fraction of the size (i.e., minimum dimension) of the
+graphics display, to @var{frame_line_width}.  @w{A negative} value means
+that the default value for the line thickness provided by the GNU
+@code{libplot} graphics library should be used.  This is usually 1/850
+times the size of the display, although if @samp{X}, @samp{png},
+@samp{pnm}, or @samp{gif} is specified, it is zero.  By
+convention, a zero-thickness line is the thinnest line that can be
+drawn.  This is the case in all output formats.  Note, however, that the
+drawing editors @code{idraw} and @code{xfig} treat zero-thickness lines
+as invisible.
+
+@code{tek} and @code{regis} do not support drawing
+lines with other than a default thickness, and @code{hpgl} does
+not support @w{doing so} if the environment variable @code{HPGL_VERSION}
+is set to a value less @w{than "2"} (the default).
+
+@item #:max-line-length @var{max_line_length}
+(Integer, default 500.)  Set the maximum number of points that a
+polygonal line drawn through any dataset may contain, before it is
+flushed to the output device, to equal @var{max_line_length}.  @w{If
+this} flushing occurs, the polygonal line will be split into two or more
+sub-lines, though the splitting should not be noticeable.  Splitting
+will not take place if the @samp{#:fill-fraction} option, which requests filling, is
+used.
+
+The reason for splitting long polygonal lines is that some display
+devices (e.g., old Postscript printers and HP-GL pen plotters) have
+limited buffer sizes.  The environment variable @code{MAX_LINE_LENGTH}
+can also be used to specify the maximum line length.  This option has no
+effect on @code{tek} or raw @code{graph}, since they draw
+polylines in real time and have no buffer limitations.
+
+@item #:page-size @var{pagesize}
+(String, default "letter".)  Set the size of the page on which the plot
+will be positioned.  This is relevant only to @code{#:output-format ``svg''},
+@code{ai}, @code{ps}, @code{cgm}, @code{fig}, @code{pcl}, and @code{hpgl}.  "letter" means
+an 8.5@dmn{in} by 11@dmn{in} page.  Any ISO page size in the range
+"a0"@dots{}"a4" or ANSI page size in the range "a"@dots{}"e" may be
+specified ("letter" is an alias @w{for "a"} and "tabloid" is an alias
+@w{for "b"}).  "legal", "ledger", @w{and "b5"} are recognized page sizes
+also.  The environment variable @code{PAGESIZE} can equally well be used
+to specify the page size.
+
+For @code{ai}, @code{ps}, @code{pcl}, and
+@code{fig}, the graphics display (or `viewport') within which
+the plot is drawn will be, by default, a square region centered on the
+specified page.  For @code{graph -T hpgl}, it will be a square region of
+the same size, but may be positioned differently.  Either or both of the
+dimensions of the graphics display can be specified explicitly.  For
+example, @var{pagesize} could be specified as "letter,xsize=4in", or
+"a4,xsize=10cm,ysize=15cm".  The dimensions are allowed to be negative
+(@w{a negative} dimension results in a reflection).
+
+The position of the graphics display, relative to its default
+position, may optionally be adjusted by specifying an offset vector.
+For example, @var{pagesize} could be specified as
+"letter,yoffset=1.2in", or "a4,xoffset=@minus{}5mm,yoffset=2.0cm".
+@w{It is} also possible to position the graphics display precisely, by
+specifying the location of its lower left corner relative to the lower
+left corner of the page.  For example, @var{pagesize} could be
+specified as "letter,xorigin=2in,yorigin=3in", or
+"a4,xorigin=0.5cm,yorigin=0.5cm".  The preceding options may be
+intermingled.  
+
+@code{svg} and @code{cgm} ignore the "xoffset",
+"yoffset", "xorigin", and "yorigin" options, since SVG format and
+WebCGM format have no notion of the Web page on which the graphics
+display will ultimately be positioned.  However, they do respect the
+"xsize" and "ysize" options.  For more on page sizes, see @ref{Page
+and Viewport Sizes}.
+
+@item #:pen-colors @var{colors}
+(String, default "1=red:2=green:3=blue:4=magenta:5=cyan".)  Set the
+colors of the pens used for drawing plots, as numbered, to be
+@var{colors}.  The format should be self-explanatory.  @w{An
+unrecognized} name sets the corresponding color to the default.  For
+information on what names are recognized, see @ref{Color Names}.
+
+@item #:rotation @var{angle}
+(Integer, default 0.)  Set the rotation angle of the graphics display
+to be @var{angle} degrees.  The rotation is counterclockwise.  The
+environment variable @code{ROTATION} can equally well be used to
+specify the rotation angle.
+
+This option is used for switching between portrait and landscape
+orientations, which have rotation angles @w{0 and} 90 degrees
+respectively.  Postmodernists may also find it useful.
+
+@item #:title-font-name @var{font_name}
+(String, default "Helvetica" except for @code{#:output-format ``pcl''}, for which
+"Univers" is the default, and @code{png}, @code{pnm},
+@code{gif}, @code{hpgl}, @code{regis}, and
+@code{tek}, for all of which "HersheySerif" is the default.)
+Set the font used for the plot title to be @var{font_name}.  Normally
+the font used for the plot title is the same as that used for labeling
+the axes and the ticks along the axes, as specified by the @samp{#:font-name}
+option.  But the @samp{#:title-font-name} option can be used to override
+this.  Font names are case-insensitive.  @w{If the} specified font is
+not available, the default font will be used.  Which fonts are available
+depends on which @samp{#:output-format} option is used.  For a list of all fonts, see
+@ref{Text Fonts}.
+
+@item #:title-font-size @var{size}
+(Float, default 0.07.)  Set the size of the font used for the top label
+(`title'), as specified by the @samp{#:top-label} option, to be @var{size}.  The
+size is specified as a fraction of the minimum dimension (width or
+height) of the plotting box.
+
+@item #:auto-abscissa [@var{step_size} [@var{lower_limit}]]
+(Floats, defaults 1.0 and 0.0.) Automatically generate abscissa
+(@math{x}) values.  Irrespective of data format (@samp{a}, @samp{e},
+@samp{f}, @samp{d}, @w{or @samp{i}}), this option specifies that the
+abscissa (@math{x}) values are missing from the input file: the
+dataset(s) to be read contain only ordinate (@math{y}) values.  The
+increment from each @w{@math{x} value} to the next will be
+@var{step_size}, and the first @w{@math{x} value} will be
+@var{lower_limit}.  @w{To return} to reading abscissa values from the
+input, i.e., for subsequent input files, you would use @samp{-a 0},
+which disables automatic generation of the abscissa values and returns
+@var{step_size} and @var{lower_limit} to their default values.
+
+@item #:toggle-auto-bump
+By default, the linemode (set with @samp{#:line-mode}, see below) is `bumped'
+(incremented by unity) at the beginning of each new dataset.  This
+option toggles auto-bumping: @w{it turns} it off if it was on, and on if
+it was off.
+@end table
+
+The following options affect the way in which individual datasets are
+drawn as part of a plot.  These options set the six `attributes' (symbol
+type, symbol font, linemode, line thickness, fill fraction, and
+color/monochrome) that each dataset has.
+
+@table @samp
+@item #:line-mode @var{line_mode}
+(Integer, default 1.)  @var{line_mode} specifies the mode (i.e., style)
+of the lines drawn between successive points in a dataset.  By
+convention, linemode #0 means no line @w{at all} (data points are
+disconnected).  @w{If the} dataset is being rendered in monochrome, the
+interpretation of @var{line_mode} is as follows.
+
+@enumerate
+@item solid
+@item dotted
+@item dotdashed
+@item shortdashed
+@item longdashed
+@end enumerate
+
+Thereafter (i.e., for @var{line_mode} greater than 5) the sequence of
+five linemodes repeats.  So besides linemode #0, there are a total of
+five distinct monochrome linemodes.  @w{If the} dataset is being
+rendered in color (as may be requested with the @samp{#:toggle-use-color} option), the
+interpretation of linemodes #1 through #5 is instead
+
+@enumerate
+@item red, solid
+@item green, solid
+@item blue, solid
+@item magenta, solid
+@item cyan, solid
+@end enumerate
+
+Linemodes #6 through #10 use the same five colors, but are dotted;
+linemodes #11 through #15 are dotdashed; linemodes #16 through #20 are
+shortdashed; and linemodes #21 through #25 are longdashed.  So besides
+linemode #0, there are a total of 25 distinct colored linemodes.  @w{A
+negative} linemode indicates that no line should be drawn, but that the
+marker symbol, @w{if any} (see below), should be in the color of the
+corresponding positive linemode.
+
+@item #:symbol [@var{symbol_number} [@var{symbol_size}]]
+(Integer and float, defaults 0 and 0.03.)  Draw a marker symbol at each
+data point.  @var{symbol_number} specifies the symbol type, and
+@var{symbol_size} specifies the font size of the symbol, as a fraction
+of the minimum dimension (width or height) of the plotting box.  @w{If
+the} dataset is being rendered in color, the symbol will have the color
+of the line that is being drawn to connect the data points.
+
+If you use the @samp{#:symbol} option, you would usually also use the
+@samp{#:line-mode} option, to request that the symbols be drawn without any line
+connecting them.  By specifying a negative argument @w{to @samp{#:line-mode}}
+(@w{a `negative} linemode'), you may obtain colored symbols.
+
+The following table lists the first few symbols (by convention,
+@w{symbol #0} means @w{no symbol} @w{at all}).
+
+@enumerate
+@item dot
+@tex
+($\thinspace\cdot\thinspace$)
+@end tex
+@item plus (@math{+})
+@item asterisk (@math{*})
+@item circle
+@tex
+($\circ$)
+@end tex
+@item cross
+@tex
+($\times$)
+@end tex
+@end enumerate
+
+Marker symbols 0@dots{}31 are furnished by the GNU @code{libplot}
+graphics library.  @xref{Marker Symbols}.  Symbol numbers greater than
+or equal @w{to 32} are interpreted as characters in a symbol font, which
+can be set with the @samp{#:symbol-font-name} option (see below).
+
+@item #:line-width @var{line_width}
+(Float, default @minus{}1.0.)  Set the thickness of the lines used to
+join successive points in a dataset, as a fraction of the size (i.e.,
+minimum dimension) of the graphics display, to @var{line_width}.  @w{A
+negative} value means that the default value for the line thickness
+provided by the GNU @code{libplot} graphics library should be used.
+This is usually 1/850 times the size of the display, although if
+@samp{X}, @samp{png}, @samp{pnm}, or @samp{gif} is
+specified, it is zero.  By convention, a zero-thickness line is the
+thinnest line that can be drawn.  This is the case in all output
+formats.  Note, however, that the drawing editors @code{idraw} and
+@code{xfig} treat zero-thickness lines as invisible.
+
+@code{tek} and @code{regis} do not support drawing
+lines with other than a default thickness, and @code{hpgl} does
+not support @w{doing so} if the environment variable @code{HPGL_VERSION}
+is set to a value less @w{than "2"} (the default).
+
+@item #:fill-fraction @var{fill_fraction}
+(Float, default @minus{}1.0.)  If successive points in a dataset are
+joined by line segments, set the shading intensity for the polygon
+formed by the line segments to be @var{fill_fraction}.  @w{A solid}
+polygon (i.e., one filled with the `pen color' used for drawing the line
+segments) is obtained by choosing @var{fill_fraction}=1.0.  The interior
+of the polygon will be white if @var{fill_fraction}=0.0.  The polygon
+will be unfilled (transparent) if @var{fill_fraction} is negative.
+
+@w{If the} polygon intersects itself, the `even-odd fill rule' will
+normally be used to determine which points are inside rather than
+outside, i.e., to determine which portions of the polygon should be
+shaded.  The even-odd fill rule is explained in the @cite{Postscript
+Language Reference Manual}.
+
+This option has no effect on @code{tek}, and it is
+only partly effective in @code{hpgl} if the environment
+variable @code{HPGL_VERSION} is set to a value less @w{than "2"} (the
+default).
+
+@item #:toggle-use-color
+Toggle between color and monochrome rendering of datasets.  The
+interpretation of linemode depends on whether the rendering is being
+performed in color or monochrome; see the @samp{#:line-mode} option above.
+
+@item #:symbol-font-name @var{symbol_font_name}
+(String, default "ZapfDingbats" unless @samp{png}, @samp{pnm},
+@samp{gif}, @samp{pcl}, @samp{hpgl}, @samp{regis}, or
+@code{@w{tek}} is specified, in which case it is "HersheySerif".)
+Set the symbol font, from which marker symbols numbered 32 and higher
+are selected, to be @var{symbol_font_name}.  Font names are
+case-insensitive.  @w{If the} specified font is not available, the
+default font will be used.  Which fonts are available depends on which
+@samp{#:output-format} option is used.  For example, if the @samp{pcl} or @samp{hpgl} option is used then normally the Wingdings font, which is an
+alternative source of symbols, becomes available.  For a list of all
+fonts, see @ref{Text Fonts}.  The GNU plotutils @code{plotfont} utility will produce a
+character map of any available font..
+
+@end table
+@node graph Environment,  , The Graphing Library, Reference Guide
+@section Environment variables
+
+The behavior of @code{graph} is affected by several environment
+variables.  We have already mentioned the environment variables
+@code{BITMAPSIZE}, @code{PAGESIZE}, @code{BG_COLOR},
+@code{EMULATE_COLOR}, @code{MAX_LINE_LENGTH}, and @code{ROTATION}@.
+
+@node Apendices, Color Names, Reference Guide, Top
+@appendix Appendices
+
+@menu
+* Marker Symbols::
+@end menu
+
+@node Marker Symbols,  , Apendices, Apendices
+@appendixsection Available marker symbols
+
+The GNU @code{libplot} library supports a standard set of marker
+symbols, numbered 0@dots{}31.  @w{A marker} symbol is a visual
+representation of a point.
+
+Like a text string, a marker symbol has a font size.  @w{In any} output
+format, @w{a marker} symbol is guaranteed to be visible if its font size
+is sufficiently large.  Marker symbol #0 is an exception to this: by
+convention, @w{symbol #0} means no symbol @w{at all}.  Marker symbols in
+the range 1@dots{}31 are defined @w{as follows}.
+
+@enumerate
+@item dot
+@tex
+($\thinspace\cdot\thinspace$)
+@end tex
+@item plus (@math{+})
+@item asterisk (@math{*})
+@item circle
+@tex
+($\circ$)
+@end tex
+@item cross
+@tex
+($\times$)
+@end tex
+@item square
+@item triangle
+@item diamond
+@item star
+@item inverted triangle
+@item starburst
+@item fancy plus
+@item fancy cross
+@item fancy square
+@item fancy diamond
+@item filled circle
+@item filled square
+@item filled triangle
+@item filled diamond
+@item filled inverted triangle
+@item filled fancy square
+@item filled fancy diamond
+@item half filled circle
+@item half filled square
+@item half filled triangle
+@item half filled diamond
+@item half filled inverted triangle
+@item half filled fancy square
+@item half filled fancy diamond
+@item octagon
+@item filled octagon
+@end enumerate
+
+@noindent
+The interpretation of marker symbols 1 through 5 is the same as in the
+@w{well known} Graphical Kernel System (GKS).
+
+By convention, symbols 32 @w{and up} are interpreted as characters in a
+certain text font.  For @code{(plotutils plot)}, this is simply the current font.
+But for the @code{(plotutils graph)} program, @w{it is} the symbol font selected
+with the @samp{#:symbol-font-name} option.  @w{By default}, the symbol
+font is the ZapfDingbats font except in @code{#:output-format ``png''}, @code{pnm}, @code{gif}, @code{pcl}, @code{hpgl}
+and @code{tek}.  Those variants of @code{graph} normally have
+no access to ZapfDingbats and other Postscript fonts, so they use the
+HersheySerif font instead.
+
+@node Color Names, Page and Viewport Sizes, Apendices, Top
+@appendix Specifying Colors by Name
+
+The library allows colors to be specified by the
+user.  It includes the @code{bgcolorname}, @code{pencolorname}, and
+@code{fillcolorname} functions, each of which takes a color as an
+argument.
+In any of these contexts, a color may be specified precisely as a
+hexadecimal string that gives by its 48-bit RGB representation.  For
+example, "#c0c0c0" is a silvery gray, and "#ffffff" is white.  Also,
+colors may be specified by name.  665 distinct names are recognized,
+including familiar ones like "red", "green", and "blue", and obscure
+ones like "dark magenta", "forest green", and "olive drab".  Color names
+are case-insensitive, and spaces are ignored.  So, @w{for example},
+"RosyBrown" is equivalent to "rosy brown", and "DarkGoldenrod3" to "dark
+goldenrod 3".
+
+@example
+@include colors.txt
+@end example
+
+@node Page and Viewport Sizes, Further Resources and Contact Info, Color Names, Top
+@appendix Page Sizes and Viewport Sizes
+
+When producing output in such vector formats as Illustrator,
+Postscript, @w{PCL 5}, HP-GL, and Fig, it is important to specify the
+size of the page on which the output will appear.  Supported page
+sizes are "letter", "a4", etc.; a full list appears below.  The page
+size is passed to the the GNU @code{libplot} library via the
+@code{PAGESIZE} parameter.  The command-line graphics programs
+@code{graph}, @code{plot}, @code{pic2plot}, @code{tek2plot}, and
+@code{plotfont}, which are @w{built on} @code{libplot}, similarly
+support a @code{PAGESIZE} environment variable and a
+@samp{--page-size} option.
+
+Graphics drawn by @code{libplot} are nominally drawn within a graphics
+display, or `viewport'.  When producing raster formats such as PNG,
+PNM, and pseudo-GIF, the viewport is simply a square or rectangular
+bitmap.  But when producing vector formats such as Illustrator,
+Postscript, @w{PCL 5}, HP-GL, and Fig format, the viewport is a square
+or rectangular region on the output page.  (For the meaning of the
+viewport when the output format is SVG or WebCGM, see below.)  Except
+in the HP-GL case, the viewport will @w{by default} be centered on the
+page.  For example, if the page size is "letter", the viewport will be
+a square 8@dmn{in} by 8@dmn{in} region, centered on a 8.5@dmn{in} by
+11.0@dmn{in} page.  Graphics will not be clipped to the viewport, so
+the entire page will @w{in principle} be imageable.
+
+Either or both of the dimensions of the viewport can be changed by the
+user.  For example, the page size could be specified as
+"letter,xsize=4in", or "a4,xsize=10cm,ysize=15cm", where the specified
+sizes will override the default dimensions of the viewport.  The
+dimensions of the viewport are allowed to be negative (@w{a negative}
+dimension results in a reflection).  Inches, centimeters, and
+millimeters are the supported units.
+
+For most vector output formats, it is possible to position the
+viewport quite precisely, by specifying the location of its lower left
+corner relative to the lower left corner of the page.  For example,
+the page size could be specified not merely as "letter" @w{or "a4"},
+but as "letter,xorigin=2in,yorigin=3in", or
+"a4,xorigin=0.5cm,yorigin=0.5cm".  (The `xorigin' and `yorigin'
+specifiers may be used in conjunction with `xsize' and `ysize'.)  As
+an alternative to `xorigin' and `yorigin', the viewport position could
+be adjusted by supplying an offset vector, the offset being
+interpreted as a shift away from the default position.  For example,
+the page size could be specified as "letter,yoffset=1.2in", or
+"a4,xoffset=@minus{}5mm,yoffset=2.0cm".  The viewport may also be
+rotated, by setting the @code{ROTATION} parameter or environment
+variable, or (@w{in the} case of the graphics programs) by using the
+@samp{--rotation} option.  A rotated viewport does not change the
+position of its four corners.  Rather, the graphics are rotated
+@w{within it}.  @w{If the} viewport is rectangular rather than square,
+this `rotation' will necessarily include a rescaling.
+
+Any ISO page size in the range "a0"@dots{}"a4" or ANSI page size in the
+range "a"@dots{}"e" may be specified.  ("letter" is an alias @w{for
+"a"}, which is the default, and "tabloid" is an alias @w{for "b"}).
+"legal", "ledger", and the JIS [Japanese Industrial Standard] size "b5"
+are recognized also.  The following are the supported page sizes and the
+default square viewport size that corresponds to each.
+
+@table @asis
+@item "a" (or "letter"; 8.5@dmn{in} by 11.0@dmn{in})
+8.0@dmn{in}
+
+@item "b" (or "tabloid"; 11.0@dmn{in} by 17.0@dmn{in})
+10.0@dmn{in}
+
+@item "c" (17.0@dmn{in} by 22.0@dmn{in})
+16.0@dmn{in}
+
+@item "d" (22.0@dmn{in} by 34.0@dmn{in})
+20.0@dmn{in}
+
+@item "e" (34.0@dmn{in} by 44.0@dmn{in})
+32.0@dmn{in}
+
+@item "legal" (8.5@dmn{in} by 14.0@dmn{in})
+8.0@dmn{in}
+
+@item "ledger" (17.0@dmn{in} by 11.0@dmn{in})
+10.0@dmn{in}
+
+@item "a4" (21.0@dmn{cm} by 29.7@dmn{cm})
+19.81@dmn{cm}
+
+@item "a3" (29.7@dmn{cm} by 42.0@dmn{cm})
+27.18@dmn{cm}
+
+@item "a2" (42.0@dmn{cm} by 59.4@dmn{cm})
+39.62@dmn{cm}
+
+@item "a1" (59.4@dmn{cm} by 84.1@dmn{cm})
+56.90@dmn{cm}
+
+@item "a0" (84.1@dmn{cm} by 118.9@dmn{cm})
+81.79@dmn{cm}
+
+@item "b5" (18.2@dmn{cm} by 25.7@dmn{cm})
+16.94@dmn{cm}
+@end table
+
+As noted, SVG and WebCGM format are special.  They have no notion of
+the size of the Web page on which the viewport will ultimately be
+positioned.  They do have a notion of viewport size, though this will
+typically be overridden when the output file is placed on a page by a
+Web page designer.  When producing SVG or WebCGM output, the viewport
+size is set in the usual way: by @code{PAGESIZE}, or (@w{in the} case
+of the graphics programs) the @samp{--page-size} option.  For example,
+if the specified page size is "letter", the viewport within which SVG
+or WebCGM graphics are drawn will be an 8@dmn{in} by 8@dmn{in} square.
+If it is "letter,xsize=6in,ysize=7in", then the viewport will be a
+6@dmn{in} by 7@dmn{in} rectangle, and so forth.  The "xorigin",
+"yorigin", "xoffset", and "yoffset" specifiers, if included, are
+necessarily ignored.
+
+For a similar reason, the "xorigin" and "yorigin" specifiers are
+ignored when producing HP-GL or HP-GL/2 output.  @w{By default}, the
+lower left corner of the viewport is positioned at the HP-GL `scaling
+@w{point' P1}, whose location is device-dependent and will not
+normally coincide with the lower left corner of the physical page,
+though it may be close to it.  The "xoffset" and "yoffset" specifiers
+are respected, however, and may be used to shift the viewport away
+from its default position.
+
+
+@menu
+* Text Fonts::
+* Text String Format::
+@end menu
+
+@node Text Fonts, Text String Format, Page and Viewport Sizes, Page and Viewport Sizes
+@appendixsection Available text fonts
+
+The GNU @code{libplot} library and applications built @w{on it} can use
+a limited set of built-in fonts.  These include 22 Hershey vector
+fonts, 35 Postscript fonts, 45 @w{PCL 5} fonts, and 18 Hewlett--Packard
+vector fonts.  @w{We call} these 120 supported fonts the `built-in'
+fonts.  The Hershey fonts are constructed from stroked characters
+digitized @w{c.@: 1967} by Dr.@: @w{Allen V.} Hershey at the U.S. Naval
+Surface Weapons Center in @w{Dahlgren, VA}@.  The 35 Postscript fonts
+are the outline fonts resident in all modern Postscript printers, and
+the 45 @w{PCL 5} fonts are the outline fonts resident in modern
+Hewlett--Packard LaserJet printers and plotters.  (Of the @w{PCL 5}
+fonts, the old LaserJet III, which was Hewlett--Packard's first @w{PCL
+5} printer, supported only eight: the Univers and CGTimes fonts.)  The
+18 Hewlett--Packard vector fonts are fonts that are resident in
+Hewlett--Packard printers and plotters (mostly the latter).
+
+The Hershey fonts can be used by all types of Plotter supported by
+@code{libplot}, and the Postscript fonts can be used by X, SVG,
+Illustrator, Postscript, and Fig Plotters.  So, for example, all
+variants of @code{graph} can use the Hershey fonts, and @code{graph
+@w{#:output-format ``X''}}, @code{svg}, @code{ai}, @code{ps},
+@code{cgm} and @code{fig} can use the Postscript
+fonts.  The @w{PCL 5} fonts can be used by by SVG, Illustrator, PCL, and
+HP-GL Plotters, and by @code{#:output-format ``svg''}, @code{ai},
+@code{pcl}, and @code{hpgl}.  The Hewlett--Packard
+vector fonts can be used by PCL and HP-GL Plotters, and by @code{#:output-format
+``pcl''} and @code{hpgl}.  @w{X Plotters} and @code{graph @w{#:output-format
+``X''}} are not restricted to the built-in Hershey and Postscript fonts.
+They can use any @w{X Window} System font.
+
+For the purpose of plotting text strings (see @ref{Text String Format}),
+the 120 built-in fonts are divided into typefaces.  As you can see from
+the following tables, our convention is that in any typeface with more
+than a single font, font #1 is the normal font, font #2 is italic or
+oblique, font #3 is bold, and font #4 is bold italic or bold oblique.
+Additional variants @w{(if any)} are numbered #5 and higher.
+
+The 22 Hershey fonts are divided into typefaces as follows.
+
+@itemize @bullet
+@item HersheySerif
+
+@enumerate
+@item HersheySerif
+@item HersheySerif-Italic
+@item HersheySerif-Bold
+@item HersheySerif-BoldItalic
+@item HersheyCyrillic
+@item HersheyCyrillic-Oblique
+@item HersheyEUC
+@end enumerate
+
+@item HersheySans
+
+@enumerate
+@item HersheySans
+@item HersheySans-Oblique
+@item HersheySans-Bold
+@item HersheySans-BoldOblique
+@end enumerate
+
+@item HersheyScript
+
+@enumerate
+@item HersheyScript
+@item HersheyScript
+@item HersheyScript-Bold
+@item HersheyScript-Bold
+@end enumerate
+
+@item HersheyGothicEnglish
+@item HersheyGothicGerman
+@item HersheyGothicItalian
+
+@item HersheySerifSymbol
+@enumerate
+@item HersheySerifSymbol
+@item HersheySerifSymbol-Oblique
+@item HersheySerifSymbol-Bold
+@item HersheySerifSymbol-BoldOblique
+@end enumerate
+
+@item HersheySansSymbol
+@enumerate
+@item HersheySansSymbol
+@item HersheySansSymbol-Oblique
+@end enumerate
+@end itemize
+
+@noindent
+Nearly all Hershey fonts except the Symbol fonts use the ISO-Latin-1
+encoding, which is a superset of ASCII@.  The Symbol fonts consist of
+Greek characters and mathematical symbols, and use the symbol font
+encoding documented in the @cite{Postscript Language Reference Manual}.
+By convention, each Hershey typeface contains a symbol font
+(HersheySerifSymbol or HersheySansSymbol, as appropriate) as @w{font
+#0}.
+
+HersheyCyrillic, HersheyCyrillic-Oblique, and HersheyEUC (which is a
+Japanese font) are the only non-Symbol Hershey fonts that do not use the
+ISO-Latin-1 encoding.
+
+The 35 Postscript fonts are divided into typefaces as follows.
+
+@itemize @bullet
+@item Helvetica
+
+@enumerate
+@item   Helvetica
+@item   Helvetica-Oblique
+@item   Helvetica-Bold
+@item   Helvetica-BoldOblique
+@end enumerate
+
+@item   Helvetica-Narrow
+
+@enumerate
+@item   Helvetica-Narrow
+@item   Helvetica-Narrow-Oblique
+@item   Helvetica-Narrow-Bold
+@item   Helvetica-Narrow-BoldOblique
+@end enumerate
+
+@item   Times
+
+@enumerate
+@item   Times-Roman
+@item   Times-Italic
+@item   Times-Bold
+@item   Times-BoldItalic
+@end enumerate
+
+@item AvantGarde
+
+@enumerate
+@item   AvantGarde-Book
+@item   AvantGarde-BookOblique
+@item   AvantGarde-Demi
+@item   AvantGarde-DemiOblique
+@end enumerate
+
+@item Bookman
+
+@enumerate
+@item   Bookman-Light
+@item   Bookman-LightItalic
+@item   Bookman-Demi
+@item   Bookman-DemiItalic
+@end enumerate
+
+@item Courier
+
+@enumerate
+@item   Courier
+@item   Courier-Oblique
+@item   Courier-Bold
+@item   Courier-BoldOblique
+@end enumerate
+
+@item NewCenturySchlbk
+
+@enumerate
+@item   NewCenturySchlbk-Roman
+@item   NewCenturySchlbk-Italic
+@item   NewCenturySchlbk-Bold
+@item   NewCenturySchlbk-BoldItalic
+@end enumerate
+
+@item Palatino
+
+@enumerate
+@item   Palatino-Roman
+@item   Palatino-Italic
+@item   Palatino-Bold
+@item   Palatino-BoldItalic
+@end enumerate
+
+@item   ZapfChancery-MediumItalic
+@item   ZapfDingbats
+@item   Symbol
+@end itemize
+
+@noindent
+All Postscript fonts except the ZapfDingbats and Symbol fonts use the
+ISO-Latin-1 encoding.  The encodings used by the ZapfDingbats and Symbol
+fonts are documented in the @cite{Postscript Language Reference Manual}.
+By convention, each Postscript typeface contains the Symbol font as
+@w{font #0}.
+
+The 45 @w{PCL 5} fonts are divided into typefaces as follows.
+
+@itemize @bullet
+@item Univers
+
+@enumerate
+@item   Univers
+@item   Univers-Oblique
+@item   Univers-Bold
+@item   Univers-BoldOblique
+@end enumerate
+
+@item UniversCondensed
+
+@enumerate
+@item   UniversCondensed
+@item   UniversCondensed-Oblique
+@item   UniversCondensed-Bold
+@item   UniversCondensed-BoldOblique
+@end enumerate
+
+@item   CGTimes
+
+@enumerate
+@item   CGTimes-Roman
+@item   CGTimes-Italic
+@item   CGTimes-Bold
+@item   CGTimes-BoldItalic
+@end enumerate
+
+@item Albertus
+
+@enumerate
+@item   AlbertusMedium
+@item   AlbertusMedium
+@item   AlbertusExtraBold
+@item   AlbertusExtraBold
+@end enumerate
+
+@item AntiqueOlive
+
+@enumerate
+@item AntiqueOlive
+@item AntiqueOlive-Italic
+@item AntiqueOlive-Bold
+@end enumerate
+
+@item   Arial
+
+@enumerate
+@item   Arial-Roman
+@item   Arial-Italic
+@item   Arial-Bold
+@item   Arial-BoldItalic
+@end enumerate
+
+@item   ClarendonCondensed
+@item   Coronet
+@item Courier
+
+@enumerate
+@item   Courier
+@item   Courier-Italic
+@item   Courier-Bold
+@item   Courier-BoldItalic
+@end enumerate
+
+@item Garamond
+
+@enumerate
+@item   Garamond
+@item   Garamond-Italic
+@item   Garamond-Bold
+@item   Garamond-BoldItalic
+@end enumerate
+
+@item LetterGothic
+
+@enumerate
+@item   LetterGothic-Roman
+@item   LetterGothic-Italic
+@item   LetterGothic-Bold
+@item   LetterGothic-BoldItalic
+@end enumerate
+
+@item   Marigold
+@item CGOmega
+
+@enumerate
+@item   CGOmega-Roman
+@item   CGOmega-Italic
+@item   CGOmega-Bold
+@item   CGOmega-BoldItalic
+@end enumerate
+
+@item TimesNewRoman
+
+@enumerate
+@item   TimesNewRoman
+@item   TimesNewRoman-Italic
+@item   TimesNewRoman-Bold
+@item   TimesNewRoman-BoldItalic
+@end enumerate
+
+@item   Wingdings
+@item   Symbol
+@end itemize
+
+@noindent
+All PCL 5 fonts except the Wingdings and Symbol fonts use the
+ISO-Latin-1 encoding.  The encoding used by the Symbol font is the
+symbol font encoding documented in the @cite{Postscript Language
+Reference Manual}.  By convention, each PCL typeface contains the Symbol
+font as @w{font #0}.
+
+The 18 Hewlett--Packard vector fonts are divided into typefaces as
+follows.
+
+@itemize @bullet
+@item Arc
+
+@enumerate
+@item   Arc
+@item   Arc-Oblique
+@item   Arc-Bold
+@item   Arc-BoldOblique
+@end enumerate
+
+@item Stick
+
+@enumerate
+@item   Stick
+@item   Stick-Oblique
+@item   Stick-Bold
+@item   Stick-BoldOblique
+@end enumerate
+
+@item ArcANK
+
+@enumerate
+@item   ArcANK*
+@item   ArcANK-Oblique*
+@item   ArcANK-Bold*
+@item   ArcANK-BoldOblique*
+@end enumerate
+
+@item StickANK
+
+@enumerate
+@item   StickANK*
+@item   StickANK-Oblique*
+@item   StickANK-Bold*
+@item   StickANK-BoldOblique*
+@end enumerate
+
+@item ArcSymbol*
+
+@item StickSymbol*
+
+@end itemize
+
+@noindent 
+The Hewlett--Packard vector fonts with an asterisk (the ANK and Symbol
+fonts) are only available when producing HP-GL/2 graphics, or HP-GL
+graphics for the HP7550A graphics plotter and the HP758x, HP7595A and
+HP7596A drafting plotters.  That is, they are available only if
+@code{HPGL_VERSION} @w{is "2"} (the default) @w{or "1.5"}.
+
+All Hewlett--Packard vector fonts except the ANK and Symbol fonts use
+the ISO-Latin-1 encoding.  The Arc fonts are proportional
+(variable-width) fonts, and the Stick fonts are fixed-width fonts.  If
+HP-GL/2 or HP-GL output is selected, the Arc fonts are assumed to be
+kerned via device-resident kerning tables.  But when producing @w{PCL 5}
+output, it is assumed that the display device will do no kerning.
+Apparently Hewlett--Packard dropped support for device-resident kerning
+tables when emulating HP-GL/2 from within @w{PCL 5}.  For information
+about Hewlett--Packard vector fonts and the way in which they are kerned
+(@w{in HP-GL} pen plotters, @w{at least}), see the article by
+@w{L@. W@.}  Hennessee @w{et al@.} in the Nov.@: 1981 issue of the
+@cite{Hewlett--Packard Journal}.
+
+To what extent do the fonts supported by @code{libplot} contain
+ligatures?  The Postscript fonts, the @w{PCL 5} fonts, and the
+Hewlett--Packard vector fonts, @w{at least} as implemented in
+@code{libplot}, @w{do not} contain ligatures.  However, six of the 22
+Hershey fonts contain ligatures.  The character combinations "fi", "ff",
+"fl", "ffi", and "ffl" are automatically drawn as ligatures in
+HersheySerif and HersheySerif-Italic.  (Also in the two HersheyCyrillic
+fonts and HersheyEUC, since insofar as printable ASCII characters are
+concerned, they are identical [or almost identical] to HersheySerif.)
+@w{In addition}, "tz" and "ch" are ligatures in HersheyGothicGerman.
+The German double-s @w{character `@ss{}'}, which is called an `eszet',
+is not treated as a ligature in any font.  @w{To obtain} an eszet, you
+must either request one with the escape @w{sequence "\ss"} (@pxref{Text
+String Format}), or, if you have an 8-bit keyboard, type an eszet
+explicitly.
+
+@node Text String Format,  , Text Fonts, Page and Viewport Sizes
+@section Text String Format
+
+
+@node Further Resources and Contact Info, GNU Free Documentation License, Page and Viewport Sizes, Top
+@chapter Further Resources and Contact Info
+
+Uh, I dunno.
+
+Maybe the Guile mailing list?
+
+@node GNU Free Documentation License, The Index, Further Resources and Contact Info, Top
+@appendix GNU Free Documentation License
+
+@include fdl-1.3.texi
+
+@node The Index,  , GNU Free Documentation License, Top
+@unnumbered The Index
+
+@printindex cp
+
+@bye
