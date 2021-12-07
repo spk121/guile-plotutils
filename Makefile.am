@@ -46,7 +46,12 @@ README: README.md
 
 info_TEXINFOS = docs/guile-plotutils.texi
 
-dvi:
+# Prefer using HTML as our distcheck documentation target, rather than
+# DVI, because for some of our automated builds, downloading texlive
+# or basictex takes a fair amount of time.
+AM_DISTCHECK_DVI_TARGET = html
+
+dvi-local:
 
 docs/guile-plotutils.info: \
 	$(srcdir)/docs/sine-wave.png \
