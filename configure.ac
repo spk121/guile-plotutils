@@ -100,10 +100,10 @@ AM_CONDITIONAL([MAKEINFO_CSS], [test "$makeinfo_css" = yes])
 ################
 # Check for libraries
 
-AC_CHECK_LIB([plot],
-             [pl_newpl_r], ,
-             # if GNU Plotutils's libplot is missing
-             [AC_MSG_ERROR([libplot not found])])
+AC_SEARCH_LIBS([pl_newpl_r],
+               [plot], ,
+               # if GNU Plotutils's libplot is missing
+               [AC_MSG_ERROR([libplot not found])])
 
 
 ################
