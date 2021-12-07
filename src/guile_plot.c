@@ -45,7 +45,6 @@ _scm_is_plparams (SCM x)
     }
   else
     return 0;
-
 }
 
 plPlotterParams *
@@ -116,7 +115,7 @@ print_plparams (SCM x, SCM port, scm_print_state * pstate)
   plPlotterParams *plparams = (plPlotterParams *) SCM_SMOB_DATA (x);
   char *str;
 
-  assert (SCM_SMOB_PREDICATE (plotter_tag, x));
+  assert (SCM_SMOB_PREDICATE (plparams_tag, x));
 
   scm_puts ("#<plparams ", port);
 
@@ -138,7 +137,7 @@ print_plparams (SCM x, SCM port, scm_print_state * pstate)
 SCM
 gupl_is_plparams_p (SCM x)
 {
-  return scm_from_bool (_scm_is_plotter (x));
+  return scm_from_bool (_scm_is_plparams (x));
 }
 
 SCM
