@@ -57,25 +57,46 @@ docs/guile-plotutils.info: \
 	$(srcdir)/docs/sine-wave.png \
 	$(srcdir)/docs/sine-wave2.png \
 	$(srcdir)/docs/plot-curve.png \
+	$(srcdir)/docs/sine-wave.eps \
+	$(srcdir)/docs/sine-wave2.eps \
+	$(srcdir)/docs/plot-curve.eps \
 	$(srcdir)/docs/colors.txt
 
 $(srcdir)/docs/index.html: $(srcdir)/docs/guile-plotutils.texi
 	makeinfo $(srcdir)/docs/guile-plotutils.texi --css-ref=document-1.0.1.css --html --output=$(srcdir)/docs
 
-$(srcdir)/docs/sine-wave.png: $(srcdir)/docs/ex-sine-wave.scm
+$(srcdir)/docs/sine-wave.png: $(srcdir)/docs/ex-sine-wave.scm $(guileobject_DATA) $(pkgguileobject_DATA) $(guileextension_LTLIBRARIES)
+
 	$(builddir)/tools/uninstalled-env \
 	  $(srcdir)/docs/ex-sine-wave.scm \
-	  $(srcdir)/docs/sine-wave.png
+	  $(srcdir)/docs/sine-wave.png png
 
-$(srcdir)/docs/sine-wave2.png: $(srcdir)/docs/ex-sine-wave2.scm
+$(srcdir)/docs/sine-wave2.png: $(srcdir)/docs/ex-sine-wave2.scm  $(guileobject_DATA) $(pkgguileobject_DATA) $(guileextension_LTLIBRARIES)
 	$(builddir)/tools/uninstalled-env \
 	  $(srcdir)/docs/ex-sine-wave2.scm \
-	  $(srcdir)/docs/sine-wave2.png
+	  $(srcdir)/docs/sine-wave2.png png
 
-$(srcdir)/docs/plot-curve.png: $(srcdir)/docs/ex-plot-curve.scm
+$(srcdir)/docs/plot-curve.png: $(srcdir)/docs/ex-plot-curve.scm  $(guileobject_DATA) $(pkgguileobject_DATA) $(guileextension_LTLIBRARIES)
 	$(builddir)/tools/uninstalled-env \
 	  $(srcdir)/docs/ex-plot-curve.scm \
-	  $(srcdir)/docs/plot-curve.png
+	  $(srcdir)/docs/plot-curve.png png
+
+$(srcdir)/docs/sine-wave.eps: $(srcdir)/docs/ex-sine-wave.scm $(guileobject_DATA) $(pkgguileobject_DATA) $(guileextension_LTLIBRARIES)
+
+	$(builddir)/tools/uninstalled-env \
+	  $(srcdir)/docs/ex-sine-wave.scm \
+	  $(srcdir)/docs/sine-wave.eps ps
+
+$(srcdir)/docs/sine-wave2.eps: $(srcdir)/docs/ex-sine-wave2.scm  $(guileobject_DATA) $(pkgguileobject_DATA) $(guileextension_LTLIBRARIES)
+	$(builddir)/tools/uninstalled-env \
+	  $(srcdir)/docs/ex-sine-wave2.scm \
+	  $(srcdir)/docs/sine-wave2.eps ps
+
+$(srcdir)/docs/plot-curve.eps: $(srcdir)/docs/ex-plot-curve.scm  $(guileobject_DATA) $(pkgguileobject_DATA) $(guileextension_LTLIBRARIES)
+	$(builddir)/tools/uninstalled-env \
+	  $(srcdir)/docs/ex-plot-curve.scm \
+	  $(srcdir)/docs/plot-curve.eps ps
+
 
 -distclean-docs:
 	-rm -rf $(srcdir)/docs/*.html

@@ -7,6 +7,6 @@
   (with-output-to-file (cadr args)
     (lambda ()
       (graph sin 0 6.28
-             #:output-format "png"
+             #:output-format (caddr args)
              #:top-label "Sine Wave"))
     #:binary #t))

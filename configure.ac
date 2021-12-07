@@ -164,15 +164,10 @@ AM_CONDITIONAL([GUILD], [test x$guild = xtrue])
 ################
 # Output
 
-AC_CONFIG_FILES([
- Makefile
- docs/ex-sine-wave.scm
- docs/ex-sine-wave2.scm
- docs/ex-plot-curve.scm
- ],
- [chmod +x docs/ex-sine-wave.scm;
- chmod +x docs/ex-sine-wave2.scm;
- chmod +x docs/ex-plot-curve.scm])
+AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([docs/ex-sine-wave.scm], [chmod +x docs/ex-sine-wave.scm])
+AC_CONFIG_FILES([docs/ex-sine-wave2.scm], [chmod +x docs/ex-sine-wave2.scm])
+AC_CONFIG_FILES([docs/ex-plot-curve.scm], [chmod +x docs/ex-plot-curve.scm])
 AC_CONFIG_FILES([tools/uninstalled-env], [chmod +x tools/uninstalled-env])
 AC_CONFIG_FILES([tools/uninstalled-test-env], [chmod +x tools/uninstalled-test-env])
 AC_CONFIG_FILES([tools/run-guile], [chmod +x tools/run-guile])

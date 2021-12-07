@@ -15,7 +15,7 @@
   (let ((fp (open-output-file (cadr args) #:binary #t))
         (param (newplparams)))
     (setplparam! param "BITMAPSIZE" "400x400")
-    (let ((plotter (newpl "png" fp (current-error-port) param)))
+    (let ((plotter (newpl (caddr args) fp (current-error-port) param)))
       (openpl! plotter)
       (space! plotter 0.0 0.0 1000.0 1000.0)
       (linewidth! plotter 0.25)
