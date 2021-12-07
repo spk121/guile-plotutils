@@ -16,7 +16,7 @@ jobs:
     - name: env
       run: export LANG=C.UTF-8 TERM=dumb VERBOSE=true DEBIAN_FRONTEND=noninteractive TZ=America/Los_Angeles
     - name: install packages
-      run: sudo apt-get install -y guile-2.2-dev texlive plotutils
+      run: sudo apt-get install -y guile-2.2-dev texlive plotutils libplot-dev
     - name: look for guile
       run: ls -l /usr/bin/gu*
     - name: make dist directory
