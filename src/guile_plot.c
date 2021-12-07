@@ -105,7 +105,7 @@ free_plparams (SCM x)
 {
   plPlotterParams *plparams;
 
-  assert (SCM_SMOB_PREDICATE (plparams_tag, x));
+  // assert (SCM_SMOB_PREDICATE (plparams_tag, x));
 
   plparams = (plPlotterParams *) SCM_SMOB_DATA (x);
   if (plparams != NULL)
@@ -222,7 +222,7 @@ free_plotter (SCM x)
 {
   plPlotter *plotter;
 
-  assert (SCM_SMOB_PREDICATE (plotter_tag, x));
+  // assert (SCM_SMOB_PREDICATE (plotter_tag, x));
 
   plotter = (plPlotter *) SCM_SMOB_DATA (x);
   /* Plotters should already be null if delwin has been called on them */
