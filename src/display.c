@@ -24,10 +24,6 @@
    This file also contains the display_version routine. */
 
 #include "libcommon.h"
-#include "getopt.h"
-
-/* global array of long options, in program we're to be linked with */
-extern struct option long_options[];
 
 #define	ARG_NONE	0
 #define	ARG_REQUIRED	1
@@ -75,43 +71,6 @@ display_usage (const char *progname, const int *omit_vals, const char *appendage
   
   fprintf (stdout, "Usage: %s", progname);
   col += (strlen (progname) + 7);
-  for (i = 0; long_options[i].name; i++)
-    {
-      int option_len;
-      
-      if (elementp (long_options[i].val, omit_vals))
-	continue;
-
-      option_len = strlen (long_options[i].name);
-      if (col >= 80 - (option_len + 16))
-	{
-	  fputs ("\n\t", stdout);
-	  col = 8;
-	}
-      fprintf (stdout, " [--%s", long_options[i].name);
-      col += (option_len + 4);
-      if ((unsigned int)(long_options[i].val) < 256)
-	{
-	  fprintf (stdout, " | -%c", long_options[i].val);
-	  col += 5;
-	}
-      if (long_options[i].has_arg == ARG_REQUIRED)
-	{
-	  fputs (" arg]", stdout);
-	  col += 5;
-	}
-      else if (long_options[i].has_arg == ARG_OPTIONAL)
-	{
-	  fputs (" [arg(s)]]", stdout);
-	  col += 10;
-	}
-      else
-	{
-	  fputs ("]", stdout);
-	  col++;
-	}
-    }
-
   if (appendage != NULL)
     fputs (appendage, stdout);
   else

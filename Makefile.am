@@ -126,8 +126,6 @@ libguile_plotutils_la_c_sources = \
   src/compat.c \
   src/display.c \
   src/fontlist.c \
-  src/getopt1.c \
-  src/getopt.c \
   src/guile_graph.c \
   src/guile_plot.c \
   src/linemode.c \

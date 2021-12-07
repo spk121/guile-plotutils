@@ -28,7 +28,6 @@
 #include "sys-defines.h"
 #include "extern.h"
 #include "libcommon.h"
-#include "getopt.h"
 #include "fontlist.h"
 #include <libguile.h>
 #include <unistd.h>
@@ -40,8 +39,6 @@ new_multigrapher_with_ports (const char *output_format, FILE *_stdout, FILE *_st
 const char *progname = "graph";	/* name of this program */
 const char *written = "Written by Robert S. Maier.";
 const char *copyright = "Copyright (C) 2009 Free Software Foundation, Inc.";
-
-struct option long_options[1] = {};
 
 static scm_t_bits graph_tag;
 
