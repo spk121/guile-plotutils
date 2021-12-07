@@ -83,14 +83,19 @@ LT_INIT([disable-fast-install disable-static win32-dll])
 # Initial guess of platform specific options
 
 AS_CASE([$host_os],
-        [mingw*], [building_dll=yes;dll_version_info=no],
-        [cygwin*], [building_dll=yes;dll_version_info=yes],
-        [pw32*], [building_dll=yes;dll_version_info=yes],
-        [cegcc*], [building_dll=yes;dll_version_info=yes],
-        [building_dll=no;dll_version_info=yes])
+        [mingw*], [building_dll=yes;dll_version_info=no;makeinfo_css=no],
+        [cygwin*], [building_dll=yes;dll_version_info=yes;makeinfo_css=yes],
+        [pw32*], [building_dll=yes;dll_version_info=yes;makeinfo_css=no],
+        [cegcc*], [building_dll=yes;dll_version_info=yes;makeinfo_css=no],
+        [darwin*], [building_dll=no;dll_version_info=yes;makeinfo_css=no],
+        [building_dll=no;dll_version_info=yes;makeinfo_css=yes])
 
 AM_CONDITIONAL([BUILDING_DLL], [test "$building_dll" = yes])
 AM_CONDITIONAL([DLL_VERSION_INFO], [test "$dll_version_info" = yes])
+
+# FIXME: a hack to workaround an apparent lack of the --css-ref flag
+# in some MacOS makeinfo executables
+AM_CONDITIONAL([MAKEINFO_CSS], [test "$makeinfo_css" = yes])
 
 ################
 # Check for libraries

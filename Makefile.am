@@ -62,8 +62,13 @@ docs/guile-plotutils.info: \
 	$(srcdir)/docs/plot-curve.eps \
 	$(srcdir)/docs/colors.txt
 
+if MAKEINFO_CSS
 $(srcdir)/docs/index.html: $(srcdir)/docs/guile-plotutils.texi
 	makeinfo $(srcdir)/docs/guile-plotutils.texi --css-ref=document-1.0.1.css --html --output=$(srcdir)/docs
+else
+$(srcdir)/docs/index.html: $(srcdir)/docs/guile-plotutils.texi
+	makeinfo $(srcdir)/docs/guile-plotutils.texi --html --output=$(srcdir)/docs
+endif
 
 $(srcdir)/docs/sine-wave.png: $(srcdir)/docs/ex-sine-wave.scm $(guileobject_DATA) $(pkgguileobject_DATA) $(guileextension_LTLIBRARIES)
 
