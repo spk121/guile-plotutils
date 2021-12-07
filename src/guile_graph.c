@@ -232,13 +232,6 @@ struct graph {
 
 typedef struct graph graph_t;
 
-static ssize_t port_read (void *cookie, char *buf, size_t siz);
-static ssize_t port_write (void *cookie, const char *buf, size_t siz);
-static int port_seek (void *cookie, off64_t * pos, int whence);
-static int port_close (void *cookie);
-
-static cookie_io_functions_t port_funcs;
-
 /* forward references */
 static void initialize_struct_graph (graph_t *p);
 static int _scm_is_graph (SCM x);
@@ -457,102 +450,6 @@ print_graph (SCM x, SCM port, scm_print_state * pstate)
 
   // non-zero means success
   return 1;
-}
-
-static ssize_t
-port_read (void *cookie, char *buf, size_t siz)
-{
-  SCM port = PTR2SCM (cookie);
-
-#ifdef GUILE_CHARS_ARE_UCS4
-  int c;
-  if (siz >= 1)
-    {
-      c = scm_get_byte_or_eof (port);
-
-      if (c == EOF)
-        return 0;
-      else
-        buf[0] = c;
-
-      return 1;
-    }
-  else
-    return PORT_ERR;
-#else
-  /* For Guile 1.8.x, we use scm_read_char so we can preserve line
-     and column information.  */
-  SCM c;
-  if (siz >= 1)
-    {
-      c = scm_read_char (port);
-
-      if (scm_is_true (scm_eof_object_p (c)))
-        return 0;
-      else
-        buf[0] = scm_to_char (c);
-
-      return 1;
-    }
-  else
-    return PORT_ERR;
-#endif
-}
-
-static ssize_t
-port_write (void *cookie, const char *buf, size_t siz)
-{
-  SCM port = PTR2SCM (cookie);
-
-#ifdef GUILE_CHARS_ARE_UCS4
-  if (siz > SSIZE_MAX)
-    {
-      scm_c_write (port, buf, SSIZE_MAX);
-      return SSIZE_MAX;
-    }
-  else
-    {
-      scm_c_write (port, buf, siz);
-      return siz;
-    }
-#else
-  {
-    size_t i;
-    SCM chr_as_int;
-    SCM chr;
-
-    for (i = 0; i < siz; i++)
-      {
-        chr_as_int = scm_from_uchar ((unsigned char) buf[i]);
-        chr = scm_integer_to_char (chr_as_int);
-        scm_write_char (chr, port);
-      }
-  }
-
-  return siz;
-#endif
-}
-
-static int
-port_seek (void *cookie, off64_t * pos, int whence)
-{
-  SCM port = PTR2SCM (cookie);
-  SCM new_pos;
-
-  new_pos = scm_seek (port, scm_from_int64 (*pos), scm_from_int (whence));
-  *pos = scm_to_int64 (new_pos);
-
-  return PORT_OK;
-}
-
-static int
-port_close (void *cookie)
-{
-  SCM port = PTR2SCM (cookie);
-
-  scm_close_port (port);
-
-  return PORT_OK;
 }
 
 SCM
@@ -1924,26 +1821,29 @@ SCM
 gupl_generate (SCM s_graph, SCM outp, SCM errp)
 {
   graph_t *c_graph;
-  FILE *c_outp, *c_errp;
 
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "generate");
   SCM_ASSERT (scm_is_true (scm_output_port_p (outp)), outp, SCM_ARG2,
               "generate");
   SCM_ASSERT (scm_is_true (scm_output_port_p (errp)), errp, SCM_ARG3, "generate");
-  /* Convert the output port to a special stream */
-  c_outp = fopencookie (SCM2PTR (outp), "wb", port_funcs);
+
+  SCM outp_fileno = scm_fileno (outp);
+  int c_outp_fileno_orig = scm_to_int (outp_fileno);
+  int c_outp_fileno = dup (c_outp_fileno_orig);
+  FILE *c_outp = fdopen (c_outp_fileno, "wb+");
+
+  SCM errp_fileno = scm_fileno (errp);
+  int c_errp_fileno_orig = scm_to_int (errp_fileno);
+  int c_errp_fileno = dup (c_errp_fileno_orig);
+  FILE *c_errp = fdopen (c_errp_fileno, "wb+");
+
   /* Don't buffer port here, since the underlying Guile port also has
      port buffering.  Double buffering causes problems.  */
 
-  setvbuf (c_outp, NULL, _IONBF, 0);
-  if (c_outp == NULL)
-    scm_syserror ("generate");
-
-  /* Convert the err port to a special stream */
-  c_errp = fopencookie (SCM2PTR (errp), "wb", port_funcs);
-  if (c_errp == NULL)
-    scm_out_of_range ("generate", errp);
-  setvbuf (c_errp, NULL, _IONBF, 0);
+  if (c_outp)
+      setvbuf (c_outp, NULL, _IONBF, 0);
+  if (c_errp)
+      setvbuf (c_errp, NULL, _IONBF, 0);
   
   c_graph = _scm_to_graph (s_graph);
   if (c_graph->first_file_of_graph == false)
@@ -2380,11 +2280,6 @@ gupl_graph_init (void)
   static int first = 1;
   if (first)
     {
-      port_funcs.read = port_read;
-      port_funcs.write = port_write;
-      port_funcs.seek = port_seek;
-      port_funcs.close = port_close;
-      
       graph_tag = scm_make_smob_type ("graph", sizeof (graph_t *));
       scm_set_smob_mark (graph_tag, mark_graph);
       scm_set_smob_free (graph_tag, free_graph);

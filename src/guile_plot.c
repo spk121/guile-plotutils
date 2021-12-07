@@ -31,13 +31,6 @@ static SCM mark_plotter (SCM x);
 static size_t free_plotter (SCM x);
 static int print_plotter (SCM x, SCM port, scm_print_state * pstate);
 
-static ssize_t port_read (void *cookie, char *buf, size_t siz);
-static ssize_t port_write (void *cookie, const char *buf, size_t siz);
-static int port_seek (void *cookie, off64_t * pos, int whence);
-static int port_close (void *cookie);
-
-static cookie_io_functions_t port_funcs;
-
 static int _scm_is_exact_integer (SCM x);
 
 int
@@ -266,109 +259,11 @@ gupl_is_plotter_p (SCM x)
   return scm_from_bool (_scm_is_plotter (x));
 }
 
-static ssize_t
-port_read (void *cookie, char *buf, size_t siz)
-{
-  SCM port = PTR2SCM (cookie);
-
-#ifdef GUILE_CHARS_ARE_UCS4
-  int c;
-  if (siz >= 1)
-    {
-      c = scm_get_byte_or_eof (port);
-
-      if (c == EOF)
-	return 0;
-      else
-	buf[0] = c;
-
-      return 1;
-    }
-  else
-    return PORT_ERR;
-#else
-  /* For Guile 1.8.x, we use scm_read_char so we can preserve line
-     and column information.  */
-  SCM c;
-  if (siz >= 1)
-    {
-      c = scm_read_char (port);
-
-      if (scm_is_true (scm_eof_object_p (c)))
-	return 0;
-      else
-	buf[0] = scm_to_char (c);
-
-      return 1;
-    }
-  else
-    return PORT_ERR;
-#endif
-}
-
-static ssize_t
-port_write (void *cookie, const char *buf, size_t siz)
-{
-  SCM port = PTR2SCM (cookie);
-
-#ifdef GUILE_CHARS_ARE_UCS4
-  if (siz > SSIZE_MAX)
-    {
-      scm_c_write (port, buf, SSIZE_MAX);
-      return SSIZE_MAX;
-    }
-  else
-    {
-      scm_c_write (port, buf, siz);
-      return siz;
-    }
-#else
-  {
-    size_t i;
-    SCM chr_as_int;
-    SCM chr;
-
-    for (i = 0; i < siz; i++)
-      {
-	chr_as_int = scm_from_uchar ((unsigned char) buf[i]);
-	chr = scm_integer_to_char (chr_as_int);
-	scm_write_char (chr, port);
-      }
-  }
-
-  return siz;
-#endif
-}
-
-static int
-port_seek (void *cookie, off64_t * pos, int whence)
-{
-  SCM port = PTR2SCM (cookie);
-  SCM new_pos;
-
-  new_pos = scm_seek (port, scm_from_int64 (*pos), scm_from_int (whence));
-  *pos = scm_to_int64 (new_pos);
-
-  return PORT_OK;
-}
-
-static int
-port_close (void *cookie)
-{
-  SCM port = PTR2SCM (cookie);
-
-  scm_close_port (port);
-
-  return PORT_OK;
-}
-
-
 /* Create a new plotter whose output and error are Guile ports */
 SCM
 gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
 {
   char *c_type;
-  FILE *c_outp, *c_errp;
   plPlotter *ret;
   plPlotterParams *c_param;
 
@@ -378,21 +273,23 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
   SCM_ASSERT (scm_is_true (scm_output_port_p (errp)), errp, SCM_ARG3, "newpl");
   SCM_ASSERT (_scm_is_plparams (param), param, SCM_ARG4, "newpl");
 
-  /* Convert the output port to a special stream */
-  c_outp = fopencookie (SCM2PTR (outp), "wb", port_funcs);
+  SCM outp_fileno = scm_fileno (outp);
+  int c_outp_fileno_orig = scm_to_int (outp_fileno);
+  int c_outp_fileno = dup (c_outp_fileno_orig);
+  FILE *c_outp = fdopen (c_outp_fileno, "wb+");
+
+  SCM errp_fileno = scm_fileno (errp);
+  int c_errp_fileno_orig = scm_to_int (errp_fileno);
+  int c_errp_fileno = dup (c_errp_fileno_orig);
+  FILE *c_errp = fdopen (c_errp_fileno, "wb+");
 
   /* Don't buffer port here, since the underlying Guile port also has
      port buffering.  Double buffering causes problems.  */
 
-  setvbuf (c_outp, NULL, _IONBF, 0);
-  if (c_outp == NULL)
-    scm_syserror ("newpl");
-
-  /* Convert the err port to a special stream */
-  c_errp = fopencookie (SCM2PTR (errp), "wb", port_funcs);
-  if (c_errp == NULL)
-    scm_out_of_range ("newpl", errp);
-  setvbuf (c_errp, NULL, _IONBF, 0);
+  if (c_outp)
+      setvbuf (c_outp, NULL, _IONBF, 0);
+  if (c_errp)
+      setvbuf (c_errp, NULL, _IONBF, 0);
 
   c_type = scm_to_locale_string (type);
   c_param = _scm_to_plparams (param);
@@ -515,11 +412,6 @@ gupl_plot_init (void)
 
   if (first)
     {
-      port_funcs.read = port_read;
-      port_funcs.write = port_write;
-      port_funcs.seek = port_seek;
-      port_funcs.close = port_close;
-
       plparams_tag = scm_make_smob_type ("plparams", sizeof (plPlotterParams *));
       scm_set_smob_mark (plparams_tag, mark_plparams);
       scm_set_smob_free (plparams_tag, free_plparams);
