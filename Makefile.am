@@ -274,9 +274,6 @@ EXTRA_DIST = \
   tools/run-test.in \
   tools/gdb-guile.in \
   tools/gdb-test.in \
-  tools/lcov.sh.in \
-  tools/valgrind.sh.in \
-  tools/valgrind.supp \
   $(TESTS) \
   $(noinst_DATA) \
   docs
