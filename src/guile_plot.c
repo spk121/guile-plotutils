@@ -275,12 +275,12 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
   SCM outp_fileno = scm_fileno (outp);
   int c_outp_fileno_orig = scm_to_int (outp_fileno);
   int c_outp_fileno = dup (c_outp_fileno_orig);
-  FILE *c_outp = fdopen (c_outp_fileno, "wb+");
+  FILE *c_outp = fdopen (c_outp_fileno, "w");
 
   SCM errp_fileno = scm_fileno (errp);
   int c_errp_fileno_orig = scm_to_int (errp_fileno);
   int c_errp_fileno = dup (c_errp_fileno_orig);
-  FILE *c_errp = fdopen (c_errp_fileno, "wb+");
+  FILE *c_errp = fdopen (c_errp_fileno, "w");
 
   /* Don't buffer port here, since the underlying Guile port also has
      port buffering.  Double buffering causes problems.  */
