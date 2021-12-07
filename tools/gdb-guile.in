@@ -1,9 +1,9 @@
 #!/bin/sh
 
-#	Copyright (C) 2003, 2006, 2008, 2009, 2010, 2016 Free Software Foundation
+#	Copyright (C) 2003, 2006, 2008, 2009, 2010, 2016, 2021 Free Software Foundation
 #
 #   This file is part of GUILE, that has been modified for the
-#   guile-gi project
+#   guile-plotutils project
 #
 # This script is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as
@@ -25,5 +25,5 @@ top_builddir="@abs_top_builddir@"
 XDG_CACHE_HOME=${top_builddir}/cache
 export XDG_CACHE_HOME
 exec ${top_builddir}/tools/uninstalled-env ${top_builddir}/libtool --mode=execute \
-     -dlopen ${top_builddir}/libguile-gi.la \
+     -dlopen ${top_builddir}/libguile-plotutils.la \
      gdb --args "@GUILE@" "$@"

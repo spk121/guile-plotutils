@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# This script opens up a gdb session for a single guile-gi test
+# This script opens up a gdb session for a single guile-plotutils test
 
 # The splitter characters used for word splitting after expansion
 IFS="$(printf '\n\t')"
@@ -28,16 +28,6 @@ export XDG_CACHE_HOME
 GUILE_AUTO_COMPILE=0
 export GUILE_AUTO_COMPILE
 
-if test -e "${top_builddir}/test/libeverything-1.0.la"
-then
     exec ${top_builddir}/tools/uninstalled-test-env ${top_builddir}/libtool --mode=execute \
-         -dlopen ${top_builddir}/libguile-gi.la \
-         -dlopen ${top_builddir}/test/libeverything-1.0.la \
-         -dlopen ${top_builddir}/test/libmarshall-1.0.la \
+         -dlopen ${top_builddir}/libguile-plotutils.la \
          gdb --args "@GUILE@" "$1"
-         "@GUILE@" "$1"
-else
-    exec ${top_builddir}/tools/uninstalled-test-env ${top_builddir}/libtool --mode=execute \
-         -dlopen ${top_builddir}/libguile-gi.la \
-         gdb --args "@GUILE@" "$1"
-fi
