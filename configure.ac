@@ -102,7 +102,7 @@ AM_CONDITIONAL([MAKEINFO_CSS], [test "$makeinfo_css" = yes])
 
 AC_CHECK_LIB([plot],
              [pl_newpl_r], ,
-             # if aspell is not ok
+             # if GNU Plotutils's libplot is missing
              [AC_MSG_ERROR([libplot not found])])
 
 
