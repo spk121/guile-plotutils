@@ -31,6 +31,7 @@
 #include "getopt.h"
 #include "fontlist.h"
 #include <libguile.h>
+#include <unistd.h>
 
 Multigrapher *
 new_multigrapher_with_ports (const char *output_format, FILE *_stdout, FILE *_stderr, const char *bg_color, const char *bitmap_size, const char *emulate_color, const char *max_line_length, const char *meta_portable, const char *page_size, const char *rotation_angle, bool save_screen);
