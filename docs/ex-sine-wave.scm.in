@@ -1,0 +1,12 @@
+#!@GUILE@ \
+-e main -s
+!#
+(use-modules (plotutils graph))
+
+(define (main args)
+  (with-output-to-file (cadr args)
+    (lambda ()
+      (graph sin 0 6.28
+             #:output-format "png"
+             #:top-label "Sine Wave"))
+    #:binary #t))
