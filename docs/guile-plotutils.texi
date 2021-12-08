@@ -528,8 +528,8 @@ the above rule.
 In the current @w{Guile binding}, each of these functions takes a pointer to
 a @code{<plotter>} as its first argument.
 
-@deffn Procedure plotter horiz-justify vert-justify s
-@t{alabel} takes three arguments @var{horiz_justify} (a symbol),
+@deffn Procedure alabel! plotter horiz-justify vert-justify s
+@t{alabel!} takes three arguments @var{horiz_justify} (a symbol),
 @var{vert_justify} (a symbol), and @var{s} (a string), which specify an `adjusted label,'
 i.e., a justified text string.  The path under construction (@w{if any})
 is ended and drawn, as if @t{endpath} had been called, and the string
@@ -1139,8 +1139,8 @@ in a path with the same thickness.  The thickness that is used is the
 minimum thickness, in the device coordinate system, that can correspond
 to the specified line thickness in the user coordinate system.
 
-@deffn move! plotter x y
-@deffnx moverel! plotter x y
+@deffn Procedure move! plotter x y
+@deffnx Procedure moverel! plotter x y
 @t{move!} takes two arguments specifying the coordinates
 (@var{x}, @var{y}) of a point to which the graphics cursor should be
 moved.  The path under construction @w{(if any)} is ended and drawn, as
