@@ -5,8 +5,8 @@
 
 #include <assert.h>
 #include <libguile.h>
-#include <plot.h>
 #include <unistd.h>
+#include "plot.h"
 #include "guile_plot.h"
 
 #define PORT_ERR (-1)
