@@ -93,10 +93,13 @@
    `read_file', but it uses the plot_point() method of a Multigrapher (see
    plotter.c) to plot each point as it is read. */
 
+#include <float.h>
+#include <stdlib.h>
+#include <math.h>
+#include <limits.h>
+#include <ctype.h>
 #include "extern.h"
 #include "libcommon.h"
-#include "sys-defines.h"
-#include <float.h>
 
 /* New (larger) length of a Point array, as function of the old; used when
    reallocating due to exhaustion of storage. */

@@ -25,12 +25,14 @@
    GNU graph. */
 
 #define _GNU_SOURCE
+#include <libguile.h>
+#include <unistd.h>
+#include <string.h>
+#include <math.h>
 #include "extern.h"
 #include "fontlist.h"
 #include "libcommon.h"
-#include "sys-defines.h"
-#include <libguile.h>
-#include <unistd.h>
+// #include "sys-defines.h"
 
 Multigrapher *new_multigrapher_with_ports (
     const char *output_format, FILE *_stdout, FILE *_stderr,
@@ -553,6 +555,7 @@ gupl_emulate_color_x (SCM s_graph, SCM s_str)
   return SCM_UNSPECIFIED;
 }
 
+#if 0
 SCM
 gupl_graph_version ()
 {
@@ -572,6 +575,7 @@ gupl_graph_version ()
   scm_newline (p);
   return SCM_UNSPECIFIED;
 }
+#endif
 
 SCM
 gupl_toggle_rotate_y_label_x (SCM s_graph)
@@ -2282,7 +2286,7 @@ gupl_graph_init (void)
                           gupl_toggle_frame_on_top_x);
       scm_c_define_gsubr ("portable-output!", 1, 0, 0, gupl_portable_output_x);
       scm_c_define_gsubr ("emulate-color!", 2, 0, 0, gupl_emulate_color_x);
-      scm_c_define_gsubr ("graph-version", 0, 0, 0, gupl_graph_version);
+      // scm_c_define_gsubr ("graph-version", 0, 0, 0, gupl_graph_version);
       scm_c_define_gsubr ("toggle-rotate-y-label!", 1, 0, 0,
                           gupl_toggle_rotate_y_label_x);
       scm_c_define_gsubr ("font-size!", 2, 0, 0, gupl_font_size_x);

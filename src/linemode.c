@@ -25,7 +25,7 @@
 
 #include "extern.h"
 #include "plot.h"
-#include "sys-defines.h"
+// #include "sys-defines.h"
 
 /* following line types are the five used by Unix graph(1) */
 

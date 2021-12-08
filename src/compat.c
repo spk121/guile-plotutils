@@ -18,8 +18,6 @@
 
 /* Replacement for system strerror() if it doesn't exist. */
 
-#include "libcommon.h"
-
 #ifndef HAVE_STRERROR
 
 /* external */

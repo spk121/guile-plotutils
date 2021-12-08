@@ -31,7 +31,7 @@
 #include <float.h>
 
 #include "extern.h"
-#include "sys-defines.h"
+// #include "sys-defines.h"
 
 /* bit fields for return value from Cohen-Sutherland clipper */
 enum
@@ -162,6 +162,9 @@ array_bounds (const Point *p, int length, bool transpose_axes, int clip_mode,
                                    user_max_y, spec_min_x, spec_min_y,
                                    spec_max_x, spec_max_y, xxr, yyr);
       /* loop through relevant points, updating bounding box */
+#define DMIN(a, b) ((a) < (b) ? (a) : (b))
+#define DMAX(a, b) ((a) > (b) ? (a) : (b))
+      
       for (j = 0; j < n; j++)
         {
           point_seen = true;
@@ -174,6 +177,8 @@ array_bounds (const Point *p, int length, bool transpose_axes, int clip_mode,
           if (!spec_max_y)
             local_max_y = DMAX (local_max_y, yyr[j]);
         }
+#undef DMIN
+#undef DMAX
       oldxx = xx;
       oldyy = yy;
     }

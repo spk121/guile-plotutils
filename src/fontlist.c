@@ -27,9 +27,12 @@
    _pl_get_hershey_font_info, _pl_get_ps_font_info, _pl_get_pcl_font_info,
    and _pl_get_stick_font_info. */
 
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
 #include "libcommon.h"
 #include "plot.h"
-#include "sys-defines.h"
+//#include "sys-defines.h"
 
 #include "fontlist.h"
 

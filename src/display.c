@@ -23,6 +23,9 @@
 
    This file also contains the display_version routine. */
 
+#include <stdio.h>
+#include <stdbool.h>
+#include <string.h>
 #include "libcommon.h"
 
 #define ARG_NONE 0
@@ -33,8 +36,10 @@
 bool elementp (int item, const int *list);
 void display_usage (const char *progname, const int *omit_vals,
                     const char *appendage, int info);
+#if 0
 void display_version (const char *progname, const char *written,
                       const char *copyright);
+#endif
 
 /* ARGS: list = null-terminated list of integers */
 bool
@@ -123,11 +128,14 @@ The default format is \"meta\", which is probably not what you want.\n");
 
   if ((appendage != NULL) || info == 1 || info == 2)
     fputs ("\n", stdout);
+#if 0
   fprintf (stdout, "\
 Report bugs to %s.\n",
            PACKAGE_BUGREPORT);
+#endif
 }
 
+#if 0
 void
 display_version (const char *progname, const char *written,
                  const char *copyright)
@@ -141,3 +149,4 @@ display_version (const char *progname, const char *written,
       "A PARTICULAR PURPOSE.\n");
   fprintf (stdout, "%s\n", written);
 }
+#endif

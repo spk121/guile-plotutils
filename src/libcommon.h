@@ -20,7 +20,8 @@
    support functions which is statically linked with several of the package
    executables.  It is built in ../lib. */
 
-#include "sys-defines.h" /* for bool, size_t, HAVE_STRERROR */
+#pragma once
+#include <stddef.h>
 
 /*------------prototypes for libcommon functions----------------------------*/
 
@@ -56,8 +57,5 @@ extern void display_version (const char *progname, const char *written,
 extern void *xmalloc (size_t length);
 extern void *xrealloc (void *p, size_t length);
 
-#ifndef HAVE_STRERROR
-extern char *strerror (int errnum);
-#endif
 
 ___END_DECLS

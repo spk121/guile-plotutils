@@ -110,10 +110,22 @@
    There is also a function end_polyline_and_flush(), which is useful for
    real-time display. */
 
+#include <math.h>
+#include <string.h>
+#include <stdlib.h>
 #include "extern.h"
 #include "libcommon.h"
 #include "plot.h"
-#include "sys-defines.h"
+
+#define DMIN(a, b) ((a) < (b) ? (a) : (b))
+#define DMAX(a, b) ((a) > (b) ? (a) : (b))
+#define IROUND(x) ((int)((x) > 0 ? (x) + 0.5 : (x)-0.5))
+#ifndef M_SQRT2
+#define M_SQRT2 1.41421356237309504880
+#endif
+#ifndef M_SQRT3
+#define M_SQRT3 1.73205080756887719
+#endif
 
 /* we use floating point libplot coordinates in the range [0,PLOT_SIZE] */
 #define PLOT_SIZE 4096.0

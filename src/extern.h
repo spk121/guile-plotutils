@@ -17,6 +17,10 @@
    the Free Software Foundation, Inc., 51 Franklin St., Fifth Floor,
    Boston, MA 02110-1301, USA. */
 
+#pragma once
+#include <stdbool.h>
+#include <stdio.h>
+
 extern const char *progname; /* program name */
 
 /* Definition of the Point structure.  The point-reader (in reader.c)

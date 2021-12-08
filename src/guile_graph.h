@@ -17,7 +17,7 @@ GUPL_API SCM gupl_toggle_use_color_x (SCM s_graph);
 GUPL_API SCM gupl_toggle_frame_on_top_x (SCM s_graph);
 GUPL_API SCM gupl_portable_output_x (SCM s_graph);
 GUPL_API SCM gupl_emulate_color_x (SCM s_graph, SCM s_str);
-GUPL_API SCM gupl_graph_version (void);
+// GUPL_API SCM gupl_graph_version (void);
 GUPL_API SCM gupl_toggle_rotate_y_label_x (SCM s_graph);
 GUPL_API SCM gupl_font_size_x (SCM s_graph, SCM s_font);
 GUPL_API SCM gupl_grid_style_x (SCM s_graph, SCM s_grid_style);
