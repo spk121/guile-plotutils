@@ -23,20 +23,16 @@
    color as well; see explanation at head of plotter.c.  NO_OF_LINEMODES is
    defined in extern.h. */
 
-#include "sys-defines.h"
-#include "plot.h"
 #include "extern.h"
+#include "plot.h"
+#include "sys-defines.h"
 
 /* following line types are the five used by Unix graph(1) */
 
-const char *linemodes[NO_OF_LINEMODES] =
-{
-  "solid", "dotted", "dotdashed", "shortdashed", "longdashed"
-};
+const char *linemodes[NO_OF_LINEMODES]
+    = { "solid", "dotted", "dotdashed", "shortdashed", "longdashed" };
 
 /* following colors are the first five used by the gnuplot X11 driver */
 
-const char *colorstyle[NO_OF_LINEMODES] =
-{
-  "red", "green", "blue", "magenta", "cyan"
-};
+const char *colorstyle[NO_OF_LINEMODES]
+    = { "red", "green", "blue", "magenta", "cyan" };

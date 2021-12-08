@@ -20,7 +20,7 @@
    support functions which is statically linked with several of the package
    executables.  It is built in ../lib. */
 
-#include "sys-defines.h"	/* for bool, size_t, HAVE_STRERROR */
+#include "sys-defines.h" /* for bool, size_t, HAVE_STRERROR */
 
 /*------------prototypes for libcommon functions----------------------------*/
 
@@ -35,22 +35,26 @@
 #undef ___END_DECLS
 #endif
 #ifdef __cplusplus
-# define ___BEGIN_DECLS extern "C" {
-# define ___END_DECLS }
+#define ___BEGIN_DECLS                                                        \
+  extern "C"                                                                  \
+  {
+#define ___END_DECLS }
 #else
-# define ___BEGIN_DECLS		/* empty */
-# define ___END_DECLS		/* empty */
+#define ___BEGIN_DECLS /* empty */
+#define ___END_DECLS   /* empty */
 #endif
-     
+
 ___BEGIN_DECLS
 
-extern char * xstrdup (const char *s);
+extern char *xstrdup (const char *s);
 extern int display_fonts (const char *output_format, const char *progname);
 extern int list_fonts (const char *output_format, const char *progname);
-extern void display_usage (const char *progname, const int *omit_vals, const char *appendage, int info);
-extern void display_version (const char *progname, const char *written, const char *copyright);
-extern void * xmalloc (size_t length);
-extern void * xrealloc (void *p, size_t length);
+extern void display_usage (const char *progname, const int *omit_vals,
+                           const char *appendage, int info);
+extern void display_version (const char *progname, const char *written,
+                             const char *copyright);
+extern void *xmalloc (size_t length);
+extern void *xrealloc (void *p, size_t length);
 
 #ifndef HAVE_STRERROR
 extern char *strerror (int errnum);

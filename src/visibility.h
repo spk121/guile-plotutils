@@ -7,9 +7,9 @@
 #define GUPL_HELPER_DLL_LOCAL
 #else
 #if __GNUC__ >= 4
-#define GUPL_HELPER_DLL_IMPORT __attribute__ ((visibility("default")))
-#define GUPL_HELPER_DLL_EXPORT __attribute__ ((visibility("default")))
-#define GUPL_HELPER_DLL_LOCAL  __attribute__ ((visibility("hidden")))
+#define GUPL_HELPER_DLL_IMPORT __attribute__ ((visibility ("default")))
+#define GUPL_HELPER_DLL_EXPORT __attribute__ ((visibility ("default")))
+#define GUPL_HELPER_DLL_LOCAL __attribute__ ((visibility ("hidden")))
 #else
 #define GUPL_HELPER_DLL_IMPORT
 #define GUPL_HELPER_DLL_EXPORT
@@ -17,8 +17,8 @@
 #endif
 #endif
 
-#ifdef GUPL_DLL			/* defined if GUPL is compiled as a DLL */
-#ifdef GUPL_DLL_EXPORTS		/* defined if we are building the GUPL DLL */
+#ifdef GUPL_DLL         /* defined if GUPL is compiled as a DLL */
+#ifdef GUPL_DLL_EXPORTS /* defined if we are building the GUPL DLL */
 #define GUPL_API GUPL_HELPER_DLL_EXPORT
 #else
 #define GUPL_API GUPL_HELPER_DLL_IMPORT

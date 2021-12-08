@@ -31,13 +31,15 @@
 #undef ___END_DECLS
 #endif
 #ifdef __cplusplus
-# define ___BEGIN_DECLS extern "C" {
-# define ___END_DECLS }
+#define ___BEGIN_DECLS                                                        \
+  extern "C"                                                                  \
+  {
+#define ___END_DECLS }
 #else
-# define ___BEGIN_DECLS		/* empty */
-# define ___END_DECLS		/* empty */
+#define ___BEGIN_DECLS /* empty */
+#define ___END_DECLS   /* empty */
 #endif
-     
+
 ___BEGIN_DECLS
 
 extern int display_fonts (const char *output_format, const char *progname);

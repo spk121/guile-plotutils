@@ -20,19 +20,21 @@
 /* This file contains the display_usage routine, which is used in
    user-level programs in the plotutils package.  It prints program options
    and long options in a reasonably nice format.
-   
+
    This file also contains the display_version routine. */
 
 #include "libcommon.h"
 
-#define	ARG_NONE	0
-#define	ARG_REQUIRED	1
-#define	ARG_OPTIONAL	2
+#define ARG_NONE 0
+#define ARG_REQUIRED 1
+#define ARG_OPTIONAL 2
 
 /* forward references */
 bool elementp (int item, const int *list);
-void display_usage (const char *progname, const int *omit_vals, const char *appendage, int info);
-void display_version (const char *progname, const char *written, const char *copyright);
+void display_usage (const char *progname, const int *omit_vals,
+                    const char *appendage, int info);
+void display_version (const char *progname, const char *written,
+                      const char *copyright);
 
 /* ARGS: list = null-terminated list of integers */
 bool
@@ -43,7 +45,7 @@ elementp (int item, const int *list)
   while ((list_item = *list++) != 0)
     {
       if (item == list_item)
-	return true;
+        return true;
     }
   return false;
 }
@@ -51,24 +53,25 @@ elementp (int item, const int *list)
 /* final arg of display_usage below is 0/1/2, meaning:
 
    0.  Print no info on output formats, because it is not relevant.
-       (This is used by `spline' and `ode'.) 
+       (This is used by `spline' and `ode'.)
    1.  Print info on output formats, specified by a `-T format' option,
-       but not on the existence of a `--help-fonts' option, which returns 
+       but not on the existence of a `--help-fonts' option, which returns
        info specific to the choice of an output format.
        (This is used by `hersheydemo', which has a -T option but
        no user-specified fonts.)
    2.  Print info on output formats, specified by a `-T format' option,
-       and also on the existence of a `--help-fonts' option, which returns 
+       and also on the existence of a `--help-fonts' option, which returns
        info on fonts that is specific to the choice of an output format.
        (This is used by `graph', `plot', 'tek2plot', `plotfont'.)
-*/       
+*/
 
 void
-display_usage (const char *progname, const int *omit_vals, const char *appendage, int info)
+display_usage (const char *progname, const int *omit_vals,
+               const char *appendage, int info)
 {
   int i;
   int col = 0;
-  
+
   fprintf (stdout, "Usage: %s", progname);
   col += (strlen (progname) + 7);
   if (appendage != NULL)
@@ -78,59 +81,63 @@ display_usage (const char *progname, const int *omit_vals, const char *appendage
 
   if (info == 1)
     {
-    fprintf (stdout, "\n\
+      fprintf (stdout, "\n\
 To specify an output format, type `%s -T \"format\"',\n\
-where \"format\" is one of:\n", progname);
+where \"format\" is one of:\n",
+               progname);
     }
   else if (info == 2)
     {
-    fprintf (stdout, "\n\
+      fprintf (stdout, "\n\
 To list available fonts, type `%s -T \"format\" --help-fonts',\n\
-where \"format\" is the output format, and is one of:\n", progname);
+where \"format\" is the output format, and is one of:\n",
+               progname);
     }
-  
+
   if (info == 1 || info == 2)
     {
 #ifdef INCLUDE_PNG_SUPPORT
 #ifndef X_DISPLAY_MISSING
-    fprintf (stdout, "\
+      fprintf (stdout, "\
 X, png, pnm, or gif (bitmap formats), or\n\
 svg, ps, ai, cgm, fig, pcl, hpgl, regis, or tek (vector formats).\n");
 #else  /* X_DISPLAY_MISSING */
-    fprintf (stdout, "\
+      fprintf (stdout, "\
 png, pnm, or gif (bitmap formats), or\n\
 svg, ps, ai, cgm, fig, pcl, hpgl, regis, or tek (vector formats).\n");
 #endif /* X_DISPLAY_MISSING */
 #else  /* not INCLUDE_PNG_SUPPORT */
 #ifndef X_DISPLAY_MISSING
-    fprintf (stdout, "\
+      fprintf (stdout, "\
 X, pnm, or gif (bitmap formats), or\n\
 svg, ps, ai, cgm, fig, pcl, hpgl, regis, or tek (vector formats).\n");
 #else  /* X_DISPLAY_MISSING */
-    fprintf (stdout, "\
+      fprintf (stdout, "\
 pnm or gif (bitmap formats), or\n\
 svg, ps, ai, cgm, fig, pcl, hpgl, regis, or tek (vector formats).\n");
 #endif /* X_DISPLAY_MISSING */
 #endif
-    fprintf (stdout, "\
+      fprintf (stdout, "\
 The default format is \"meta\", which is probably not what you want.\n");
     }
-  
+
   if ((appendage != NULL) || info == 1 || info == 2)
     fputs ("\n", stdout);
   fprintf (stdout, "\
-Report bugs to %s.\n", PACKAGE_BUGREPORT);
+Report bugs to %s.\n",
+           PACKAGE_BUGREPORT);
 }
 
 void
-display_version (const char *progname, const char *written, const char *copyright)
+display_version (const char *progname, const char *written,
+                 const char *copyright)
 {
-  fprintf (stdout, "%s (%s) %s\n", 
-	   progname, PACKAGE_NAME, PACKAGE_VERSION);
-  fprintf (stdout, "%s\n",
-	   copyright);
-  fprintf (stdout, "%s",
-	   "This is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
-  fprintf (stdout, "%s\n",
-	   written);
+  fprintf (stdout, "%s (%s) %s\n", progname, PACKAGE_NAME, PACKAGE_VERSION);
+  fprintf (stdout, "%s\n", copyright);
+  fprintf (
+      stdout, "%s",
+      "This is free software; see the source for copying conditions.  "
+      "There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR "
+      "A PARTICULAR PURPOSE.\n");
+  fprintf (stdout, "%s\n", written);
 }

@@ -1,11 +1,11 @@
 #ifndef GUPL_GRAPH_H
 #define GUPL_GRAPH_H
 
-#include <libguile.h>
 #include "visibility.h"
+#include <libguile.h>
 
 /* Initialization */
-void gupl_graph_init (void) __attribute__ ((visibility("default"))) ;
+void gupl_graph_init (void) __attribute__ ((visibility ("default")));
 
 /* Functions */
 GUPL_API SCM gupl_is_graph_p (SCM x);
@@ -52,10 +52,13 @@ GUPL_API SCM gupl_pen_colors (SCM s_colors);
 GUPL_API SCM gupl_bg_color_x (SCM s_graph, SCM s_color);
 GUPL_API SCM gupl_frame_color_x (SCM s_graph, SCM s_color);
 GUPL_API SCM gupl_auto_abscissa_x (SCM s_graph, SCM s_delta_x, SCM s_x_start);
-GUPL_API SCM gupl_x_limits_x (SCM s_graph, SCM s_min, SCM s_max, SCM s_spacing);
-GUPL_API SCM gupl_y_limits_x (SCM s_graph, SCM s_min, SCM s_max, SCM s_spacing);
+GUPL_API SCM gupl_x_limits_x (SCM s_graph, SCM s_min, SCM s_max,
+                              SCM s_spacing);
+GUPL_API SCM gupl_y_limits_x (SCM s_graph, SCM s_min, SCM s_max,
+                              SCM s_spacing);
 GUPL_API SCM gupl_symbol_x (SCM s_graph, SCM s_index, SCM s_size);
-GUPL_API SCM gupl_reposition_x (SCM s_graph, SCM s_trans_x, SCM s_trans_y, SCM s_scale);
+GUPL_API SCM gupl_reposition_x (SCM s_graph, SCM s_trans_x, SCM s_trans_y,
+                                SCM s_scale);
 GUPL_API SCM gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec);
 GUPL_API SCM gupl_generate (SCM s_graph, SCM s_outp, SCM s_errp);
 GUPL_API SCM gupl_graph_test (SCM s_graph, SCM s_name);

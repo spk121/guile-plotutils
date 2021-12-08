@@ -19,7 +19,7 @@
 #ifndef _SYS_DEFINES_H_
 #define _SYS_DEFINES_H_ 1
 
-#include "config.h"		/* built by autoconf */
+#include "config.h" /* built by autoconf */
 
 /**********************************************************************/
 /* SUPPORT C++.                                                       */
@@ -28,9 +28,9 @@
 /* Support declarations of C linkage in C++, for functions not declared in
    C headers the way they should be. */
 #ifdef __cplusplus
-# define __C_LINKAGE "C"
+#define __C_LINKAGE "C"
 #else
-# define __C_LINKAGE		/* empty */
+#define __C_LINKAGE /* empty */
 #endif
 
 /**********************************************************************/
@@ -61,15 +61,15 @@
 
 #ifdef __cplusplus
 
-#include <cstdio>
-#include <cctype>		/* why is this needed? */
+#include <cctype> /* why is this needed? */
 #include <cerrno>
+#include <cstdio>
 
-#else  /* not __cplusplus */
+#else /* not __cplusplus */
 
-#include <stdio.h>
-#include <ctype.h>		/* why is this needed? */
+#include <ctype.h> /* why is this needed? */
 #include <errno.h>
+#include <stdio.h>
 
 #endif /* not __cplusplus */
 
@@ -78,7 +78,7 @@
 /***************************************************************************/
 
 #ifdef __DJGPP__
-/* for DJGPP math.h, must specify that -lm will be used; 
+/* for DJGPP math.h, must specify that -lm will be used;
    thanks mdruiter@cs.vu.nl */
 #define _USE_LIBM_MATH_H
 #endif
@@ -87,25 +87,24 @@
 
 #ifdef __cplusplus
 
-#include <cmath>
 #include <cfloat>
 #include <climits>
+#include <cmath>
 
-#else  /* not __cplusplus */
+#else /* not __cplusplus */
 
-#include <math.h> 
+#include <math.h>
 #ifdef HAVE_FLOAT_H
-#include <float.h>		/* for DBL_MAX, FLT_MAX */
+#include <float.h> /* for DBL_MAX, FLT_MAX */
 #endif
 #ifdef HAVE_LIMITS_H
-#include <limits.h>		/* for INT_MAX */
+#include <limits.h> /* for INT_MAX */
 #endif
 #ifdef HAVE_VALUES_H
-#include <values.h>		/* for MAXDOUBLE, MAXFLOAT, MAXINT (backups) */
+#include <values.h> /* for MAXDOUBLE, MAXFLOAT, MAXINT (backups) */
 #endif
 
 #endif /* not __cplusplus */
-
 
 /**********************************************************************/
 /* INCLUDE stdlib.h, string.h.  (SUBSTITUTE AS NECESSARY; if STDC_HEADERS
@@ -119,16 +118,16 @@
 #include <cstdlib>
 #include <cstring>
 
-#else  /* not __cplusplus */
+#else /* not __cplusplus */
 
 #ifdef STDC_HEADERS
-#include <stdlib.h>		/* for getenv, atoi, atof, etc. */
-#include <string.h>		/* for memcpy, memmove, strchr, malloc, etc. */
+#include <stdlib.h> /* for getenv, atoi, atof, etc. */
+#include <string.h> /* for memcpy, memmove, strchr, malloc, etc. */
 
-#else  /* not STDC_HEADERS, must do a LOT of declarations by hand */
+#else /* not STDC_HEADERS, must do a LOT of declarations by hand */
 
 #ifdef HAVE_SYS_STDTYPES_H
-#include <sys/stdtypes.h>	/* SunOS, at least, needs this for size_t */
+#include <sys/stdtypes.h> /* SunOS, at least, needs this for size_t */
 #endif
 
 /* supply declarations for functions declared in stdlib.h */
@@ -137,8 +136,8 @@ extern __C_LINKAGE int atoi (const char *nptr);
 extern __C_LINKAGE double atof (const char *nptr);
 
 /* supply definitions in stdlib.h */
-#define	EXIT_FAILURE	1	/* Failing exit status.  */
-#define	EXIT_SUCCESS	0	/* Successful exit status.  */
+#define EXIT_FAILURE 1 /* Failing exit status.  */
+#define EXIT_SUCCESS 0 /* Successful exit status.  */
 
 /* determine how to declare (or define) functions declared in string.h */
 #ifdef HAVE_STRCHR
@@ -149,7 +148,7 @@ extern __C_LINKAGE double atof (const char *nptr);
 #include <strings.h>
 #endif
 #endif
-#else  /* don't have strchr, prefer strings.h */
+#else /* don't have strchr, prefer strings.h */
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
 #else
@@ -168,18 +167,18 @@ extern __C_LINKAGE double atof (const char *nptr);
 #define memmove(d, s, n) bcopy ((s), (d), (n))
 #endif /* not HAVE_MEMMOVE */
 
-#ifndef HAVE_STRCASECMP		/* will use local version */
+#ifndef HAVE_STRCASECMP /* will use local version */
 extern __C_LINKAGE int strcasecmp (const char *s1, const char *s2);
-#endif /* not HAVE_STRCASECMP */
+#endif                  /* not HAVE_STRCASECMP */
 
 /* supply declarations for more functions declared in stdlib.h */
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #else
-extern __C_LINKAGE void * malloc (size_t size);
-extern __C_LINKAGE void * realloc (void * ptr, size_t size);
-extern __C_LINKAGE void * calloc (size_t nmemb, size_t size);
-extern __C_LINKAGE void free (void * ptr);
+extern __C_LINKAGE void *malloc (size_t size);
+extern __C_LINKAGE void *realloc (void *ptr, size_t size);
+extern __C_LINKAGE void *calloc (size_t nmemb, size_t size);
+extern __C_LINKAGE void free (void *ptr);
 #endif /* not HAVE_MALLOC_H */
 
 #endif /* not STDC_HEADERS */
@@ -200,8 +199,12 @@ extern __C_LINKAGE void free (void * ptr);
 
 #ifndef __cplusplus
 #ifdef __STDC__
-typedef enum { false = 0, true = 1 } bool;
-#else  /* not __STDC__, do things the old-fashioned way */
+typedef enum
+{
+  false = 0,
+  true = 1
+} bool;
+#else /* not __STDC__, do things the old-fashioned way */
 typedef int bool;
 #define false 0
 #define true 1
@@ -213,16 +216,16 @@ typedef int bool;
 /**************************************************************************/
 
 #ifndef M_PI
-#define M_PI        3.14159265358979323846264
+#define M_PI 3.14159265358979323846264
 #endif
 #ifndef M_PI_2
-#define M_PI_2      1.57079632679489661923
+#define M_PI_2 1.57079632679489661923
 #endif
 #ifndef M_SQRT2
-#define M_SQRT2     1.41421356237309504880
+#define M_SQRT2 1.41421356237309504880
 #endif
 #ifndef M_SQRT3
-#define M_SQRT3	    1.73205080756887719
+#define M_SQRT3 1.73205080756887719
 #endif
 
 /**************************************************************************/
@@ -239,11 +242,11 @@ typedef int bool;
    allow the installer to do -DNO_SYSTEM_GAMMA to prevent the use of vendor
    code.  What a mess! */
 #ifdef _AIX
-#define NO_SYSTEM_GAMMA		/* AIX gamma support in libm.a is buggy */
+#define NO_SYSTEM_GAMMA /* AIX gamma support in libm.a is buggy */
 #endif
 #ifdef NO_SYSTEM_GAMMA
-#define F_LGAMMA f_lgamma	/* our own version, see ode/specfun.c */
-#else  /* not NO_SYSTEM_GAMMA */
+#define F_LGAMMA f_lgamma /* our own version, see ode/specfun.c */
+#else                     /* not NO_SYSTEM_GAMMA */
 #ifdef HAVE_LGAMMA
 #define F_LGAMMA lgamma
 #else
@@ -262,40 +265,85 @@ typedef int bool;
 #include <limits.h>
 
 #ifdef __GNUC__
-#define DMAX(a,b) ({double _a = (a), _b = (b); _a > _b ? _a : _b; })
-#define DMIN(a,b) ({double _a = (a), _b = (b); _a < _b ? _a : _b; })
-#define IMAX(a,b) ({int _a = (a), _b = (b); _a > _b ? _a : _b; })
-#define IMIN(a,b) ({int _a = (a), _b = (b); _a < _b ? _a : _b; })
-#define UMAX(a,b) ({unsigned int _a = (a), _b = (b); _a > _b ? _a : _b; })
-#define UMIN(a,b) ({unsigned int _a = (a), _b = (b); _a < _b ? _a : _b; })
-#define IROUND(x) ({double _x = (x); int _i; \
-                    if (_x >= INT_MAX) _i = INT_MAX; \
-                    else if (_x <= -(INT_MAX)) _i = -(INT_MAX); \
-                    else _i = (_x > 0.0 ? (int)(_x + 0.5) : (int)(_x - 0.5)); \
-                    _i;})
-#define FROUND(x) ({double _x = (x); float _f; \
-                    if (_x >= FLT_MAX) _f = FLT_MAX; \
-                    else if (_x <= -(FLT_MAX)) _f = -(FLT_MAX); \
-                    else _f = _x; \
-                    _f;})
+#define DMAX(a, b)                                                            \
+  ({                                                                          \
+    double _a = (a), _b = (b);                                                \
+    _a > _b ? _a : _b;                                                        \
+  })
+#define DMIN(a, b)                                                            \
+  ({                                                                          \
+    double _a = (a), _b = (b);                                                \
+    _a < _b ? _a : _b;                                                        \
+  })
+#define IMAX(a, b)                                                            \
+  ({                                                                          \
+    int _a = (a), _b = (b);                                                   \
+    _a > _b ? _a : _b;                                                        \
+  })
+#define IMIN(a, b)                                                            \
+  ({                                                                          \
+    int _a = (a), _b = (b);                                                   \
+    _a < _b ? _a : _b;                                                        \
+  })
+#define UMAX(a, b)                                                            \
+  ({                                                                          \
+    unsigned int _a = (a), _b = (b);                                          \
+    _a > _b ? _a : _b;                                                        \
+  })
+#define UMIN(a, b)                                                            \
+  ({                                                                          \
+    unsigned int _a = (a), _b = (b);                                          \
+    _a < _b ? _a : _b;                                                        \
+  })
+#define IROUND(x)                                                             \
+  ({                                                                          \
+    double _x = (x);                                                          \
+    int _i;                                                                   \
+    if (_x >= INT_MAX)                                                        \
+      _i = INT_MAX;                                                           \
+    else if (_x <= -(INT_MAX))                                                \
+      _i = -(INT_MAX);                                                        \
+    else                                                                      \
+      _i = (_x > 0.0 ? (int)(_x + 0.5) : (int)(_x - 0.5));                    \
+    _i;                                                                       \
+  })
+#define FROUND(x)                                                             \
+  ({                                                                          \
+    double _x = (x);                                                          \
+    float _f;                                                                 \
+    if (_x >= FLT_MAX)                                                        \
+      _f = FLT_MAX;                                                           \
+    else if (_x <= -(FLT_MAX))                                                \
+      _f = -(FLT_MAX);                                                        \
+    else                                                                      \
+      _f = _x;                                                                \
+    _f;                                                                       \
+  })
 #define FABS(x) ((x) >= 0.0 ? (x) : -(x))
-#define ICEIL(x) ({double _x = (x); int _i = (int)_x; \
-		   ((_x == _i) || (_x < 0.0)) ? _i : _i + 1;})
-#define IFLOOR(x) ({double _x = (x); int _i = (int)_x; \
-		   ((_x == _i) || (_x > 0.0)) ? _i : _i - 1;})
+#define ICEIL(x)                                                              \
+  ({                                                                          \
+    double _x = (x);                                                          \
+    int _i = (int)_x;                                                         \
+    ((_x == _i) || (_x < 0.0)) ? _i : _i + 1;                                 \
+  })
+#define IFLOOR(x)                                                             \
+  ({                                                                          \
+    double _x = (x);                                                          \
+    int _i = (int)_x;                                                         \
+    ((_x == _i) || (_x > 0.0)) ? _i : _i - 1;                                 \
+  })
 #else
-#define DMAX(a,b) ((a) > (b) ? (a) : (b))
-#define DMIN(a,b) ((a) < (b) ? (a) : (b))
-#define IMAX(a,b) ((a) > (b) ? (a) : (b))
-#define IMIN(a,b) ((a) < (b) ? (a) : (b))
-#define UMAX(a,b) ((a) > (b) ? (a) : (b))
-#define UMIN(a,b) ((a) < (b) ? (a) : (b))
-#define IROUND(x) ((int) ((x) > 0 ? (x) + 0.5 : (x) - 0.5))
+#define DMAX(a, b) ((a) > (b) ? (a) : (b))
+#define DMIN(a, b) ((a) < (b) ? (a) : (b))
+#define IMAX(a, b) ((a) > (b) ? (a) : (b))
+#define IMIN(a, b) ((a) < (b) ? (a) : (b))
+#define UMAX(a, b) ((a) > (b) ? (a) : (b))
+#define UMIN(a, b) ((a) < (b) ? (a) : (b))
+#define IROUND(x) ((int)((x) > 0 ? (x) + 0.5 : (x)-0.5))
 #define FROUND(x) ((float)(x))
 #define FABS(x) ((x) >= 0.0 ? (x) : -(x))
-#define ICEIL(x) ((int)ceil(x))
-#define IFLOOR(x) ((int)floor(x))
+#define ICEIL(x) ((int)ceil (x))
+#define IFLOOR(x) ((int)floor (x))
 #endif
-
 
 #endif /* not _SYS_DEFINES_H_ */

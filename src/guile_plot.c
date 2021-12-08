@@ -2,12 +2,11 @@
 #define _LARGEFILE64_SOURCE
 #include <stdio.h>
 
-
+#include "guile_plot.h"
+#include "plot.h"
 #include <assert.h>
 #include <libguile.h>
 #include <unistd.h>
-#include "plot.h"
-#include "guile_plot.h"
 
 #define PORT_ERR (-1)
 #define PORT_OK (0)
@@ -21,7 +20,7 @@ static SCM _scm_from_plparams (plPlotterParams *x);
 static SCM equalp_plparams (SCM x1, SCM x2);
 static SCM mark_plparams (SCM x);
 static size_t free_plparams (SCM x);
-static int print_plparams (SCM x, SCM port, scm_print_state * pstate);
+static int print_plparams (SCM x, SCM port, scm_print_state *pstate);
 
 static int _scm_is_plotter (SCM x);
 static plPlotter *_scm_to_plotter (SCM x);
@@ -29,7 +28,7 @@ static SCM _scm_from_plotter (plPlotter *x);
 static SCM equalp_plotter (SCM x1, SCM x2);
 static SCM mark_plotter (SCM x);
 static size_t free_plotter (SCM x);
-static int print_plotter (SCM x, SCM port, scm_print_state * pstate);
+static int print_plotter (SCM x, SCM port, scm_print_state *pstate);
 
 static int _scm_is_exact_integer (SCM x);
 
@@ -39,9 +38,9 @@ _scm_is_plparams (SCM x)
   if (SCM_SMOB_PREDICATE (plparams_tag, x))
     {
       if (SCM_SMOB_DATA (x) != 0)
-	return 1;
+        return 1;
       else
-	return 0;
+        return 0;
     }
   else
     return 0;
@@ -52,11 +51,11 @@ _scm_to_plparams (SCM x)
 {
   assert (_scm_is_plparams (x));
 
-  return (plPlotterParams *) SCM_SMOB_DATA (x);
+  return (plPlotterParams *)SCM_SMOB_DATA (x);
 }
 
 SCM
-_scm_from_plparams (plPlotterParams * x)
+_scm_from_plparams (plPlotterParams *x)
 {
   SCM s_plparams;
 
@@ -64,7 +63,7 @@ _scm_from_plparams (plPlotterParams * x)
 
   SCM_NEWSMOB (s_plparams, plparams_tag, x);
 
-  assert (x == (plPlotterParams *) SCM_SMOB_DATA (s_plparams));
+  assert (x == (plPlotterParams *)SCM_SMOB_DATA (s_plparams));
 
   return (s_plparams);
 }
@@ -74,8 +73,8 @@ equalp_plparams (SCM x1, SCM x2)
 {
   plPlotterParams *plparams1, *plparams2;
 
-  plparams1 = (plPlotterParams *) SCM_SMOB_DATA (x1);
-  plparams2 = (plPlotterParams *) SCM_SMOB_DATA (x2);
+  plparams1 = (plPlotterParams *)SCM_SMOB_DATA (x1);
+  plparams2 = (plPlotterParams *)SCM_SMOB_DATA (x2);
 
   if ((plparams1 == NULL) || (plparams2 == NULL))
     return SCM_BOOL_F;
@@ -99,7 +98,7 @@ free_plparams (SCM x)
 
   // assert (SCM_SMOB_PREDICATE (plparams_tag, x));
 
-  plparams = (plPlotterParams *) SCM_SMOB_DATA (x);
+  plparams = (plPlotterParams *)SCM_SMOB_DATA (x);
   if (plparams != NULL)
     {
       pl_deleteplparams (plparams);
@@ -110,9 +109,9 @@ free_plparams (SCM x)
 }
 
 int
-print_plparams (SCM x, SCM port, scm_print_state * pstate)
+print_plparams (SCM x, SCM port, scm_print_state *pstate)
 {
-  plPlotterParams *plparams = (plPlotterParams *) SCM_SMOB_DATA (x);
+  plPlotterParams *plparams = (plPlotterParams *)SCM_SMOB_DATA (x);
   char *str;
 
   assert (SCM_SMOB_PREDICATE (plparams_tag, x));
@@ -120,13 +119,13 @@ print_plparams (SCM x, SCM port, scm_print_state * pstate)
   scm_puts ("#<plparams ", port);
 
   if (plparams == 0)
-    scm_puts ( "(freed)", port);
+    scm_puts ("(freed)", port);
   else
     {
-      if (asprintf (&str, "%p", (void *) plparams) < 0)
-	scm_puts ("???", port);
+      if (asprintf (&str, "%p", (void *)plparams) < 0)
+        scm_puts ("???", port);
       else
-	scm_puts (str, port);
+        scm_puts (str, port);
     }
   scm_puts (">", port);
 
@@ -154,13 +153,12 @@ _scm_is_plotter (SCM x)
   if (SCM_SMOB_PREDICATE (plotter_tag, x))
     {
       if (SCM_SMOB_DATA (x) != 0)
-	return 1;
+        return 1;
       else
-	return 0;
+        return 0;
     }
   else
     return 0;
-
 }
 
 plPlotter *
@@ -168,11 +166,11 @@ _scm_to_plotter (SCM x)
 {
   assert (_scm_is_plotter (x));
 
-  return (plPlotter *) SCM_SMOB_DATA (x);
+  return (plPlotter *)SCM_SMOB_DATA (x);
 }
 
 SCM
-_scm_from_plotter (plPlotter * x)
+_scm_from_plotter (plPlotter *x)
 {
   SCM s_plotter;
 
@@ -180,7 +178,7 @@ _scm_from_plotter (plPlotter * x)
 
   SCM_NEWSMOB (s_plotter, plotter_tag, x);
 
-  assert (x == (plPlotter *) SCM_SMOB_DATA (s_plotter));
+  assert (x == (plPlotter *)SCM_SMOB_DATA (s_plotter));
 
   return (s_plotter);
 }
@@ -191,8 +189,8 @@ equalp_plotter (SCM x1, SCM x2)
 {
   plPlotter *plotter1, *plotter2;
 
-  plotter1 = (plPlotter *) SCM_SMOB_DATA (x1);
-  plotter2 = (plPlotter *) SCM_SMOB_DATA (x2);
+  plotter1 = (plPlotter *)SCM_SMOB_DATA (x1);
+  plotter2 = (plPlotter *)SCM_SMOB_DATA (x2);
 
   if ((plotter1 == NULL) || (plotter2 == NULL))
     return SCM_BOOL_F;
@@ -216,7 +214,7 @@ free_plotter (SCM x)
 
   // assert (SCM_SMOB_PREDICATE (plotter_tag, x));
 
-  plotter = (plPlotter *) SCM_SMOB_DATA (x);
+  plotter = (plPlotter *)SCM_SMOB_DATA (x);
   /* Plotters should already be null if delwin has been called on them */
   if (plotter != NULL)
     {
@@ -228,9 +226,9 @@ free_plotter (SCM x)
 }
 
 int
-print_plotter (SCM x, SCM port, scm_print_state * pstate)
+print_plotter (SCM x, SCM port, scm_print_state *pstate)
 {
-  plPlotter *plotter = (plPlotter *) SCM_SMOB_DATA (x);
+  plPlotter *plotter = (plPlotter *)SCM_SMOB_DATA (x);
   char *str;
 
   assert (SCM_SMOB_PREDICATE (plotter_tag, x));
@@ -238,13 +236,13 @@ print_plotter (SCM x, SCM port, scm_print_state * pstate)
   scm_puts ("#<plotter ", port);
 
   if (plotter == 0)
-    scm_puts ( "(freed)", port);
+    scm_puts ("(freed)", port);
   else
     {
-      if (asprintf (&str, "%p", (void *) plotter) < 0)
-	scm_puts ("???", port);
+      if (asprintf (&str, "%p", (void *)plotter) < 0)
+        scm_puts ("???", port);
       else
-	scm_puts (str, port);
+        scm_puts (str, port);
     }
   scm_puts (">", port);
 
@@ -267,8 +265,7 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
   plPlotterParams *c_param;
 
   SCM_ASSERT (scm_is_string (type), type, SCM_ARG1, "newpl");
-  SCM_ASSERT (scm_is_true (scm_output_port_p (outp)), outp, SCM_ARG2,
-	      "newpl");
+  SCM_ASSERT (scm_is_true (scm_output_port_p (outp)), outp, SCM_ARG2, "newpl");
   SCM_ASSERT (scm_is_true (scm_output_port_p (errp)), errp, SCM_ARG3, "newpl");
   SCM_ASSERT (_scm_is_plparams (param), param, SCM_ARG4, "newpl");
 
@@ -286,9 +283,9 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
      port buffering.  Double buffering causes problems.  */
 
   if (c_outp)
-      setvbuf (c_outp, NULL, _IONBF, 0);
+    setvbuf (c_outp, NULL, _IONBF, 0);
   if (c_errp)
-      setvbuf (c_errp, NULL, _IONBF, 0);
+    setvbuf (c_errp, NULL, _IONBF, 0);
 
   c_type = scm_to_locale_string (type);
   c_param = _scm_to_plparams (param);
@@ -311,35 +308,49 @@ _scm_is_exact_integer (SCM x)
 
 INT_FUNC_PL_INT_INT_STRING (gupl_alabel_x, "%alabel!", pl_alabel_r);
 INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_arc_x, "arc!", pl_arc_r, pl_farc_r)
-INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_arcrel_x, "arcrel!", pl_arcrel_r, pl_farcrel_r)
-INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_bezier2_x, "bezier2!", pl_bezier2_r, pl_fbezier2_r)
-INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_bezier2rel_x, "bezier2rel!", pl_bezier2rel_r, pl_fbezier2rel_r)
-INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_bezier3_x, "bezier3!", pl_bezier3_r, pl_fbezier3_r)
-INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_bezier3rel_x, "bezier3rel!", pl_bezier3rel_r, pl_fbezier3rel_r)
+INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_arcrel_x, "arcrel!", pl_arcrel_r,
+                                     pl_farcrel_r)
+INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_bezier2_x, "bezier2!", pl_bezier2_r,
+                                     pl_fbezier2_r)
+INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_bezier2rel_x, "bezier2rel!",
+                                     pl_bezier2rel_r, pl_fbezier2rel_r)
+INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_bezier3_x, "bezier3!",
+                                             pl_bezier3_r, pl_fbezier3_r)
+INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_bezier3rel_x, "bezier3rel!",
+                                             pl_bezier3rel_r, pl_fbezier3rel_r)
 INT_FUNC_PL_INT_INT_INT (gupl_bgcolor_x, "bgcolor!", pl_bgcolor_r);
 INT_FUNC_PL_STRING (gupl_bgcolorname_x, "bgcolorname!", pl_bgcolorname_r);
 INT_FUNC_PL_VAL_VAL_VAL_VAL (gupl_box_x, "box!", pl_box_r, pl_fbox_r);
-INT_FUNC_PL_VAL_VAL_VAL_VAL (gupl_boxrel_x, "boxrel!", pl_boxrel_r, pl_fboxrel_r);
+INT_FUNC_PL_VAL_VAL_VAL_VAL (gupl_boxrel_x, "boxrel!", pl_boxrel_r,
+                             pl_fboxrel_r);
 INT_FUNC_PL_STRING (gupl_capmod_x, "capmod!", pl_capmod_r);
 INT_FUNC_PL_VAL_VAL_VAL (gupl_circle_x, "circle!", pl_circle_r, pl_fcircle_r);
-INT_FUNC_PL_VAL_VAL_VAL (gupl_circlerel_x, "circlerel!", pl_circlerel_r, pl_fcirclerel_r);
+INT_FUNC_PL_VAL_VAL_VAL (gupl_circlerel_x, "circlerel!", pl_circlerel_r,
+                         pl_fcirclerel_r);
 INT_FUNC_PL (gupl_closepl_x, "closepl!", pl_closepl_r);
 INT_FUNC_PL_INT_INT_INT (gupl_color_x, "color!", pl_color_r);
 INT_FUNC_PL_STRING (gupl_colorname_x, "colorname!", pl_colorname_r);
-INT_FUNC_PL_DOUBLE_DOUBLE_DOUBLE_DOUBLE_DOUBLE_DOUBLE (gupl_concat_x, "concat!", pl_fconcat_r);
-INT_FUNC_PL_VAL_VAL(gupl_cont_x, "cont!", pl_cont_r, pl_fcont_r);
-INT_FUNC_PL_VAL_VAL(gupl_contrel_x, "contrel!", pl_contrel_r, pl_fcontrel_r);
-INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_ellarc_x, "ellarc!", pl_ellarc_r, pl_fellarc_r);
-INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_ellarcrel_x, "ellarcrel!", pl_ellarcrel_r, pl_fellarcrel_r);
-INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL (gupl_ellipse_x, "ellipse!", pl_ellipse_r, pl_fellipse_r);
-INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL (gupl_ellipserel_x, "ellipserel!", pl_ellipserel_r, pl_fellipserel_r);
+INT_FUNC_PL_DOUBLE_DOUBLE_DOUBLE_DOUBLE_DOUBLE_DOUBLE (gupl_concat_x,
+                                                       "concat!",
+                                                       pl_fconcat_r);
+INT_FUNC_PL_VAL_VAL (gupl_cont_x, "cont!", pl_cont_r, pl_fcont_r);
+INT_FUNC_PL_VAL_VAL (gupl_contrel_x, "contrel!", pl_contrel_r, pl_fcontrel_r);
+INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_ellarc_x, "ellarc!", pl_ellarc_r,
+                                     pl_fellarc_r);
+INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_ellarcrel_x, "ellarcrel!",
+                                     pl_ellarcrel_r, pl_fellarcrel_r);
+INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL (gupl_ellipse_x, "ellipse!", pl_ellipse_r,
+                                 pl_fellipse_r);
+INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL (gupl_ellipserel_x, "ellipserel!",
+                                 pl_ellipserel_r, pl_fellipserel_r);
 INT_FUNC_PL (gupl_endpath_x, "endpath!", pl_endpath_r);
 INT_FUNC_PL (gupl_endsubpath_x, "endsubpath!", pl_endsubpath_r);
 INT_FUNC_PL (gupl_erase_x, "erase!", pl_erase_r);
 INT_FUNC_PL_INT_INT_INT (gupl_fillcolor_x, "fillcolor!", pl_fillcolor_r);
-INT_FUNC_PL_STRING (gupl_fillcolorname_x, "fillcolorname!", pl_fillcolorname_r);
+INT_FUNC_PL_STRING (gupl_fillcolorname_x, "fillcolorname!",
+                    pl_fillcolorname_r);
 INT_FUNC_PL_STRING (gupl_fillmod_x, "fillmod!", pl_fillmod_r);
-INT_FUNC_PL_INT(gupl_filltype_x, "filltype!", pl_filltype_r);
+INT_FUNC_PL_INT (gupl_filltype_x, "filltype!", pl_filltype_r);
 INT_FUNC_PL (gupl_flushpl_x, "flushpl!", pl_flushpl_r);
 DOUBLE_FUNC_PL_STRING (gupl_fontname_x, "fontname!", pl_ffontname_r);
 VAL_FUNC_PL_VAL (gupl_fontsize_x, "fontsize!", pl_fontsize_r, pl_ffontsize_r);
@@ -349,25 +360,32 @@ INT_FUNC_PL_STRING (gupl_label_x, "label!", pl_label_r);
 DOUBLE_FUNC_PL_STRING (gupl_labelwidth_x, "labelwidth!", pl_flabelwidth_r);
 INT_FUNC_PL_VAL_VAL_VAL_VAL (gupl_line_x, "line!", pl_line_r, pl_fline_r);
 INT_FUNC_PL_STRING (gupl_linemod_x, "linemod!", pl_linemod_r);
-INT_FUNC_PL_VAL (gupl_linewidth_x, "linewidth!", pl_linewidth_r, pl_flinewidth_r);
-INT_FUNC_PL_VAL_VAL_VAL_VAL (gupl_linerel_x, "linerel!", pl_linerel_r, pl_flinerel_r);
-INT_FUNC_PL_VAL_VAL_INT_VAL (gupl_marker_x, "marker!", pl_marker_r, pl_fmarker_r);
-INT_FUNC_PL_VAL_VAL_INT_VAL (gupl_markerrel_x, "markerrel!", pl_markerrel_r, pl_fmarkerrel_r);
+INT_FUNC_PL_VAL (gupl_linewidth_x, "linewidth!", pl_linewidth_r,
+                 pl_flinewidth_r);
+INT_FUNC_PL_VAL_VAL_VAL_VAL (gupl_linerel_x, "linerel!", pl_linerel_r,
+                             pl_flinerel_r);
+INT_FUNC_PL_VAL_VAL_INT_VAL (gupl_marker_x, "marker!", pl_marker_r,
+                             pl_fmarker_r);
+INT_FUNC_PL_VAL_VAL_INT_VAL (gupl_markerrel_x, "markerrel!", pl_markerrel_r,
+                             pl_fmarkerrel_r);
 INT_FUNC_PL_DOUBLE (gupl_miterlimit_x, "miterlimit!", pl_fmiterlimit_r);
-INT_FUNC_PL_VAL_VAL(gupl_move_x, "move!", pl_move_r, pl_fmove_r);
-INT_FUNC_PL_VAL_VAL(gupl_moverel_x, "moverel!", pl_moverel_r, pl_fmoverel_r);
+INT_FUNC_PL_VAL_VAL (gupl_move_x, "move!", pl_move_r, pl_fmove_r);
+INT_FUNC_PL_VAL_VAL (gupl_moverel_x, "moverel!", pl_moverel_r, pl_fmoverel_r);
 INT_FUNC_PL (gupl_openpl_x, "openpl!", pl_openpl_r);
 INT_FUNC_PL_INT (gupl_orientation_x, "orientation!", pl_orientation_r);
 INT_FUNC_PL_INT_INT_INT (gupl_pencolor_x, "pencolor!", pl_pencolor_r);
 INT_FUNC_PL_STRING (gupl_pencolorname_x, "pencolorname!", pl_pencolorname_r);
 INT_FUNC_PL_INT (gupl_pentype_x, "pentype!", pl_pentype_r);
 INT_FUNC_PL_VAL_VAL (gupl_point_x, "point!", pl_point_r, pl_fpoint_r);
-INT_FUNC_PL_VAL_VAL (gupl_pointrel_x, "pointrel!", pl_pointrel_r, pl_fpointrel_r);
+INT_FUNC_PL_VAL_VAL (gupl_pointrel_x, "pointrel!", pl_pointrel_r,
+                     pl_fpointrel_r);
 INT_FUNC_PL (gupl_restorestate_x, "restorestate!", pl_restorestate_r);
 INT_FUNC_PL_DOUBLE (gupl_rotate_x, "rotate!", pl_frotate_r);
 INT_FUNC_PL (gupl_savestate_x, "savestate!", pl_savestate_r);
 INT_FUNC_PL_DOUBLE_DOUBLE (gupl_scale_x, "scale!", pl_fscale_r);
-INT_FUNC_PL_DOUBLE_DOUBLE_DOUBLE_DOUBLE_DOUBLE_DOUBLE (gupl_setmatrix_x, "setmatrix!", pl_fsetmatrix_r);
+INT_FUNC_PL_DOUBLE_DOUBLE_DOUBLE_DOUBLE_DOUBLE_DOUBLE (gupl_setmatrix_x,
+                                                       "setmatrix!",
+                                                       pl_fsetmatrix_r);
 
 SCM
 gupl_setplparam_x (SCM s_plparams, SCM s_parameter, SCM s_value)
@@ -377,8 +395,10 @@ gupl_setplparam_x (SCM s_plparams, SCM s_parameter, SCM s_value)
   char *c_string_value;
   int c_ret;
 
-  SCM_ASSERT (_scm_is_plparams (s_plparams), s_plparams, SCM_ARG1, "setplparam!");
-  SCM_ASSERT (scm_is_string (s_parameter), s_parameter, SCM_ARG2, "setplparam!");
+  SCM_ASSERT (_scm_is_plparams (s_plparams), s_plparams, SCM_ARG1,
+              "setplparam!");
+  SCM_ASSERT (scm_is_string (s_parameter), s_parameter, SCM_ARG2,
+              "setplparam!");
   SCM_ASSERT (scm_is_string (s_value), s_value, SCM_ARG3, "setplparam!");
 
   c_plparams = _scm_to_plparams (s_plparams);
@@ -391,12 +411,12 @@ gupl_setplparam_x (SCM s_plparams, SCM s_parameter, SCM s_value)
   return (scm_from_int (c_ret));
 }
 
-
 INT_FUNC_PL_VAL_VAL_VAL_VAL (gupl_space_x, "space!", pl_space_r, pl_fspace_r);
-INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_space2_x, "space2!", pl_space2_r, pl_fspace2_r)
-VAL_FUNC_PL_VAL (gupl_textangle_x, "textangle!", pl_textangle_r, pl_ftextangle_r);
+INT_FUNC_PL_VAL_VAL_VAL_VAL_VAL_VAL (gupl_space2_x, "space2!", pl_space2_r,
+                                     pl_fspace2_r)
+VAL_FUNC_PL_VAL (gupl_textangle_x, "textangle!", pl_textangle_r,
+                 pl_ftextangle_r);
 INT_FUNC_PL_DOUBLE_DOUBLE (gupl_translate_x, "translate!", pl_ftranslate_r);
-
 
 void
 libguile_plotutils_LTX_gupl_plot_init (void)
@@ -411,7 +431,8 @@ gupl_plot_init (void)
 
   if (first)
     {
-      plparams_tag = scm_make_smob_type ("plparams", sizeof (plPlotterParams *));
+      plparams_tag
+          = scm_make_smob_type ("plparams", sizeof (plPlotterParams *));
       scm_set_smob_mark (plparams_tag, mark_plparams);
       scm_set_smob_free (plparams_tag, free_plparams);
       scm_set_smob_print (plparams_tag, print_plparams);

@@ -25,67 +25,76 @@
    GNU graph. */
 
 #define _GNU_SOURCE
-#include "sys-defines.h"
 #include "extern.h"
-#include "libcommon.h"
 #include "fontlist.h"
+#include "libcommon.h"
+#include "sys-defines.h"
 #include <libguile.h>
 #include <unistd.h>
 
-Multigrapher *
-new_multigrapher_with_ports (const char *output_format, FILE *_stdout, FILE *_stderr, const char *bg_color, const char *bitmap_size, const char *emulate_color, const char *max_line_length, const char *meta_portable, const char *page_size, const char *rotation_angle, bool save_screen);
+Multigrapher *new_multigrapher_with_ports (
+    const char *output_format, FILE *_stdout, FILE *_stderr,
+    const char *bg_color, const char *bitmap_size, const char *emulate_color,
+    const char *max_line_length, const char *meta_portable,
+    const char *page_size, const char *rotation_angle, bool save_screen);
 
-
-const char *progname = "graph";	/* name of this program */
+const char *progname = "graph"; /* name of this program */
 const char *written = "Written by Robert S. Maier.";
 const char *copyright = "Copyright (C) 2009 Free Software Foundation, Inc.";
 
 static scm_t_bits graph_tag;
 
-typedef enum { IN_PROGRESS, ENDED_BY_EOF, ENDED_BY_DATASET_TERMINATOR, ENDED_BY_MODE_CHANGE } dataset_status_t;
+typedef enum
+{
+  IN_PROGRESS,
+  ENDED_BY_EOF,
+  ENDED_BY_DATASET_TERMINATOR,
+  ENDED_BY_MODE_CHANGE
+} dataset_status_t;
 
-struct VecReaderStruct		/* point reader datatype */
+struct VecReaderStruct /* point reader datatype */
 {
   /* parameters which are constant over the lifetime of a Reader, and which
      affect the computation of the returned point structures */
-  bool transpose_axes;		/* x <-> y ? */
-  int log_axis;			/* x,y axes are logarithmic? (portmanteau) */
+  bool transpose_axes; /* x <-> y ? */
+  int log_axis;        /* x,y axes are logarithmic? (portmanteau) */
   SCM xvec;
   SCM yvec;
   SCM yerrvec;
-  size_t i_vec;		 /* index of current vector element */
-  data_type format_type;	/* stream format (T_ASCII, T_DOUBLE, etc.) */
-  bool auto_abscissa;		/* auto-generate x values?  */
-  double delta_x;		/* increment for x value, if auto-generated */
-  double initial_abscissa;	/* initial value for x, if auto-generated */
-  bool auto_bump;		/* bump linemode when starting next polyline?*/
+  size_t i_vec;            /* index of current vector element */
+  data_type format_type;   /* stream format (T_ASCII, T_DOUBLE, etc.) */
+  bool auto_abscissa;      /* auto-generate x values?  */
+  double delta_x;          /* increment for x value, if auto-generated */
+  double initial_abscissa; /* initial value for x, if auto-generated */
+  bool auto_bump;          /* bump linemode when starting next polyline?*/
   /* Reader parameters that are constant for the duration of each dataset */
-  int symbol;			/* symbol type */
-  double symbol_size;		/* symbol size (in `box coordinates') */
-  const char *symbol_font_name;	/* font used for marker types >= 32 */
-  int linemode;			/* linemode */
-  double line_width;		/* line width (as frac. of display size) */
-  double fill_fraction;		/* in interval [0,1], <0 means no filling */
-  bool use_color;		/* color/monochrome interp. of linemode */
+  int symbol;                   /* symbol type */
+  double symbol_size;           /* symbol size (in `box coordinates') */
+  const char *symbol_font_name; /* font used for marker types >= 32 */
+  int linemode;                 /* linemode */
+  double line_width;            /* line width (as frac. of display size) */
+  double fill_fraction;         /* in interval [0,1], <0 means no filling */
+  bool use_color;               /* color/monochrome interp. of linemode */
   /* state variables, updated during Reader operation */
-  bool need_break;		/* draw next point with pen up ? */
-  double abscissa;		/* x value, if auto-generated */
+  bool need_break; /* draw next point with pen up ? */
+  double abscissa; /* x value, if auto-generated */
 };
 
 typedef struct VecReaderStruct VecReader;
 
-struct graph {
+struct graph
+{
   int option;
   int opt_index;
-  int errcnt;		    /* errors encountered in getopt parsing */
+  int errcnt; /* errors encountered in getopt parsing */
   int matched;
-  bool using_getopt;	/* true until end of command-line options */
-  bool continue_parse;	/* reset e.g. when --help or --version seen */
-  bool show_version;	/* show version message? */
-  bool show_usage;	/* show usage message? */
-  bool show_fonts;	/* supply help on fonts? */
-  bool do_list_fonts;	/* show a list of fonts? */
-  bool filter;		/* will we act as a filter? */
+  bool using_getopt;   /* true until end of command-line options */
+  bool continue_parse; /* reset e.g. when --help or --version seen */
+  bool show_version;   /* show version message? */
+  bool show_usage;     /* show usage message? */
+  bool show_fonts;     /* supply help on fonts? */
+  bool do_list_fonts;  /* show a list of fonts? */
+  bool filter;         /* will we act as a filter? */
   bool new_symbol;
   bool new_symbol_size;
   bool new_symbol_font_name;
@@ -100,76 +109,76 @@ struct graph {
   /* Variables related to the point reader */
 
   VecReader *reader;
-  data_type input_type;	 /* by default we read ascii data */
-  bool auto_bump;	 /* auto-bump linemode between polylines? */
-  bool auto_abscissa;	 /* generate abscissa values automatically? */
-  double x_start;	 /* start and increment, for auto-abscissa */
+  data_type input_type; /* by default we read ascii data */
+  bool auto_bump;       /* auto-bump linemode between polylines? */
+  bool auto_abscissa;   /* generate abscissa values automatically? */
+  double x_start;       /* start and increment, for auto-abscissa */
   double delta_x;
   /* polyline attributes */
-  int linemode_index;	   /* linemode for polylines, 1=solid, etc. */
+  int linemode_index;     /* linemode for polylines, 1=solid, etc. */
   double plot_line_width; /* polyline width (as frac. of display width),
                              negative means default provided by libplot) */
-  int symbol_index;	/* 0=none, 1=dot, 2=plus, 3=asterisk, etc. */
-  double symbol_size;	/* symbol size (frac. of plotting box size) */
-  double fill_fraction;	/* negative means regions aren't filled */
-  bool use_color;	/* color / monochrome */
+  int symbol_index;       /* 0=none, 1=dot, 2=plus, 3=asterisk, etc. */
+  double symbol_size;     /* symbol size (frac. of plotting box size) */
+  double fill_fraction;   /* negative means regions aren't filled */
+  bool use_color;         /* color / monochrome */
 
   /* Variables related to both the point reader and the point plotter */
 
-  bool transpose_axes;	   /* true means -x applies to y axis, etc. */
+  bool transpose_axes; /* true means -x applies to y axis, etc. */
 
   /* Variables related to the multigrapher, i.e. point plotter */
 
   Multigrapher *multigrapher;
 
   /* command-line parameters (constant over multigrapher operation) */
-  const char *output_format;	/* libplot output format */
-  const char *bg_color;		/* color of background, if non-NULL */
+  const char *output_format; /* libplot output format */
+  const char *bg_color;      /* color of background, if non-NULL */
   const char *bitmap_size;
   const char *emulate_color;
   const char *max_line_length;
   const char *meta_portable;
   const char *page_size;
   const char *rotation_angle;
-  bool save_screen;	 /* save screen, i.e. no erase before plot? */
+  bool save_screen; /* save screen, i.e. no erase before plot? */
 
   /* graph-specific parameters (may change from graph to graph) */
 
-  grid_type grid_spec;	     /* frame type for current graph */
-  bool no_rotate_y_label;    /* used for pre-X11R6 servers */
-  const char *frame_color;   /* color of frame (and graph, if no -C)*/
-  int clip_mode;	     /* clipping mode (cf. gnuplot) */
+  grid_type grid_spec;     /* frame type for current graph */
+  bool no_rotate_y_label;  /* used for pre-X11R6 servers */
+  const char *frame_color; /* color of frame (and graph, if no -C)*/
+  int clip_mode;           /* clipping mode (cf. gnuplot) */
   /* following variables are portmanteau: x and y are included as bitfields*/
-  int log_axis;		      /* log axes or linear axes? */
-  int round_to_next_tick;     /* round axis limits to nearest tick? */
-  int switch_axis_end; /* axis at top/right instead of bottom/left? */
-  int omit_ticks;      /* omit ticks and tick labels from an axis? */
+  int log_axis;           /* log axes or linear axes? */
+  int round_to_next_tick; /* round axis limits to nearest tick? */
+  int switch_axis_end;    /* axis at top/right instead of bottom/left? */
+  int omit_ticks;         /* omit ticks and tick labels from an axis? */
 
   /* graph dimensions, expressed as fractions of the width of the libplot
      graphics display [by convention square]; <0.0 means use libplot default */
-  double frame_line_width;     /* width of lines in the graph frame */
+  double frame_line_width; /* width of lines in the graph frame */
 
   /* dimensions of graphing area, expressed as fractions of the width of
      the libplot graphics display [by convention square] */
-  double margin_below;		/* margin below the plot */
-  double margin_left;		/* margin left of the plot */
-  double plot_height;		/* height of the plot */
-  double plot_width;		/* width of the plot */
+  double margin_below; /* margin below the plot */
+  double margin_left;  /* margin left of the plot */
+  double plot_height;  /* height of the plot */
+  double plot_width;   /* width of the plot */
 
   /* dimensions, expressed as fractions of the size of the plotting area */
-  double tick_size;	      /* size of tick marks (< 0.0 allowed) */
-  double font_size;	      /* fontsize */
-  double title_font_size;     /* title fontsize */
-  double blankout_fraction;   /* this fraction of size of plotting box
-                                 is erased before the plot is drawn */
+  double tick_size;         /* size of tick marks (< 0.0 allowed) */
+  double font_size;         /* fontsize */
+  double title_font_size;   /* title fontsize */
+  double blankout_fraction; /* this fraction of size of plotting box
+                               is erased before the plot is drawn */
 
   /* text-related */
-  const char *font_name;       /* font name, NULL -> device default */
-  const char *title_font_name; /* title font name, NULL -> default */
+  const char *font_name;        /* font name, NULL -> device default */
+  const char *title_font_name;  /* title font name, NULL -> default */
   const char *symbol_font_name; /* symbol font name, NULL -> default */
-  const char *x_label;	  /* label for the x axis, NULL -> no label */
-  const char *y_label;	  /* label for the y axis, NULL -> no label */
-  const char *top_label;  /* title above the plot, NULL -> no title */
+  const char *x_label;          /* label for the x axis, NULL -> no label */
+  const char *y_label;          /* label for the y axis, NULL -> no label */
+  const char *top_label;        /* title above the plot, NULL -> no title */
 
   /* user-specified limits on the axes */
   double min_x, min_y, max_x, max_y;
@@ -205,9 +214,9 @@ struct graph {
   bool final_transpose_axes;
 
   /* for storage of data points (if we're not acting as a filter) */
-  Point *p;		   /* points array */
-  int points_length;	   /* length of the points array, in points */
-  int no_of_points;	   /* number of points stored in it */
+  Point *p;          /* points array */
+  int points_length; /* length of the points array, in points */
+  int no_of_points;  /* number of points stored in it */
 
   /* support for multigraphing */
   double reposition_trans_x, reposition_trans_y;
@@ -237,18 +246,19 @@ static graph_t *_scm_to_graph (SCM x);
 static SCM equalp_graph (SCM x1, SCM x2);
 static SCM mark_graph (SCM x);
 static size_t free_graph (SCM x);
-static int print_graph (SCM x, SCM port, scm_print_state * pstate);
+static int print_graph (SCM x, SCM port, scm_print_state *pstate);
 static bool parse_pen_string (const char *pen_s);
-static dataset_status_t read_vector_dataset (VecReader *reader, Point **p_addr, int *length, int *no_of_points);
+static dataset_status_t read_vector_dataset (VecReader *reader, Point **p_addr,
+                                             int *length, int *no_of_points);
 static dataset_status_t read_vector_point (VecReader *reader, Point *point);
 static dataset_status_t read_point_from_list (VecReader *reader, Point *point);
 void gupl_graph_init (void);
 static void reset_vec_reader (VecReader *reader);
 
-#define NEW_POINT_ARRAY_LENGTH(old_len)                     \
-  ((old_len)*sizeof(Point) < 10000000                       \
-   ? 2 * (old_len) : (old_len) + 10000000/sizeof(Point))
-
+#define NEW_POINT_ARRAY_LENGTH(old_len)                                       \
+  ((old_len) * sizeof (Point) < 10000000                                      \
+       ? 2 * (old_len)                                                        \
+       : (old_len) + 10000000 / sizeof (Point))
 
 void
 initialize_struct_graph (graph_t *p)
@@ -380,13 +390,12 @@ _scm_is_graph (SCM x)
     }
   else
     return 0;
-
 }
 
 static graph_t *
 _scm_to_graph (SCM x)
 {
-  return (graph_t *) SCM_SMOB_DATA (x);
+  return (graph_t *)SCM_SMOB_DATA (x);
 }
 
 SCM
@@ -394,8 +403,8 @@ equalp_graph (SCM x1, SCM x2)
 {
   graph_t *graph1, *graph2;
 
-  graph1 = (graph_t *) SCM_SMOB_DATA (x1);
-  graph2 = (graph_t *) SCM_SMOB_DATA (x2);
+  graph1 = (graph_t *)SCM_SMOB_DATA (x1);
+  graph2 = (graph_t *)SCM_SMOB_DATA (x2);
 
   if ((graph1 == NULL) || (graph2 == NULL))
     return SCM_BOOL_F;
@@ -417,7 +426,7 @@ free_graph (SCM x)
 {
   graph_t *graph;
 
-  graph = (graph_t *) SCM_SMOB_DATA (x);
+  graph = (graph_t *)SCM_SMOB_DATA (x);
   if (graph != NULL)
     {
       free (graph);
@@ -428,18 +437,18 @@ free_graph (SCM x)
 }
 
 int
-print_graph (SCM x, SCM port, scm_print_state * pstate)
+print_graph (SCM x, SCM port, scm_print_state *pstate)
 {
-  graph_t *graph = (graph_t *) SCM_SMOB_DATA (x);
+  graph_t *graph = (graph_t *)SCM_SMOB_DATA (x);
   char *str;
 
   scm_puts ("#<graph ", port);
 
   if (graph == 0)
-    scm_puts ( "(freed)", port);
+    scm_puts ("(freed)", port);
   else
     {
-      if (asprintf (&str, "%p", (void *) graph) < 0)
+      if (asprintf (&str, "%p", (void *)graph) < 0)
         scm_puts ("???", port);
       else
         scm_puts (str, port);
@@ -462,7 +471,7 @@ gupl_new_graph (void)
   graph_t *c_graph;
   SCM s_graph;
 
-  c_graph = (graph_t *) scm_malloc (sizeof (graph_t));
+  c_graph = (graph_t *)scm_malloc (sizeof (graph_t));
   initialize_struct_graph (c_graph);
   SCM_NEWSMOB (s_graph, graph_tag, c_graph);
   return (s_graph);
@@ -482,7 +491,8 @@ SCM
 gupl_toggle_transpose_axes_x (SCM s_graph)
 {
   graph_t *c_graph;
-  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "toggle-transpose-axes!");
+  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1,
+              "toggle-transpose-axes!");
   c_graph = _scm_to_graph (s_graph);
   c_graph->transpose_axes = (c_graph->transpose_axes == true ? false : true);
   return SCM_UNSPECIFIED;
@@ -513,7 +523,8 @@ SCM
 gupl_toggle_frame_on_top_x (SCM s_graph)
 {
   graph_t *c_graph;
-  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "toggle-frame-on-top!");
+  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1,
+              "toggle-frame-on-top!");
   c_graph = _scm_to_graph (s_graph);
   c_graph->frame_on_top = (c_graph->frame_on_top == true ? false : true);
   return SCM_UNSPECIFIED;
@@ -566,9 +577,11 @@ SCM
 gupl_toggle_rotate_y_label_x (SCM s_graph)
 {
   graph_t *c_graph;
-  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "toggle-rotate-y-label!");
+  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1,
+              "toggle-rotate-y-label!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->no_rotate_y_label = (c_graph->no_rotate_y_label == true ? false : true);
+  c_graph->no_rotate_y_label
+      = (c_graph->no_rotate_y_label == true ? false : true);
   return SCM_UNSPECIFIED;
 }
 
@@ -591,7 +604,8 @@ gupl_grid_style_x (SCM s_graph, SCM s_grid_style)
 {
   graph_t *c_graph;
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "grid-style!");
-  SCM_ASSERT (scm_is_integer (s_grid_style), s_grid_style, SCM_ARG2, "grid-style!");
+  SCM_ASSERT (scm_is_integer (s_grid_style), s_grid_style, SCM_ARG2,
+              "grid-style!");
   c_graph = _scm_to_graph (s_graph);
   c_graph->local_grid_style = scm_to_int (s_grid_style);
   if (c_graph->local_grid_style > 4 || c_graph->local_grid_style < 0)
@@ -656,7 +670,7 @@ gupl_toggle_log_axis_x (SCM s_graph, SCM s_arg)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "toggle-log-axis!");
   SCM_ASSERT (scm_is_string (s_arg), s_arg, SCM_ARG2, "toggle-log-axis!");
   c_graph = _scm_to_graph (s_graph);
-  for (len = 0; len < scm_c_string_length (s_arg); len ++)
+  for (len = 0; len < scm_c_string_length (s_arg); len++)
     {
       unsigned int c = SCM_CHAR (scm_c_string_ref (s_arg, len));
       if (c == 'x' || c == 'X')
@@ -675,7 +689,7 @@ gupl_toggle_no_ticks_x (SCM s_graph, SCM s_arg)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "toggle-no-ticks!");
   SCM_ASSERT (scm_is_string (s_arg), s_arg, SCM_ARG2, "toggle-no-ticks!");
   c_graph = _scm_to_graph (s_graph);
-  for (len = 0; len < scm_c_string_length (s_arg); len ++)
+  for (len = 0; len < scm_c_string_length (s_arg); len++)
     {
       unsigned int c = SCM_CHAR (scm_c_string_ref (s_arg, len));
       if (c == 'x' || c == 'X')
@@ -705,7 +719,8 @@ gupl_fill_fraction_x (SCM s_graph, SCM s_fraction)
 {
   graph_t *c_graph;
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "fill-fraction!");
-  SCM_ASSERT (scm_is_real (s_fraction), s_fraction, SCM_ARG2, "fill-fraction!");
+  SCM_ASSERT (scm_is_real (s_fraction), s_fraction, SCM_ARG2,
+              "fill-fraction!");
   c_graph = _scm_to_graph (s_graph);
   c_graph->local_fill_fraction = scm_to_double (s_fraction);
   if (c_graph->local_fill_fraction > 1.0)
@@ -747,7 +762,6 @@ gupl_width_of_plot_x (SCM s_graph, SCM s_width)
   c_graph->plot_width = scm_to_double (s_width);
   return SCM_UNSPECIFIED;
 }
-
 
 SCM
 gupl_output_format_x (SCM s_graph, SCM s_format)
@@ -804,16 +818,17 @@ gupl_symbol_font_name_x (SCM s_graph, SCM s_name)
   return SCM_UNSPECIFIED;
 }
 
-
 SCM
 gupl_toggle_round_to_next_tick_x (SCM s_graph, SCM s_arg)
 {
   graph_t *c_graph;
   size_t len;
-  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "toggle-round-to-next-tick!");
-  SCM_ASSERT (scm_is_string (s_arg), s_arg, SCM_ARG2, "toggle-round-to-next-tick!");
+  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1,
+              "toggle-round-to-next-tick!");
+  SCM_ASSERT (scm_is_string (s_arg), s_arg, SCM_ARG2,
+              "toggle-round-to-next-tick!");
   c_graph = _scm_to_graph (s_graph);
-  for (len = 0; len < scm_c_string_length (s_arg); len ++)
+  for (len = 0; len < scm_c_string_length (s_arg); len++)
     {
       unsigned int c = SCM_CHAR (scm_c_string_ref (s_arg, len));
       if (c == 'x' || c == 'X')
@@ -892,7 +907,7 @@ gupl_toggle_axis_end (SCM s_graph, SCM s_arg)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "toggle-axis-end!");
   SCM_ASSERT (scm_is_string (s_arg), s_arg, SCM_ARG2, "toggle-axis-end!");
   c_graph = _scm_to_graph (s_graph);
-  for (len = 0; len < scm_c_string_length (s_arg); len ++)
+  for (len = 0; len < scm_c_string_length (s_arg); len++)
     {
       unsigned int c = SCM_CHAR (scm_c_string_ref (s_arg, len));
       if (c == 'x' || c == 'X')
@@ -1141,8 +1156,7 @@ gupl_symbol_x (SCM s_graph, SCM s_index, SCM s_size)
     return SCM_UNSPECIFIED;
 
   c_graph->local_symbol_index = scm_to_int (s_graph);
-  if (c_graph->local_symbol_index < 0
-      || c_graph->local_symbol_index > 255)
+  if (c_graph->local_symbol_index < 0 || c_graph->local_symbol_index > 255)
     scm_out_of_range ("symbol!", s_index);
 
   if (SCM_UNBNDP (s_size))
@@ -1280,25 +1294,27 @@ pre_finalize_axes_parameters (graph_t *c_graph)
       if (c_graph->spec_min_x)
         {
           if (c_graph->min_x > 0.0)
-            c_graph->min_x = log10(c_graph->min_x);
+            c_graph->min_x = log10 (c_graph->min_x);
           else
             {
-              fprintf(stderr,
-                      "%s: error: the limit %g on a logarithmic axis is nonpositive\n",
-                      progname, c_graph->min_x);
+              fprintf (stderr,
+                       "%s: error: the limit %g on a logarithmic axis is "
+                       "nonpositive\n",
+                       progname, c_graph->min_x);
               // return EXIT_FAILURE;
             }
         }
       if (c_graph->spec_max_x)
         {
           if (c_graph->max_x > 0.0)
-            c_graph->max_x = log10(c_graph->max_x);
+            c_graph->max_x = log10 (c_graph->max_x);
           else
             {
-              fprintf(stderr,
-                      "%s: error: the limit %g on a logarithmic axis is nonpositive\n",
-                      progname, c_graph->max_x);
-              //return EXIT_FAILURE;
+              fprintf (stderr,
+                       "%s: error: the limit %g on a logarithmic axis is "
+                       "nonpositive\n",
+                       progname, c_graph->max_x);
+              // return EXIT_FAILURE;
             }
         }
     }
@@ -1308,25 +1324,27 @@ pre_finalize_axes_parameters (graph_t *c_graph)
       if (c_graph->spec_min_y)
         {
           if (c_graph->min_y > 0.0)
-            c_graph->min_y = log10(c_graph->min_y);
+            c_graph->min_y = log10 (c_graph->min_y);
           else
             {
-              fprintf(stderr,
-                      "%s: error: the limit %g on a logarithmic axis is nonpositive\n",
-                      progname, c_graph->min_y);
+              fprintf (stderr,
+                       "%s: error: the limit %g on a logarithmic axis is "
+                       "nonpositive\n",
+                       progname, c_graph->min_y);
               // return EXIT_FAILURE;
             }
         }
       if (c_graph->spec_max_y)
         {
           if (c_graph->max_y > 0.0)
-            c_graph->max_y = log10(c_graph->max_y);
+            c_graph->max_y = log10 (c_graph->max_y);
           else
             {
-              fprintf(stderr,
-                      "%s: error: the limit %g on a logarithmic axis is nonpositive\n",
-                      progname, c_graph->max_y);
-              //return EXIT_FAILURE;
+              fprintf (stderr,
+                       "%s: error: the limit %g on a logarithmic axis is "
+                       "nonpositive\n",
+                       progname, c_graph->max_y);
+              // return EXIT_FAILURE;
             }
         }
     }
@@ -1373,11 +1391,12 @@ pre_finalize_axes_parameters (graph_t *c_graph)
      by the luser is special: we set the `filter' flag for the
      duration of this plot.  This indicates that the axes information
      does not need to be computed from the data.  */
-  c_graph->filter = ((c_graph->final_spec_min_x && c_graph->final_spec_max_x
-                      && c_graph->final_spec_min_y && c_graph->final_spec_max_y)
-                     ? true : false);
+  c_graph->filter
+      = ((c_graph->final_spec_min_x && c_graph->final_spec_max_x
+          && c_graph->final_spec_min_y && c_graph->final_spec_max_y)
+             ? true
+             : false);
 }
-
 
 VecReader *
 new_vec_reader (SCM s_xvec, SCM s_yvec, SCM s_yerrvec, data_type format_type,
@@ -1391,7 +1410,7 @@ new_vec_reader (SCM s_xvec, SCM s_yvec, SCM s_yerrvec, data_type format_type,
 
   reader = (VecReader *)xmalloc (sizeof (VecReader));
 
-  reader->need_break = true;	/* next point will have pen up */
+  reader->need_break = true; /* next point will have pen up */
   reader->xvec = s_xvec;
   reader->yvec = s_yvec;
   reader->yerrvec = s_yerrvec;
@@ -1415,19 +1434,16 @@ new_vec_reader (SCM s_xvec, SCM s_yvec, SCM s_yerrvec, data_type format_type,
   return reader;
 }
 
-
 void
-alter_vec_reader_parameters (VecReader *reader, SCM s_xvec, SCM s_yvec, SCM s_yerrvec,
-                             data_type format_type, bool auto_abscissa, double delta_x,
-                             double abscissa, int symbol, double symbol_size,
-                             const char *symbol_font_name, int linemode,
-                             double line_width, double fill_fraction, bool use_color,
-                             bool new_symbol, bool new_symbol_size,
-                             bool new_symbol_font_name, bool new_linemode,
-                             bool new_line_width, bool new_fill_fraction,
-                             bool new_use_color)
+alter_vec_reader_parameters (
+    VecReader *reader, SCM s_xvec, SCM s_yvec, SCM s_yerrvec,
+    data_type format_type, bool auto_abscissa, double delta_x, double abscissa,
+    int symbol, double symbol_size, const char *symbol_font_name, int linemode,
+    double line_width, double fill_fraction, bool use_color, bool new_symbol,
+    bool new_symbol_size, bool new_symbol_font_name, bool new_linemode,
+    bool new_line_width, bool new_fill_fraction, bool new_use_color)
 {
-  reader->need_break = true;	/* force break in polyline */
+  reader->need_break = true; /* force break in polyline */
   reader->xvec = s_xvec;
   reader->yvec = s_yvec;
   reader->yerrvec = s_yerrvec;
@@ -1458,7 +1474,7 @@ alter_vec_reader_parameters (VecReader *reader, SCM s_xvec, SCM s_yvec, SCM s_ye
 static void
 reset_vec_reader (VecReader *reader)
 {
-  reader->need_break = true;	/* force break in polyline */
+  reader->need_break = true; /* force break in polyline */
 
   /* bump linemode if appropriate */
   if (reader->auto_bump)
@@ -1501,12 +1517,13 @@ read_vector (VecReader *reader, Point **p_addr, int *length, int *no_of_points)
 }
 
 static dataset_status_t
-read_vector_dataset (VecReader *reader, Point **p_addr, int *length, int *no_of_points)
+read_vector_dataset (VecReader *reader, Point **p_addr, int *length,
+                     int *no_of_points)
 {
   Point *p = *p_addr;
   dataset_status_t status;
 
-  for ( ; ; )
+  for (;;)
     {
       /*
        * Grow the buffer if needed
@@ -1516,7 +1533,7 @@ read_vector_dataset (VecReader *reader, Point **p_addr, int *length, int *no_of_
           int old_length, new_length;
 
           old_length = *length;
-          new_length = NEW_POINT_ARRAY_LENGTH(old_length);
+          new_length = NEW_POINT_ARRAY_LENGTH (old_length);
           p = (Point *)xrealloc (p, new_length * sizeof (Point));
           *length = new_length;
         }
@@ -1529,7 +1546,7 @@ read_vector_dataset (VecReader *reader, Point **p_addr, int *length, int *no_of_
       (*no_of_points)++;
     }
 
-  *p_addr = p;			/* update beginning of array if needed */
+  *p_addr = p; /* update beginning of array if needed */
 
   return status;
 }
@@ -1548,14 +1565,15 @@ read_vector_point (VecReader *reader, Point *point)
   point->fill_fraction = reader->fill_fraction;
   point->use_color = reader->use_color;
   point->have_x_errorbar = false; /* not supported yet */
-  point->have_y_errorbar = (reader->format_type == T_ASCII_ERRORBAR ? true : false);
+  point->have_y_errorbar
+      = (reader->format_type == T_ASCII_ERRORBAR ? true : false);
 
- head:
+head:
 
   if (scm_is_true (scm_list_p (reader->yvec)))
     status = read_point_from_list (reader, point);
-  //else if (scm_is_true (scm_f64vector_p (reader->yvec)))
-  //status = read_point_from_f64vector (reader, point);
+  // else if (scm_is_true (scm_f64vector_p (reader->yvec)))
+  // status = read_point_from_f64vector (reader, point);
   else
     scm_misc_error (NULL, "bad format", SCM_BOOL_F);
 
@@ -1587,10 +1605,13 @@ read_vector_point (VecReader *reader, Point *point)
 
           if (bad_point)
             {
-              fprintf (stderr, "%s: the inappropriate point (%g,%g) is dropped, as this is a log plot\n",
+              fprintf (stderr,
+                       "%s: the inappropriate point (%g,%g) is dropped, as "
+                       "this is a "
+                       "log plot\n",
                        progname, point->x, point->y);
               reader->need_break = true;
-              goto head;		/* on to next point */
+              goto head; /* on to next point */
             }
         }
       if (reader->log_axis & Y_AXIS)
@@ -1614,10 +1635,13 @@ read_vector_point (VecReader *reader, Point *point)
 
           if (bad_point)
             {
-              fprintf (stderr, "%s: the inappropriate point (%g,%g) is dropped, as this is a log plot\n",
+              fprintf (stderr,
+                       "%s: the inappropriate point (%g,%g) is dropped, as "
+                       "this is a "
+                       "log plot\n",
                        progname, point->x, point->y);
               reader->need_break = true;
-              goto head;		/* on to next point */
+              goto head; /* on to next point */
             }
         }
 
@@ -1658,7 +1682,7 @@ read_point_from_list (VecReader *reader, Point *point)
 {
   size_t i = reader->i_vec;
 
-  reader->i_vec ++;
+  reader->i_vec++;
 
   /* read coordinate(s) */
   if (reader->auto_abscissa)
@@ -1724,10 +1748,10 @@ read_point_from_list (VecReader *reader, Point *point)
   return IN_PROGRESS;
 }
 
-
 void
 copy_xy_vectors_to_points_array (SCM xvec, SCM yvec, Reader *reader,
-                                 Point **p_addr, int *length, int *no_of_points)
+                                 Point **p_addr, int *length,
+                                 int *no_of_points)
 {
   // size_t i_vec = 0;
 }
@@ -1738,9 +1762,9 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
   graph_t *c_graph;
 
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "xy-graph!");
-  //SCM_ASSERT (scm_is_true (scm_f64vector_p (s_xvec)), s_xvec, SCM_ARG2,
+  // SCM_ASSERT (scm_is_true (scm_f64vector_p (s_xvec)), s_xvec, SCM_ARG2,
   //"xy-graph!");
-  //SCM_ASSERT (scm_is_true (scm_f64vector_p (s_yvec)), s_yvec, SCM_ARG3,
+  // SCM_ASSERT (scm_is_true (scm_f64vector_p (s_yvec)), s_yvec, SCM_ARG3,
   // "xy-graph!");
 
   c_graph = _scm_to_graph (s_graph);
@@ -1758,19 +1782,14 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
     {
       c_graph->p = scm_malloc (c_graph->points_length * sizeof (Point));
 
-      c_graph->reader = new_vec_reader (s_xvec,
-                                        s_yvec,
-                                        SCM_BOOL_F, /* y error bars */
-                                        c_graph->input_type,
-                                        c_graph->auto_abscissa, c_graph->delta_x,
-                                        c_graph->x_start, c_graph->final_transpose_axes,
-                                        c_graph->final_log_axis, c_graph->auto_bump,
-                                        c_graph->symbol_index, c_graph->symbol_size,
-                                        c_graph->symbol_font_name,
-                                        c_graph->linemode_index,
-                                        c_graph->plot_line_width,
-                                        c_graph->fill_fraction,
-                                        c_graph->use_color);
+      c_graph->reader = new_vec_reader (
+          s_xvec, s_yvec, SCM_BOOL_F, /* y error bars */
+          c_graph->input_type, c_graph->auto_abscissa, c_graph->delta_x,
+          c_graph->x_start, c_graph->final_transpose_axes,
+          c_graph->final_log_axis, c_graph->auto_bump, c_graph->symbol_index,
+          c_graph->symbol_size, c_graph->symbol_font_name,
+          c_graph->linemode_index, c_graph->plot_line_width,
+          c_graph->fill_fraction, c_graph->use_color);
 
       c_graph->new_symbol = false;
       c_graph->new_symbol_size = false;
@@ -1782,20 +1801,16 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
     }
   else
     {
-      alter_vec_reader_parameters (c_graph->reader,
-                                   s_xvec,
-                                   s_yvec,
-                                   SCM_BOOL_F,
-                                   c_graph->input_type,
-                                   c_graph->auto_abscissa, c_graph->delta_x,
-                                   c_graph->x_start, c_graph->symbol_index,
-                                   c_graph->symbol_size, c_graph->symbol_font_name,
-                                   c_graph->linemode_index, c_graph->plot_line_width,
-                                   c_graph->fill_fraction, c_graph->use_color,
-                                   c_graph->new_symbol, c_graph->new_symbol_size,
-                                   c_graph->new_symbol_font_name, c_graph->new_linemode,
-                                   c_graph->new_plot_line_width, c_graph->new_fill_fraction,
-                                   c_graph->new_use_color);
+      alter_vec_reader_parameters (
+          c_graph->reader, s_xvec, s_yvec, SCM_BOOL_F, c_graph->input_type,
+          c_graph->auto_abscissa, c_graph->delta_x, c_graph->x_start,
+          c_graph->symbol_index, c_graph->symbol_size,
+          c_graph->symbol_font_name, c_graph->linemode_index,
+          c_graph->plot_line_width, c_graph->fill_fraction, c_graph->use_color,
+          c_graph->new_symbol, c_graph->new_symbol_size,
+          c_graph->new_symbol_font_name, c_graph->new_linemode,
+          c_graph->new_plot_line_width, c_graph->new_fill_fraction,
+          c_graph->new_use_color);
       c_graph->new_symbol = false;
       c_graph->new_symbol_size = false;
       c_graph->new_symbol_font_name = false;
@@ -1805,12 +1820,10 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
       c_graph->new_use_color = false;
     }
 
-  read_vector (c_graph->reader,
-               &(c_graph->p), &(c_graph->points_length),
+  read_vector (c_graph->reader, &(c_graph->p), &(c_graph->points_length),
                &(c_graph->no_of_points));
 
   c_graph->first_file_of_graph = false;
-
 
   return SCM_UNSPECIFIED;
 }
@@ -1823,7 +1836,8 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "generate");
   SCM_ASSERT (scm_is_true (scm_output_port_p (outp)), outp, SCM_ARG2,
               "generate");
-  SCM_ASSERT (scm_is_true (scm_output_port_p (errp)), errp, SCM_ARG3, "generate");
+  SCM_ASSERT (scm_is_true (scm_output_port_p (errp)), errp, SCM_ARG3,
+              "generate");
 
   SCM outp_fileno = scm_fileno (outp);
   int c_outp_fileno_orig = scm_to_int (outp_fileno);
@@ -1839,44 +1853,33 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
      port buffering.  Double buffering causes problems.  */
 
   if (c_outp)
-      setvbuf (c_outp, NULL, _IONBF, 0);
+    setvbuf (c_outp, NULL, _IONBF, 0);
   if (c_errp)
-      setvbuf (c_errp, NULL, _IONBF, 0);
-  
+    setvbuf (c_errp, NULL, _IONBF, 0);
+
   c_graph = _scm_to_graph (s_graph);
   if (c_graph->first_file_of_graph == false)
     {
       /* fill in any of min_? and max_? that user didn't specify (the
          prefix "final_" means these arguments were finalized at the
          time the first file of the plot was processed) */
-      array_bounds (c_graph->p,
-                    c_graph->no_of_points,
-                    c_graph->final_transpose_axes,
-                    c_graph->clip_mode,
-                    &(c_graph->final_min_x),
-                    &(c_graph->final_min_y),
-                    &(c_graph->final_max_x),
-                    &(c_graph->final_max_y),
-                    c_graph->final_spec_min_x,
-                    c_graph->final_spec_min_y,
-                    c_graph->final_spec_max_x,
-                    c_graph->final_spec_max_y);
+      array_bounds (c_graph->p, c_graph->no_of_points,
+                    c_graph->final_transpose_axes, c_graph->clip_mode,
+                    &(c_graph->final_min_x), &(c_graph->final_min_y),
+                    &(c_graph->final_max_x), &(c_graph->final_max_y),
+                    c_graph->final_spec_min_x, c_graph->final_spec_min_y,
+                    c_graph->final_spec_max_x, c_graph->final_spec_max_y);
 
       if (c_graph->first_graph_of_multigraph)
         /* still haven't created multigrapher, do so now */
         {
-          if ((c_graph->multigrapher
-               = new_multigrapher_with_ports (c_graph->output_format,
-                                              c_outp,
-                                              c_errp,
-                                              c_graph->bg_color,
-                                              c_graph->bitmap_size,
-                                              c_graph->emulate_color,
-                                              c_graph->max_line_length,
-                                              c_graph->meta_portable,
-                                              c_graph->page_size,
-                                              c_graph->rotation_angle,
-                                              c_graph->save_screen)) == NULL)
+          if ((c_graph->multigrapher = new_multigrapher_with_ports (
+                   c_graph->output_format, c_outp, c_errp, c_graph->bg_color,
+                   c_graph->bitmap_size, c_graph->emulate_color,
+                   c_graph->max_line_length, c_graph->meta_portable,
+                   c_graph->page_size, c_graph->rotation_angle,
+                   c_graph->save_screen))
+              == NULL)
             {
               scm_misc_error ("generate",
                               "the graphing device could not be opened: ~S",
@@ -1888,51 +1891,33 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
          states; also concatenate the current transformation matrix
          with a matrix formed from the repositioning parameters (this
          will take effect for the duration of the graph) */
-      begin_graph (c_graph->multigrapher,
-                   c_graph->reposition_scale,
-                   c_graph->reposition_trans_x,
-                   c_graph->reposition_trans_y);
+      begin_graph (c_graph->multigrapher, c_graph->reposition_scale,
+                   c_graph->reposition_trans_x, c_graph->reposition_trans_y);
 
       /* font selection, saves typing */
       if ((c_graph->title_font_name == NULL) && (c_graph->font_name != NULL))
         c_graph->title_font_name = c_graph->font_name;
 
-      set_graph_parameters (c_graph->multigrapher,
-                            c_graph->frame_line_width,
-                            c_graph->frame_color,
-                            c_graph->top_label,
-                            c_graph->title_font_name,
-                            c_graph->title_font_size, /*for title*/
-                            c_graph->tick_size,
-                            c_graph->grid_spec,
-                            c_graph->final_min_x,
-                            c_graph->final_max_x,
-                            c_graph->final_spacing_x,
-                            c_graph->final_min_y,
-                            c_graph->final_max_y,
-                            c_graph->final_spacing_y,
-                            c_graph->final_spec_spacing_x,
-                            c_graph->final_spec_spacing_y,
-                            c_graph->plot_width,
-                            c_graph->plot_height,
-                            c_graph->margin_below,
-                            c_graph->margin_left,
-                            c_graph->font_name,
-                            c_graph->font_size, /* for abscissa label */
-                            c_graph->x_label,
-                            c_graph->font_name,
-                            c_graph->font_size, /* for ordinate label */
-                            c_graph->y_label,
-                            c_graph->no_rotate_y_label,
-                            /* these args are portmanteaux */
-                            c_graph->final_log_axis,
-                            c_graph->final_round_to_next_tick,
-                            c_graph->switch_axis_end,
-                            c_graph->omit_ticks,
-                            /* more args */
-                            c_graph->clip_mode,
-                            c_graph->blankout_fraction,
-                            c_graph->final_transpose_axes);
+      set_graph_parameters (
+          c_graph->multigrapher, c_graph->frame_line_width,
+          c_graph->frame_color, c_graph->top_label, c_graph->title_font_name,
+          c_graph->title_font_size, /*for title*/
+          c_graph->tick_size, c_graph->grid_spec, c_graph->final_min_x,
+          c_graph->final_max_x, c_graph->final_spacing_x, c_graph->final_min_y,
+          c_graph->final_max_y, c_graph->final_spacing_y,
+          c_graph->final_spec_spacing_x, c_graph->final_spec_spacing_y,
+          c_graph->plot_width, c_graph->plot_height, c_graph->margin_below,
+          c_graph->margin_left, c_graph->font_name,
+          c_graph->font_size, /* for abscissa label */
+          c_graph->x_label, c_graph->font_name,
+          c_graph->font_size, /* for ordinate label */
+          c_graph->y_label, c_graph->no_rotate_y_label,
+          /* these args are portmanteaux */
+          c_graph->final_log_axis, c_graph->final_round_to_next_tick,
+          c_graph->switch_axis_end, c_graph->omit_ticks,
+          /* more args */
+          c_graph->clip_mode, c_graph->blankout_fraction,
+          c_graph->final_transpose_axes);
 
       /* draw the graph frame (grid, ticks, etc.); draw a `canvas' (a
          background opaque white rectangle) only if this isn't the
@@ -1972,7 +1957,7 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
 }
 
 SCM
-gupl_graph_test(SCM s_graph, SCM s_name)
+gupl_graph_test (SCM s_graph, SCM s_name)
 {
   graph_t *c_graph;
   char *c_name;
@@ -2072,7 +2057,7 @@ gupl_graph_test(SCM s_graph, SCM s_name)
       else
         ret = SCM_BOOL_F;
     }
-  
+
 #if 0  
   /* command-line parameters (constant over multigrapher operation) */
   const char *bg_color;		/* color of background, if non-NULL */
@@ -2086,7 +2071,7 @@ gupl_graph_test(SCM s_graph, SCM s_name)
 
   /* graph-specific parameters (may change from graph to graph) */
 #endif
-  
+
   else if (!strcmp (c_name, "grid_spec"))
     {
       if (c_graph->grid_spec == NO_AXES)
@@ -2135,13 +2120,13 @@ gupl_graph_test(SCM s_graph, SCM s_name)
 
   else if (!strcmp (c_name, "font_size"))
     ret = scm_from_double (c_graph->font_size);
-  
+
 #if 0
   double title_font_size;     /* title fontsize */
   double blankout_fraction;   /* this fraction of size of plotting box
                                  is erased before the plot is drawn */
 #endif
-  
+
   else if (!strcmp (c_name, "font_name"))
     ret = scm_from_latin1_string (c_graph->font_name);
 
@@ -2208,7 +2193,6 @@ gupl_graph_test(SCM s_graph, SCM s_name)
 
   free (c_name);
   return ret;
-    
 }
 
 static bool
@@ -2225,10 +2209,10 @@ parse_pen_string (const char *pen_s)
       bool got_digit;
       const char *tmp;
 
-      if (*charp == ':')	/* skip any ':' */
+      if (*charp == ':') /* skip any ':' */
         {
           charp++;
-          continue;		/* back to top of while loop */
+          continue; /* back to top of while loop */
         }
       pen_num = 0;
       got_digit = false;
@@ -2267,7 +2251,8 @@ parse_pen_string (const char *pen_s)
   return true;
 }
 
-void libguile_plotutils_LTX_gupl_graph_init (void)
+void
+libguile_plotutils_LTX_gupl_graph_init (void)
 {
   gupl_graph_init ();
 }
@@ -2289,9 +2274,12 @@ gupl_graph_init (void)
       scm_c_define_gsubr ("save-screen!", 1, 0, 0, gupl_save_screen_x);
       scm_c_define_gsubr ("toggle-transpose-axes!", 1, 0, 0,
                           gupl_toggle_transpose_axes_x);
-      scm_c_define_gsubr ("toggle-auto-bump!", 1, 0, 0, gupl_toggle_auto_bump_x);
-      scm_c_define_gsubr ("toggle-use-color!", 1, 0, 0, gupl_toggle_use_color_x);
-      scm_c_define_gsubr ("toggle-frame-on-top!", 1, 0, 0, gupl_toggle_frame_on_top_x);
+      scm_c_define_gsubr ("toggle-auto-bump!", 1, 0, 0,
+                          gupl_toggle_auto_bump_x);
+      scm_c_define_gsubr ("toggle-use-color!", 1, 0, 0,
+                          gupl_toggle_use_color_x);
+      scm_c_define_gsubr ("toggle-frame-on-top!", 1, 0, 0,
+                          gupl_toggle_frame_on_top_x);
       scm_c_define_gsubr ("portable-output!", 1, 0, 0, gupl_portable_output_x);
       scm_c_define_gsubr ("emulate-color!", 2, 0, 0, gupl_emulate_color_x);
       scm_c_define_gsubr ("graph-version", 0, 0, 0, gupl_graph_version);
@@ -2312,7 +2300,8 @@ gupl_graph_init (void)
       scm_c_define_gsubr ("font-name!", 2, 0, 0, gupl_font_name_x);
       scm_c_define_gsubr ("rotation-angle!", 2, 0, 0, gupl_rotation_angle_x);
       scm_c_define_gsubr ("title-font-name!", 2, 0, 0, gupl_title_font_name_x);
-      scm_c_define_gsubr ("symbol-font-name!", 2, 0, 0, gupl_symbol_font_name_x);
+      scm_c_define_gsubr ("symbol-font-name!", 2, 0, 0,
+                          gupl_symbol_font_name_x);
       scm_c_define_gsubr ("toggle-round-to-next-tick!", 2, 0, 0,
                           gupl_toggle_round_to_next_tick_x);
       scm_c_define_gsubr ("top-label!", 2, 0, 0, gupl_top_label_x);
@@ -2324,7 +2313,8 @@ gupl_graph_init (void)
       scm_c_define_gsubr ("blankout!", 2, 0, 0, gupl_blankout_x);
       scm_c_define_gsubr ("bitmap-size!", 2, 0, 0, gupl_bitmap_size_x);
       scm_c_define_gsubr ("title-font-size!", 2, 0, 0, gupl_title_font_size_x);
-      scm_c_define_gsubr ("frame-line-width!", 2, 0, 0, gupl_frame_line_width_x);
+      scm_c_define_gsubr ("frame-line-width!", 2, 0, 0,
+                          gupl_frame_line_width_x);
       scm_c_define_gsubr ("max-line-length!", 2, 0, 0, gupl_max_line_length_x);
       scm_c_define_gsubr ("page-size!", 2, 0, 0, gupl_page_size_x);
       scm_c_define_gsubr ("pen-colors", 1, 0, 0, gupl_pen_colors);

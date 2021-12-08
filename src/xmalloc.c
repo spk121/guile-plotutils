@@ -18,13 +18,13 @@
 
 #include "libcommon.h"
 
-void * 
+void *
 xmalloc (size_t length)
 {
-  void * p;
-  p = (void *) malloc (length);
+  void *p;
+  p = (void *)malloc (length);
 
-  if (p == (void *) NULL)
+  if (p == (void *)NULL)
     {
       perror ("out of memory");
       exit (EXIT_FAILURE);
@@ -32,12 +32,12 @@ xmalloc (size_t length)
   return p;
 }
 
-void * 
-xrealloc (void * p, size_t length)
+void *
+xrealloc (void *p, size_t length)
 {
-  p = (void *) realloc (p, length);
+  p = (void *)realloc (p, length);
 
-  if (p == (void *) NULL)
+  if (p == (void *)NULL)
     {
       perror ("out of memory");
       exit (EXIT_FAILURE);
@@ -45,13 +45,13 @@ xrealloc (void * p, size_t length)
   return p;
 }
 
-void * 
+void *
 xcalloc (size_t nmemb, size_t size)
 {
-  void * p;
-  p = (void *) calloc (nmemb, size);
+  void *p;
+  p = (void *)calloc (nmemb, size);
 
-  if (p == (void *) NULL)
+  if (p == (void *)NULL)
     {
       perror ("out of memory");
       exit (EXIT_FAILURE);
