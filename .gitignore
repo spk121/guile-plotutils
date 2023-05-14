@@ -7,6 +7,10 @@ build-aux/install-sh
 build-aux/mdate-sh
 build-aux/missing
 build-aux/texinfo.tex
+build-aux/ar-lib
+build-aux/config.sub
+build-aux/depcomp
+build-aux/ltmain.sh
 config.log
 config.status
 configure
@@ -14,6 +18,11 @@ doc/.dirstamp
 doc/stamp-vti
 doc/version.texi
 pre-inst-env
+m4/libtool.m4
+m4/ltoptions.m4
+m4/ltsugar.m4
+m4/ltversion.m4
+m4/lt~obsolete.m4
 
 # Temp files
 *~
