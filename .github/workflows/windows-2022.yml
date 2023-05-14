@@ -1,4 +1,4 @@
-name: MinGW i686
+name: Windows 2022 MinGW
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2019
+    runs-on: windows-2022
     defaults:
       run:
         shell: msys2 {0}
