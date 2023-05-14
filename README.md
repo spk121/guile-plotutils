@@ -34,6 +34,6 @@ It appears to work on some GNU/Linux distros.
 To run one of the examples or your own code with Guile-Plotutils built
 directly from source, use `tools/uninstalled-env`.  For example
 
-    $ tools/uninstalled-env tools/run-guile examples/ex-plot.scm
+    $ tools/uninstalled-env tools/run-guile examples/ex-plot3.scm
 
 
