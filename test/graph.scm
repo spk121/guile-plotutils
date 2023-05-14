@@ -40,5 +40,17 @@
   (graph xvalues yvalues
          #:font-name "Serif"
          #:test "font_name"))
+(test-equal "symbol_index 2"
+  2
+  (graph xvalues yvalues
+         #:font-name "Serif"
+         #:symbol '(2 0.25)
+         #:test "symbol_index"))
+(test-equal "symbol_size 0.25"
+  0.25
+  (graph xvalues yvalues
+         #:font-name "Serif"
+         #:symbol '(2 0.25)
+         #:test "symbol_size"))
 
 (test-end "graph.scm")
