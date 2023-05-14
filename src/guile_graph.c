@@ -1159,9 +1159,10 @@ gupl_symbol_x (SCM s_graph, SCM s_index, SCM s_size)
   if (SCM_UNBNDP (s_index))
     return SCM_UNSPECIFIED;
 
-  c_graph->local_symbol_index = scm_to_int (s_graph);
+  c_graph->local_symbol_index = scm_to_int (s_index);
   if (c_graph->local_symbol_index < 0 || c_graph->local_symbol_index > 255)
     scm_out_of_range ("symbol!", s_index);
+  c_graph->symbol_index = c_graph->local_symbol_index;
 
   if (SCM_UNBNDP (s_size))
     return SCM_UNSPECIFIED;
@@ -1169,6 +1170,7 @@ gupl_symbol_x (SCM s_graph, SCM s_index, SCM s_size)
   c_graph->local_symbol_size = scm_to_double (s_size);
   if (c_graph->local_symbol_size <= 0.0)
     scm_out_of_range ("symbol!", s_size);
+
   c_graph->symbol_size = c_graph->local_symbol_size;
   c_graph->new_symbol_size = true;
   return SCM_UNSPECIFIED;
@@ -2062,7 +2064,7 @@ gupl_graph_test (SCM s_graph, SCM s_name)
         ret = SCM_BOOL_F;
     }
 
-#if 0  
+#if 0
   /* command-line parameters (constant over multigrapher operation) */
   const char *bg_color;		/* color of background, if non-NULL */
   const char *bitmap_size;
@@ -2104,7 +2106,7 @@ gupl_graph_test (SCM s_graph, SCM s_name)
   else if (!strcmp (c_name, "switch_axis_end"))
     ret = scm_from_int (c_graph->switch_axis_end);
 
-#if 0  
+#if 0
   int omit_ticks;      /* omit ticks and tick labels from an axis? */
 
   /* graph dimensions, expressed as fractions of the width of the libplot

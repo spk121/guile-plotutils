@@ -23,6 +23,15 @@ m4/ltoptions.m4
 m4/ltsugar.m4
 m4/ltversion.m4
 m4/lt~obsolete.m4
+src/.dirstamp
+src/config.h
+src/stamp-h1
+tools/gdb-guile
+tools/gdb-test
+tools/run-guile
+tools/run-test
+tools/uninstalled-env
+tools/uninstalled-test-env
 
 # Temp files
 *~
@@ -32,6 +41,7 @@ m4/lt~obsolete.m4
 *.gz
 *.trs
 *.log
+*.png
 
 # Documents
 *.info
@@ -40,19 +50,30 @@ m4/lt~obsolete.m4
 *.pdf
 *.ps
 *.eps
+docs/.dirstamp
+docs/stamp-vti
+docs/version.texi
 
 # Object files
 *.o
+*.lo
+*.go
+cache
+src/.deps/
+src/.dirstamp
 
 # Libraries
 *.lib
 *.a
+*.la
+.libs/
 
 # Shared objects (inc. Windows DLLs)
 *.dll
 *.so
 *.so.*
 *.dylib
+libtool
 
 # Executables
 *.exe
