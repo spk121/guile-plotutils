@@ -1,5 +1,5 @@
 /* This file is part of the GNU plotutils package.  Copyright (C) 1995,
-   1996, 1997, 1998, 1999, 2000, 2005, 2008, Free Software Foundation, Inc.
+   1996, 1997, 1998, 1999, 2000, 2005, 2008, 2026 Free Software Foundation, Inc.
 
    The GNU plotutils package is free software.  You may redistribute it
    and/or modify it under the terms of the GNU General Public License as
@@ -24,6 +24,8 @@ void *
 xmalloc (size_t length)
 {
   void *p;
+  if (length == 0)
+    length = 1;
   p = (void *)malloc (length);
 
   if (p == (void *)NULL)
@@ -37,6 +39,8 @@ xmalloc (size_t length)
 void *
 xrealloc (void *p, size_t length)
 {
+  if (length == 0)
+    length = 1;
   p = (void *)realloc (p, length);
 
   if (p == (void *)NULL)
@@ -51,6 +55,11 @@ void *
 xcalloc (size_t nmemb, size_t size)
 {
   void *p;
+  if (nmemb == 0 || size == 0)
+    {
+      nmemb = 1;
+      size = 1;
+    }
   p = (void *)calloc (nmemb, size);
 
   if (p == (void *)NULL)
