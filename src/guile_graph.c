@@ -1114,9 +1114,12 @@ SCM
 gupl_pen_colors (SCM s_colors)
 {
   char *c_colors;
+  bool parsed;
   SCM_ASSERT (scm_is_string (s_colors), s_colors, SCM_ARG1, "pen-colors");
   c_colors = scm_to_locale_string (s_colors);
-  return scm_from_bool (parse_pen_string (c_colors));
+  parsed = parse_pen_string (c_colors);
+  free (c_colors);
+  return scm_from_bool (parsed);
 }
 
 SCM
