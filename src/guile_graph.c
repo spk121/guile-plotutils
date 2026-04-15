@@ -142,6 +142,14 @@ struct graph
   const char *meta_portable;
   const char *page_size;
   const char *rotation_angle;
+  bool owns_output_format;
+  bool owns_bg_color;
+  bool owns_bitmap_size;
+  bool owns_emulate_color;
+  bool owns_max_line_length;
+  bool owns_meta_portable;
+  bool owns_page_size;
+  bool owns_rotation_angle;
   bool save_screen; /* save screen, i.e. no erase before plot? */
 
   /* graph-specific parameters (may change from graph to graph) */
@@ -149,6 +157,7 @@ struct graph
   grid_type grid_spec;     /* frame type for current graph */
   bool no_rotate_y_label;  /* used for pre-X11R6 servers */
   const char *frame_color; /* color of frame (and graph, if no -C)*/
+  bool owns_frame_color;
   int clip_mode;           /* clipping mode (cf. gnuplot) */
   /* following variables are portmanteau: x and y are included as bitfields*/
   int log_axis;           /* log axes or linear axes? */
@@ -181,6 +190,12 @@ struct graph
   const char *x_label;          /* label for the x axis, NULL -> no label */
   const char *y_label;          /* label for the y axis, NULL -> no label */
   const char *top_label;        /* title above the plot, NULL -> no title */
+  bool owns_font_name;
+  bool owns_title_font_name;
+  bool owns_symbol_font_name;
+  bool owns_x_label;
+  bool owns_y_label;
+  bool owns_top_label;
 
   /* user-specified limits on the axes */
   double min_x, min_y, max_x, max_y;
@@ -254,6 +269,12 @@ static dataset_status_t read_vector_dataset (VecReader *reader, Point **p_addr,
                                              int *length, int *no_of_points);
 static dataset_status_t read_vector_point (VecReader *reader, Point *point);
 static dataset_status_t read_point_from_list (VecReader *reader, Point *point);
+static void replace_graph_string_from_scm (const char **slot, bool *owned,
+                                           SCM s_value);
+static void replace_graph_string_literal (const char **slot, bool *owned,
+                                          const char *value);
+static void free_owned_graph_string (const char **slot, bool *owned);
+static void free_graph_allocations (graph_t *graph);
 void gupl_graph_init (void);
 static void reset_vec_reader (VecReader *reader);
 
@@ -311,11 +332,20 @@ initialize_struct_graph (graph_t *p)
   p->meta_portable = NULL;
   p->page_size = NULL;
   p->rotation_angle = NULL;
+  p->owns_output_format = false;
+  p->owns_bg_color = false;
+  p->owns_bitmap_size = false;
+  p->owns_emulate_color = false;
+  p->owns_max_line_length = false;
+  p->owns_meta_portable = false;
+  p->owns_page_size = false;
+  p->owns_rotation_angle = false;
   p->save_screen = false;
 
   p->grid_spec = AXES_AND_BOX;
   p->no_rotate_y_label = false;
   p->frame_color = "black";
+  p->owns_frame_color = false;
   p->clip_mode = 1;
 
   p->log_axis = 0;
@@ -341,6 +371,12 @@ initialize_struct_graph (graph_t *p)
   p->x_label = NULL;
   p->y_label = NULL;
   p->top_label = NULL;
+  p->owns_font_name = false;
+  p->owns_title_font_name = false;
+  p->owns_symbol_font_name = false;
+  p->owns_x_label = false;
+  p->owns_y_label = false;
+  p->owns_top_label = false;
 
   p->min_x = 0.0;
   p->min_y = 0.0;
@@ -378,6 +414,73 @@ initialize_struct_graph (graph_t *p)
   p->reposition_trans_y = 0.0;
   p->reposition_scale = 1.0;
   p->frame_on_top = false;
+}
+
+static void
+replace_graph_string_from_scm (const char **slot, bool *owned, SCM s_value)
+{
+  if (*owned && *slot)
+    free ((void *)*slot);
+
+  *slot = scm_to_locale_string (s_value);
+  *owned = true;
+}
+
+static void
+replace_graph_string_literal (const char **slot, bool *owned, const char *value)
+{
+  if (*owned && *slot)
+    free ((void *)*slot);
+
+  *slot = value;
+  *owned = false;
+}
+
+static void
+free_owned_graph_string (const char **slot, bool *owned)
+{
+  if (*owned && *slot)
+    free ((void *)*slot);
+  *slot = NULL;
+  *owned = false;
+}
+
+static void
+free_graph_allocations (graph_t *graph)
+{
+  if (!graph)
+    return;
+
+  if (graph->p)
+    {
+      free (graph->p);
+      graph->p = NULL;
+    }
+
+  if (graph->reader)
+    {
+      free (graph->reader);
+      graph->reader = NULL;
+    }
+
+  free_owned_graph_string (&graph->output_format, &graph->owns_output_format);
+  free_owned_graph_string (&graph->bg_color, &graph->owns_bg_color);
+  free_owned_graph_string (&graph->bitmap_size, &graph->owns_bitmap_size);
+  free_owned_graph_string (&graph->emulate_color, &graph->owns_emulate_color);
+  free_owned_graph_string (&graph->max_line_length,
+                           &graph->owns_max_line_length);
+  free_owned_graph_string (&graph->meta_portable, &graph->owns_meta_portable);
+  free_owned_graph_string (&graph->page_size, &graph->owns_page_size);
+  free_owned_graph_string (&graph->rotation_angle, &graph->owns_rotation_angle);
+  free_owned_graph_string (&graph->frame_color, &graph->owns_frame_color);
+  free_owned_graph_string (&graph->font_name, &graph->owns_font_name);
+  free_owned_graph_string (&graph->title_font_name,
+                           &graph->owns_title_font_name);
+  free_owned_graph_string (&graph->symbol_font_name,
+                           &graph->owns_symbol_font_name);
+  free_owned_graph_string (&graph->x_label, &graph->owns_x_label);
+  free_owned_graph_string (&graph->y_label, &graph->owns_y_label);
+  free_owned_graph_string (&graph->top_label, &graph->owns_top_label);
 }
 
 static int
@@ -431,6 +534,7 @@ free_graph (SCM x)
   graph = (graph_t *)SCM_SMOB_DATA (x);
   if (graph != NULL)
     {
+      free_graph_allocations (graph);
       free (graph);
       SCM_SET_SMOB_DATA (x, 0);
     }
@@ -538,7 +642,8 @@ gupl_portable_output_x (SCM s_graph)
   graph_t *c_graph;
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "portable-output!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->meta_portable = "yes";
+  replace_graph_string_literal (&c_graph->meta_portable,
+                                &c_graph->owns_meta_portable, "yes");
   return SCM_UNSPECIFIED;
 }
 
@@ -546,12 +651,11 @@ SCM
 gupl_emulate_color_x (SCM s_graph, SCM s_str)
 {
   graph_t *c_graph;
-  char *c_str;
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "emulate-color!");
   SCM_ASSERT (scm_is_string (s_str), s_str, SCM_ARG2, "emulate-color!");
   c_graph = _scm_to_graph (s_graph);
-  c_str = scm_to_locale_string (s_str);
-  c_graph->emulate_color = c_str;
+  replace_graph_string_from_scm (&c_graph->emulate_color,
+                                 &c_graph->owns_emulate_color, s_str);
   return SCM_UNSPECIFIED;
 }
 
@@ -774,7 +878,8 @@ gupl_output_format_x (SCM s_graph, SCM s_format)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "output-format!");
   SCM_ASSERT (scm_is_string (s_format), s_format, SCM_ARG2, "output-format!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->output_format = scm_to_locale_string (s_format);
+  replace_graph_string_from_scm (&c_graph->output_format,
+                                 &c_graph->owns_output_format, s_format);
   return SCM_UNSPECIFIED;
 }
 
@@ -785,7 +890,8 @@ gupl_font_name_x (SCM s_graph, SCM s_name)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "font-name!");
   SCM_ASSERT (scm_is_string (s_name), s_name, SCM_ARG2, "font-name!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->font_name = scm_to_locale_string (s_name);
+  replace_graph_string_from_scm (&c_graph->font_name, &c_graph->owns_font_name,
+                                 s_name);
   return SCM_UNSPECIFIED;
 }
 
@@ -796,7 +902,8 @@ gupl_rotation_angle_x (SCM s_graph, SCM s_angle)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "rotation-angle!");
   SCM_ASSERT (scm_is_string (s_angle), s_angle, SCM_ARG2, "rotation-angle!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->rotation_angle = scm_to_locale_string (s_angle);
+  replace_graph_string_from_scm (&c_graph->rotation_angle,
+                                 &c_graph->owns_rotation_angle, s_angle);
   return SCM_UNSPECIFIED;
 }
 
@@ -807,7 +914,8 @@ gupl_title_font_name_x (SCM s_graph, SCM s_name)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "title-font-name!");
   SCM_ASSERT (scm_is_string (s_name), s_name, SCM_ARG2, "title-font-name!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->title_font_name = scm_to_locale_string (s_name);
+  replace_graph_string_from_scm (&c_graph->title_font_name,
+                                 &c_graph->owns_title_font_name, s_name);
   return SCM_UNSPECIFIED;
 }
 
@@ -818,7 +926,8 @@ gupl_symbol_font_name_x (SCM s_graph, SCM s_name)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "symbol-font-name!");
   SCM_ASSERT (scm_is_string (s_name), s_name, SCM_ARG2, "symbol-font-name!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->symbol_font_name = scm_to_locale_string (s_name);
+  replace_graph_string_from_scm (&c_graph->symbol_font_name,
+                                 &c_graph->owns_symbol_font_name, s_name);
   return SCM_UNSPECIFIED;
 }
 
@@ -850,7 +959,8 @@ gupl_top_label_x (SCM s_graph, SCM s_label)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "top-label!");
   SCM_ASSERT (scm_is_string (s_label), s_label, SCM_ARG2, "top-label!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->top_label = scm_to_locale_string (s_label);
+  replace_graph_string_from_scm (&c_graph->top_label, &c_graph->owns_top_label,
+                                 s_label);
   return SCM_UNSPECIFIED;
 }
 
@@ -888,7 +998,8 @@ gupl_x_label_x (SCM s_graph, SCM s_label)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "x-label!");
   SCM_ASSERT (scm_is_string (s_label), s_label, SCM_ARG2, "x-label!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->x_label = scm_to_locale_string (s_label);
+  replace_graph_string_from_scm (&c_graph->x_label, &c_graph->owns_x_label,
+                                 s_label);
   return SCM_UNSPECIFIED;
 }
 
@@ -899,7 +1010,8 @@ gupl_y_label_x (SCM s_graph, SCM s_label)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "y-label!");
   SCM_ASSERT (scm_is_string (s_label), s_label, SCM_ARG2, "y-label!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->y_label = scm_to_locale_string (s_label);
+  replace_graph_string_from_scm (&c_graph->y_label, &c_graph->owns_y_label,
+                                 s_label);
   return SCM_UNSPECIFIED;
 }
 
@@ -940,7 +1052,8 @@ gupl_bitmap_size_x (SCM s_graph, SCM s_val)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "bitmap-size!");
   SCM_ASSERT (scm_is_string (s_val), s_val, SCM_ARG2, "bitmap-size!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->bitmap_size = scm_to_locale_string (s_val);
+  replace_graph_string_from_scm (&c_graph->bitmap_size,
+                                 &c_graph->owns_bitmap_size, s_val);
   return SCM_UNSPECIFIED;
 }
 
@@ -979,7 +1092,8 @@ gupl_max_line_length_x (SCM s_graph, SCM s_val)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "max-line-length!");
   SCM_ASSERT (scm_is_string (s_val), s_val, SCM_ARG2, "max-line-length!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->max_line_length = scm_to_locale_string (s_val);
+  replace_graph_string_from_scm (&c_graph->max_line_length,
+                                 &c_graph->owns_max_line_length, s_val);
   return SCM_UNSPECIFIED;
 }
 
@@ -991,7 +1105,8 @@ gupl_page_size_x (SCM s_graph, SCM s_size)
   SCM_ASSERT (scm_is_string (s_size), s_size, SCM_ARG2, "page-size!");
   c_graph = _scm_to_graph (s_graph);
 
-  c_graph->page_size = scm_to_locale_string (s_size);
+  replace_graph_string_from_scm (&c_graph->page_size, &c_graph->owns_page_size,
+                                 s_size);
   return SCM_UNSPECIFIED;
 }
 
@@ -1012,7 +1127,8 @@ gupl_bg_color_x (SCM s_graph, SCM s_color)
   SCM_ASSERT (scm_is_string (s_color), s_color, SCM_ARG2, "bg-color!");
   c_graph = _scm_to_graph (s_graph);
 
-  c_graph->bg_color = scm_to_locale_string (s_color);
+  replace_graph_string_from_scm (&c_graph->bg_color, &c_graph->owns_bg_color,
+                                 s_color);
   return SCM_UNSPECIFIED;
 }
 
@@ -1024,7 +1140,8 @@ gupl_frame_color_x (SCM s_graph, SCM s_color)
   SCM_ASSERT (scm_is_string (s_color), s_color, SCM_ARG2, "frame-color!");
   c_graph = _scm_to_graph (s_graph);
 
-  c_graph->frame_color = scm_to_locale_string (s_color);
+  replace_graph_string_from_scm (&c_graph->frame_color,
+                                 &c_graph->owns_frame_color, s_color);
   return SCM_UNSPECIFIED;
 }
 
@@ -1937,6 +2054,7 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
 
       /* free points array */
       free (c_graph->p);
+      c_graph->p = NULL;
       c_graph->no_of_points = 0;
 
       /* draw graph frame on top of graph, if user requested it */
