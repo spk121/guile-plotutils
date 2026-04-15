@@ -2,7 +2,7 @@
    1990, 1991, 1995, 1996, 1997, 1998, 1999, 2000, 2005, 2008, 2009, Free
    Software Foundation, Inc.
 
-   Copyright (C) 2010, 2021 Michael L. Gran
+   Copyright (C) 2010, 2021, 2026 Michael L. Gran
 
    This file is based on a file that is part of the GNU plotutils package.
 
@@ -506,7 +506,7 @@ gupl_toggle_auto_bump_x (SCM s_graph)
   graph_t *c_graph;
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "toggle-auto-bump!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->transpose_axes = (c_graph->transpose_axes == true ? false : true);
+  c_graph->auto_bump = (c_graph->auto_bump == true ? false : true);
   return SCM_UNSPECIFIED;
 }
 
@@ -951,8 +951,8 @@ gupl_title_font_size_x (SCM s_graph, SCM s_font)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "title-font-size!");
   SCM_ASSERT (scm_is_real (s_font), s_font, SCM_ARG2, "title-font-size!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->title_font_size = scm_to_double (s_font);
-  if (c_graph->local_title_font_size >= 1.0 || c_graph->local_font_size < 0.0)
+  c_graph->local_title_font_size = scm_to_double (s_font);
+  if (c_graph->local_title_font_size >= 1.0 || c_graph->local_title_font_size < 0.0)
     scm_out_of_range ("title-font-size!", s_font);
   c_graph->title_font_size = c_graph->local_title_font_size;
   return SCM_UNSPECIFIED;
