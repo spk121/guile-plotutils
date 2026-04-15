@@ -2233,7 +2233,7 @@ parse_pen_string (const char *pen_s)
       if (*charp != '=')
         return false;
       charp++;
-      for (tmp = charp, i = 0; i < MAX_COLOR_NAME_LEN; tmp++, i++)
+      for (tmp = charp, i = 0; i < MAX_COLOR_NAME_LEN - 1; tmp++, i++)
         {
           if (*tmp == ':') /* end of color name string */
             {
@@ -2249,6 +2249,22 @@ parse_pen_string (const char *pen_s)
             }
           else
             name[i] = *tmp;
+        }
+
+      if (i == MAX_COLOR_NAME_LEN - 1)
+        {
+          if (*tmp == ':')
+            {
+              name[i] = '\0';
+              charp = tmp + 1;
+            }
+          else if (*tmp == '\0')
+            {
+              name[i] = '\0';
+              charp = tmp;
+            }
+          else
+            return false; /* color name too long */
         }
 
       /* replace pen color name by user-specified color name */
