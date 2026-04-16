@@ -177,34 +177,33 @@ static void skip_all_whitespace (FILE *stream);
          fill_fraction = number in range [0,1], <0 means unfilled
    (transparent)*/
 Reader *
-new_reader (FILE *input, data_type format_type, bool auto_abscissa,
-            double delta_x, double abscissa, bool transpose_axes, int log_axis,
-            bool auto_bump, int symbol, double symbol_size,
-            const char *symbol_font_name, int linemode, double line_width,
-            double fill_fraction, bool use_color)
+new_reader (const reader_init *init)
 
 {
   Reader *reader;
 
+  if (init == NULL)
+    return (Reader *)NULL;
+
   reader = (Reader *)xmalloc (sizeof (Reader));
 
   reader->need_break = true; /* next point will have pen up */
-  reader->input = input;
-  reader->format_type = format_type;
-  reader->auto_abscissa = auto_abscissa;
-  reader->delta_x = delta_x;
-  reader->initial_abscissa = abscissa;
+  reader->input = init->input;
+  reader->format_type = init->input_type;
+  reader->auto_abscissa = init->auto_abscissa;
+  reader->delta_x = init->delta_x;
+  reader->initial_abscissa = init->abscissa;
   reader->abscissa = reader->initial_abscissa;
-  reader->transpose_axes = transpose_axes;
-  reader->log_axis = log_axis;
-  reader->auto_bump = auto_bump;
-  reader->symbol = symbol;
-  reader->symbol_size = symbol_size;
-  reader->symbol_font_name = symbol_font_name;
-  reader->linemode = linemode;
-  reader->line_width = line_width;
-  reader->fill_fraction = fill_fraction;
-  reader->use_color = use_color;
+  reader->transpose_axes = init->transpose_axes;
+  reader->log_axis = init->log_axis;
+  reader->auto_bump = init->auto_bump;
+  reader->symbol = init->symbol;
+  reader->symbol_size = init->symbol_size;
+  reader->symbol_font_name = init->symbol_font_name;
+  reader->linemode = init->linemode;
+  reader->line_width = init->line_width;
+  reader->fill_fraction = init->fill_fraction;
+  reader->use_color = init->use_color;
 
   return reader;
 }
@@ -226,38 +225,33 @@ delete_reader (Reader *reader)
 
 /* ARGS: note that the final new_* args make up a mask */
 void
-alter_reader_parameters (Reader *reader, FILE *input, data_type format_type,
-                         bool auto_abscissa, double delta_x, double abscissa,
-                         int symbol, double symbol_size,
-                         const char *symbol_font_name, int linemode,
-                         double line_width, double fill_fraction,
-                         bool use_color, bool new_symbol, bool new_symbol_size,
-                         bool new_symbol_font_name, bool new_linemode,
-                         bool new_line_width, bool new_fill_fraction,
-                         bool new_use_color)
+alter_reader_parameters (Reader *reader, const reader_update *update)
 {
+  if (reader == NULL || update == NULL)
+    return;
+
   reader->need_break = true; /* force break in polyline */
-  reader->input = input;
-  reader->format_type = format_type;
-  reader->auto_abscissa = auto_abscissa;
-  reader->delta_x = delta_x;
-  reader->initial_abscissa = abscissa;
+  reader->input = update->input;
+  reader->format_type = update->input_type;
+  reader->auto_abscissa = update->auto_abscissa;
+  reader->delta_x = update->delta_x;
+  reader->initial_abscissa = update->abscissa;
   reader->abscissa = reader->initial_abscissa;
   /* test bits in mask to determine which polyline attributes need updating */
-  if (new_symbol)
-    reader->symbol = symbol;
-  if (new_symbol_size)
-    reader->symbol_size = symbol_size;
-  if (new_symbol_font_name)
-    reader->symbol_font_name = symbol_font_name;
-  if (new_linemode)
-    reader->linemode = linemode;
-  if (new_line_width)
-    reader->line_width = line_width;
-  if (new_fill_fraction)
-    reader->fill_fraction = fill_fraction;
-  if (new_use_color)
-    reader->use_color = use_color;
+  if (update->new_symbol)
+    reader->symbol = update->symbol;
+  if (update->new_symbol_size)
+    reader->symbol_size = update->symbol_size;
+  if (update->new_symbol_font_name)
+    reader->symbol_font_name = update->symbol_font_name;
+  if (update->new_linemode)
+    reader->linemode = update->linemode;
+  if (update->new_line_width)
+    reader->line_width = update->line_width;
+  if (update->new_fill_fraction)
+    reader->fill_fraction = update->fill_fraction;
+  if (update->new_use_color)
+    reader->use_color = update->use_color;
 
   return;
 }

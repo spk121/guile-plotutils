@@ -95,12 +95,64 @@ extern const char *colorstyle[NO_OF_LINEMODES];
 
 typedef struct MultigrapherStruct Multigrapher;
 
+typedef struct
+{
+  const char *output_format;
+  FILE *_stdout;
+  FILE *_stderr;
+  const char *bg_color;
+  const char *bitmap_size;
+  const char *emulate_color;
+  const char *max_line_length;
+  const char *meta_portable;
+  const char *page_size;
+  const char *rotation_angle;
+  bool save_screen;
+} multigrapher_create_init;
+
+typedef struct
+{
+  Multigrapher *multigrapher;
+  double frame_line_width;
+  const char *frame_color;
+  const char *title;
+  const char *title_font_name;
+  double title_font_size;
+  double tick_size;
+  grid_type grid_spec;
+  double x_min;
+  double x_max;
+  double x_spacing;
+  double y_min;
+  double y_max;
+  double y_spacing;
+  bool spec_x_spacing;
+  bool spec_y_spacing;
+  double width;
+  double height;
+  double up;
+  double right;
+  const char *x_font_name;
+  double x_font_size;
+  const char *x_label;
+  const char *y_font_name;
+  double y_font_size;
+  const char *y_label;
+  bool no_rotate_y_label;
+  int log_axis;
+  int round_to_next_tick;
+  int switch_axis_end;
+  int omit_ticks;
+  int clip_mode;
+  double blankout_fraction;
+  bool transpose_axes;
+} set_graph_parameters_init;
+
 extern Multigrapher *
-new_multigrapher (const char *output_format, const char *bg_color,
-                  const char *bitmap_size, const char *emulate_color,
-                  const char *max_line_length, const char *meta_portable,
-                  const char *page_size, const char *rotation_angle,
-                  bool save_screen);
+new_multigrapher (const multigrapher_create_init *init);
+
+extern Multigrapher *
+new_multigrapher_with_ports (const multigrapher_create_init *init);
 
 extern int delete_multigrapher (Multigrapher *multigrapher);
 
@@ -109,17 +161,7 @@ extern void begin_graph (Multigrapher *multigrapher, double scale,
 
 extern void end_graph (Multigrapher *multigrapher);
 
-extern void set_graph_parameters (
-    Multigrapher *multigrapher, double frame_line_width,
-    const char *frame_color, const char *title, const char *title_font_name,
-    double title_font_size, double tick_size, grid_type grid_spec,
-    double x_min, double x_max, double x_spacing, double y_min, double y_max,
-    double y_spacing, bool spec_x_spacing, bool spec_y_spacing, double width,
-    double height, double up, double right, const char *x_font_name,
-    double x_font_size, const char *x_label, const char *y_font_name,
-    double y_font_size, const char *y_label, bool no_rotate_y_label,
-    int log_axis, int round_to_next_tick, int switch_axis_end, int omit_labels,
-    int clip_mode, double blankout_fraction, bool transpose_axes);
+extern void set_graph_parameters (const set_graph_parameters_init *init);
 
 extern void draw_frame_of_graph (Multigrapher *multigrapher, bool draw_canvas);
 
@@ -134,13 +176,49 @@ extern void end_polyline_and_flush (Multigrapher *multigrapher);
 
 typedef struct ReaderStruct Reader;
 
-extern Reader *new_reader (FILE *input, data_type input_type,
-                           bool auto_abscissa, double delta_x, double abscissa,
-                           bool transpose_axes, int log_axis, bool auto_bump,
-                           int symbol, double symbol_size,
-                           const char *symbol_font_name, int linemode,
-                           double line_width, double fill_fraction,
-                           bool use_color);
+typedef struct
+{
+  FILE *input;
+  data_type input_type;
+  bool auto_abscissa;
+  double delta_x;
+  double abscissa;
+  bool transpose_axes;
+  int log_axis;
+  bool auto_bump;
+  int symbol;
+  double symbol_size;
+  const char *symbol_font_name;
+  int linemode;
+  double line_width;
+  double fill_fraction;
+  bool use_color;
+} reader_init;
+
+typedef struct
+{
+  FILE *input;
+  data_type input_type;
+  bool auto_abscissa;
+  double delta_x;
+  double abscissa;
+  int symbol;
+  double symbol_size;
+  const char *symbol_font_name;
+  int linemode;
+  double line_width;
+  double fill_fraction;
+  bool use_color;
+  bool new_symbol;
+  bool new_symbol_size;
+  bool new_symbol_font_name;
+  bool new_linemode;
+  bool new_line_width;
+  bool new_fill_fraction;
+  bool new_use_color;
+} reader_update;
+
+extern Reader *new_reader (const reader_init *init);
 
 extern void delete_reader (Reader *reader);
 
@@ -149,19 +227,27 @@ extern void read_file (Reader *reader, Point **p, int *length,
 
 extern void read_and_plot_file (Reader *reader, Multigrapher *multigrapher);
 
-extern void alter_reader_parameters (
-    Reader *reader, FILE *input, data_type input_type, bool auto_abscissa,
-    double delta_x, double abscissa, int symbol, double symbol_size,
-    const char *symbol_font_name, int linemode, double line_width,
-    double fill_fraction, bool use_color, bool new_symbol,
-    bool new_symbol_size, bool new_symbol_font_name, bool new_linemode,
-    bool new_line_width, bool new_fill_fraction, bool new_use_color);
+extern void alter_reader_parameters (Reader *reader,
+                   const reader_update *update);
 
 /*----------------- prototypes for functions in misc.h -------------------*/
 
-extern void array_bounds (const Point *p, int length, bool transpose_axes,
-                          int clip_mode, double *min_x, double *min_y,
-                          double *max_x, double *max_y, bool spec_min_x,
-                          bool spec_min_y, bool spec_max_x, bool spec_max_y);
+typedef struct
+{
+  const Point *p;
+  int length;
+  bool transpose_axes;
+  int clip_mode;
+  double *min_x;
+  double *min_y;
+  double *max_x;
+  double *max_y;
+  bool spec_min_x;
+  bool spec_min_y;
+  bool spec_max_x;
+  bool spec_max_y;
+} array_bounds_init;
+
+extern void array_bounds (const array_bounds_init *init);
 
 /*------------------------------------------------------------------------*/

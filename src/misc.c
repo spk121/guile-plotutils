@@ -68,11 +68,21 @@ static int compute_outcode (double x, double y, double x_min_clip,
                             bool spec_min_y, bool spec_max_x, bool spec_max_y);
 
 void
-array_bounds (const Point *p, int length, bool transpose_axes, int clip_mode,
-              double *min_x, double *min_y, double *max_x, double *max_y,
-              bool spec_min_x, bool spec_min_y, bool spec_max_x,
-              bool spec_max_y)
+array_bounds (const array_bounds_init *init)
 {
+  const Point *p;
+  int length;
+  bool transpose_axes;
+  int clip_mode;
+  double *min_x;
+  double *min_y;
+  double *max_x;
+  double *max_y;
+  bool spec_min_x;
+  bool spec_min_y;
+  bool spec_max_x;
+  bool spec_max_y;
+
   /* keep compilers happy */
   double user_min_x = 0.0, user_min_y = 0.0;
   double user_max_x = 0.0, user_max_y = 0.0;
@@ -81,6 +91,22 @@ array_bounds (const Point *p, int length, bool transpose_axes, int clip_mode,
   double xx, yy, oldxx, oldyy;
   bool point_seen = false;
   int i;
+
+  if (init == NULL)
+    return;
+
+  p = init->p;
+  length = init->length;
+  transpose_axes = init->transpose_axes;
+  clip_mode = init->clip_mode;
+  min_x = init->min_x;
+  min_y = init->min_y;
+  max_x = init->max_x;
+  max_y = init->max_y;
+  spec_min_x = init->spec_min_x;
+  spec_min_y = init->spec_min_y;
+  spec_max_x = init->spec_max_x;
+  spec_max_y = init->spec_max_y;
 
   if (length == 0)
     /* adopt a convention */

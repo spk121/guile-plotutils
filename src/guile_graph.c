@@ -34,12 +34,6 @@
 #include "libcommon.h"
 // #include "sys-defines.h"
 
-Multigrapher *new_multigrapher_with_ports (
-    const char *output_format, FILE *_stdout, FILE *_stderr,
-    const char *bg_color, const char *bitmap_size, const char *emulate_color,
-    const char *max_line_length, const char *meta_portable,
-    const char *page_size, const char *rotation_angle, bool save_screen);
-
 const char *progname = "graph"; /* name of this program */
 const char *written = "Written by Robert S. Maier.";
 const char *copyright = "Copyright (C) 2009 Free Software Foundation, Inc.";
@@ -1317,28 +1311,39 @@ gupl_reposition_x (SCM s_graph, SCM s_trans_x, SCM s_trans_y, SCM s_scale)
     {
       if (!c_graph->filter)
         {
-          array_bounds (c_graph->p, c_graph->no_of_points,
-                        c_graph->final_transpose_axes,
-                        c_graph->clip_mode,
-                        &(c_graph->final_min_x),
-                        &(c_graph->final_min_y),
-                        &(c_graph->final_max_x),
-                        &(c_graph->final_max_y),
-                        c_graph->final_spec_min_x,
-                        c_graph->final_spec_min_y,
-                        c_graph->final_spec_max_x,
-                        c_graph->final_spec_max_y);
+          array_bounds_init bounds_init = {
+            .p = c_graph->p,
+            .length = c_graph->no_of_points,
+            .transpose_axes = c_graph->final_transpose_axes,
+            .clip_mode = c_graph->clip_mode,
+            .min_x = &(c_graph->final_min_x),
+            .min_y = &(c_graph->final_min_y),
+            .max_x = &(c_graph->final_max_x),
+            .max_y = &(c_graph->final_max_y),
+            .spec_min_x = c_graph->final_spec_min_x,
+            .spec_min_y = c_graph->final_spec_min_y,
+            .spec_max_x = c_graph->final_spec_max_x,
+            .spec_max_y = c_graph->final_spec_max_y
+          };
+
+          array_bounds (&bounds_init);
           if (c_graph->first_graph_of_multigraph)
             {
-              c_graph->multigrapher = new_multigrapher (c_graph->output_format,
-                                                        c_graph->bg_color,
-                                                        c_graph->bitmap_size,
-                                                        c_graph->emulate_color,
-                                                        c_graph->max_line_length,
-                                                        c_graph->meta_portable,
-                                                        c_graph->page_size,
-                                                        c_graph->rotation_angle,
-                                                        c_graph->save_screen);
+              multigrapher_create_init init = {
+                .output_format = c_graph->output_format,
+                ._stdout = NULL,
+                ._stderr = NULL,
+                .bg_color = c_graph->bg_color,
+                .bitmap_size = c_graph->bitmap_size,
+                .emulate_color = c_graph->emulate_color,
+                .max_line_length = c_graph->max_line_length,
+                .meta_portable = c_graph->meta_portable,
+                .page_size = c_graph->page_size,
+                .rotation_angle = c_graph->rotation_angle,
+                .save_screen = c_graph->save_screen
+              };
+
+              c_graph->multigrapher = new_multigrapher (&init);
               if (c_graph->multigrapher == NULL)
                 scm_misc_error ("reposition!",
                                 "the graphing device could not be opened",
@@ -1352,40 +1357,44 @@ gupl_reposition_x (SCM s_graph, SCM s_trans_x, SCM s_trans_y, SCM s_scale)
               && (c_graph->font_name != NULL))
             c_graph->title_font_name = c_graph->font_name;
 
-          set_graph_parameters (c_graph->multigrapher,
-                                c_graph->frame_line_width,
-                                c_graph->frame_color,
-                                c_graph->top_label,
-                                c_graph->title_font_name,
-                                c_graph->title_font_size,
-                                c_graph->tick_size,
-                                c_graph->grid_spec,
-                                c_graph->final_min_x,
-                                c_graph->final_max_x,
-                                c_graph->final_spacing_x,
-                                c_graph->final_min_y,
-                                c_graph->final_max_y,
-                                c_graph->final_spacing_y,
-                                c_graph->final_spec_spacing_x,
-                                c_graph->final_spec_spacing_y,
-                                c_graph->plot_width,
-                                c_graph->plot_height,
-                                c_graph->margin_below,
-                                c_graph->margin_left,
-                                c_graph->font_name,
-                                c_graph->font_size,
-                                c_graph->x_label,
-                                c_graph->font_name,
-                                c_graph->font_size,
-                                c_graph->y_label,
-                                c_graph->no_rotate_y_label,
-                                c_graph->final_log_axis,
-                                c_graph->final_round_to_next_tick,
-                                c_graph->switch_axis_end,
-                                c_graph->omit_ticks,
-                                c_graph->clip_mode,
-                                c_graph->blankout_fraction,
-                                c_graph->final_transpose_axes);
+          set_graph_parameters_init graph_params = {
+            .multigrapher = c_graph->multigrapher,
+            .frame_line_width = c_graph->frame_line_width,
+            .frame_color = c_graph->frame_color,
+            .title = c_graph->top_label,
+            .title_font_name = c_graph->title_font_name,
+            .title_font_size = c_graph->title_font_size,
+            .tick_size = c_graph->tick_size,
+            .grid_spec = c_graph->grid_spec,
+            .x_min = c_graph->final_min_x,
+            .x_max = c_graph->final_max_x,
+            .x_spacing = c_graph->final_spacing_x,
+            .y_min = c_graph->final_min_y,
+            .y_max = c_graph->final_max_y,
+            .y_spacing = c_graph->final_spacing_y,
+            .spec_x_spacing = c_graph->final_spec_spacing_x,
+            .spec_y_spacing = c_graph->final_spec_spacing_y,
+            .width = c_graph->plot_width,
+            .height = c_graph->plot_height,
+            .up = c_graph->margin_below,
+            .right = c_graph->margin_left,
+            .x_font_name = c_graph->font_name,
+            .x_font_size = c_graph->font_size,
+            .x_label = c_graph->x_label,
+            .y_font_name = c_graph->font_name,
+            .y_font_size = c_graph->font_size,
+            .y_label = c_graph->y_label,
+            .no_rotate_y_label = c_graph->no_rotate_y_label,
+            .log_axis = c_graph->final_log_axis,
+            .round_to_next_tick = c_graph->final_round_to_next_tick,
+            .switch_axis_end = c_graph->switch_axis_end,
+            .omit_ticks = c_graph->omit_ticks,
+            .clip_mode = c_graph->clip_mode,
+            .blankout_fraction = c_graph->blankout_fraction,
+            .transpose_axes = c_graph->final_transpose_axes
+          };
+
+          set_graph_parameters (&graph_params);
 
           draw_frame_of_graph (c_graph->multigrapher,
                                (c_graph->first_graph_of_multigraph ? false : true));
@@ -1989,22 +1998,42 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
       /* fill in any of min_? and max_? that user didn't specify (the
          prefix "final_" means these arguments were finalized at the
          time the first file of the plot was processed) */
-      array_bounds (c_graph->p, c_graph->no_of_points,
-                    c_graph->final_transpose_axes, c_graph->clip_mode,
-                    &(c_graph->final_min_x), &(c_graph->final_min_y),
-                    &(c_graph->final_max_x), &(c_graph->final_max_y),
-                    c_graph->final_spec_min_x, c_graph->final_spec_min_y,
-                    c_graph->final_spec_max_x, c_graph->final_spec_max_y);
+      array_bounds_init bounds_init = {
+        .p = c_graph->p,
+        .length = c_graph->no_of_points,
+        .transpose_axes = c_graph->final_transpose_axes,
+        .clip_mode = c_graph->clip_mode,
+        .min_x = &(c_graph->final_min_x),
+        .min_y = &(c_graph->final_min_y),
+        .max_x = &(c_graph->final_max_x),
+        .max_y = &(c_graph->final_max_y),
+        .spec_min_x = c_graph->final_spec_min_x,
+        .spec_min_y = c_graph->final_spec_min_y,
+        .spec_max_x = c_graph->final_spec_max_x,
+        .spec_max_y = c_graph->final_spec_max_y
+      };
+
+      array_bounds (&bounds_init);
 
       if (c_graph->first_graph_of_multigraph)
         /* still haven't created multigrapher, do so now */
         {
+          multigrapher_create_init init = {
+            .output_format = c_graph->output_format,
+            ._stdout = c_outp,
+            ._stderr = c_errp,
+            .bg_color = c_graph->bg_color,
+            .bitmap_size = c_graph->bitmap_size,
+            .emulate_color = c_graph->emulate_color,
+            .max_line_length = c_graph->max_line_length,
+            .meta_portable = c_graph->meta_portable,
+            .page_size = c_graph->page_size,
+            .rotation_angle = c_graph->rotation_angle,
+            .save_screen = c_graph->save_screen
+          };
+
           if ((c_graph->multigrapher = new_multigrapher_with_ports (
-                   c_graph->output_format, c_outp, c_errp, c_graph->bg_color,
-                   c_graph->bitmap_size, c_graph->emulate_color,
-                   c_graph->max_line_length, c_graph->meta_portable,
-                   c_graph->page_size, c_graph->rotation_angle,
-                   c_graph->save_screen))
+                   &init))
               == NULL)
             {
               scm_misc_error ("generate",
@@ -2024,26 +2053,44 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
       if ((c_graph->title_font_name == NULL) && (c_graph->font_name != NULL))
         c_graph->title_font_name = c_graph->font_name;
 
-      set_graph_parameters (
-          c_graph->multigrapher, c_graph->frame_line_width,
-          c_graph->frame_color, c_graph->top_label, c_graph->title_font_name,
-          c_graph->title_font_size, /*for title*/
-          c_graph->tick_size, c_graph->grid_spec, c_graph->final_min_x,
-          c_graph->final_max_x, c_graph->final_spacing_x, c_graph->final_min_y,
-          c_graph->final_max_y, c_graph->final_spacing_y,
-          c_graph->final_spec_spacing_x, c_graph->final_spec_spacing_y,
-          c_graph->plot_width, c_graph->plot_height, c_graph->margin_below,
-          c_graph->margin_left, c_graph->font_name,
-          c_graph->font_size, /* for abscissa label */
-          c_graph->x_label, c_graph->font_name,
-          c_graph->font_size, /* for ordinate label */
-          c_graph->y_label, c_graph->no_rotate_y_label,
-          /* these args are portmanteaux */
-          c_graph->final_log_axis, c_graph->final_round_to_next_tick,
-          c_graph->switch_axis_end, c_graph->omit_ticks,
-          /* more args */
-          c_graph->clip_mode, c_graph->blankout_fraction,
-          c_graph->final_transpose_axes);
+      set_graph_parameters_init graph_params = {
+        .multigrapher = c_graph->multigrapher,
+        .frame_line_width = c_graph->frame_line_width,
+        .frame_color = c_graph->frame_color,
+        .title = c_graph->top_label,
+        .title_font_name = c_graph->title_font_name,
+        .title_font_size = c_graph->title_font_size,
+        .tick_size = c_graph->tick_size,
+        .grid_spec = c_graph->grid_spec,
+        .x_min = c_graph->final_min_x,
+        .x_max = c_graph->final_max_x,
+        .x_spacing = c_graph->final_spacing_x,
+        .y_min = c_graph->final_min_y,
+        .y_max = c_graph->final_max_y,
+        .y_spacing = c_graph->final_spacing_y,
+        .spec_x_spacing = c_graph->final_spec_spacing_x,
+        .spec_y_spacing = c_graph->final_spec_spacing_y,
+        .width = c_graph->plot_width,
+        .height = c_graph->plot_height,
+        .up = c_graph->margin_below,
+        .right = c_graph->margin_left,
+        .x_font_name = c_graph->font_name,
+        .x_font_size = c_graph->font_size,
+        .x_label = c_graph->x_label,
+        .y_font_name = c_graph->font_name,
+        .y_font_size = c_graph->font_size,
+        .y_label = c_graph->y_label,
+        .no_rotate_y_label = c_graph->no_rotate_y_label,
+        .log_axis = c_graph->final_log_axis,
+        .round_to_next_tick = c_graph->final_round_to_next_tick,
+        .switch_axis_end = c_graph->switch_axis_end,
+        .omit_ticks = c_graph->omit_ticks,
+        .clip_mode = c_graph->clip_mode,
+        .blankout_fraction = c_graph->blankout_fraction,
+        .transpose_axes = c_graph->final_transpose_axes
+      };
+
+      set_graph_parameters (&graph_params);
 
       /* draw the graph frame (grid, ticks, etc.); draw a `canvas' (a
          background opaque white rectangle) only if this isn't the

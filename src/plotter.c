@@ -777,42 +777,58 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
    line. */
 
 Multigrapher *
-new_multigrapher_with_ports (const char *output_format, FILE *_stdout,
-                             FILE *_stderr, const char *bg_color,
-                             const char *bitmap_size,
-                             const char *emulate_color,
-                             const char *max_line_length,
-                             const char *meta_portable, const char *page_size,
-                             const char *rotation_angle, bool save_screen)
+new_multigrapher (const multigrapher_create_init *init)
+{
+  multigrapher_create_init init_with_ports;
+
+  if (init == NULL)
+    return (Multigrapher *)NULL;
+
+  init_with_ports = *init;
+  if (init_with_ports._stdout == NULL)
+    init_with_ports._stdout = stdout;
+  if (init_with_ports._stderr == NULL)
+    init_with_ports._stderr = stderr;
+
+  return new_multigrapher_with_ports (&init_with_ports);
+}
+
+Multigrapher *
+new_multigrapher_with_ports (const multigrapher_create_init *init)
 {
   plPlotterParams *plotter_params;
   plPlotter *plotter;
   Multigrapher *multigrapher;
 
+  if (init == NULL)
+    return (Multigrapher *)NULL;
+
   multigrapher = (Multigrapher *)xmalloc (sizeof (Multigrapher));
 
   /* set Plotter parameters */
   plotter_params = pl_newplparams ();
-  pl_setplparam (plotter_params, "BG_COLOR", (void *)bg_color);
-  pl_setplparam (plotter_params, "BITMAPSIZE", (void *)bitmap_size);
-  pl_setplparam (plotter_params, "EMULATE_COLOR", (void *)emulate_color);
-  pl_setplparam (plotter_params, "MAX_LINE_LENGTH", (void *)max_line_length);
-  pl_setplparam (plotter_params, "META_PORTABLE", (void *)meta_portable);
-  pl_setplparam (plotter_params, "PAGESIZE", (void *)page_size);
-  pl_setplparam (plotter_params, "ROTATION", (void *)rotation_angle);
+  pl_setplparam (plotter_params, "BG_COLOR", (void *)init->bg_color);
+  pl_setplparam (plotter_params, "BITMAPSIZE", (void *)init->bitmap_size);
+  pl_setplparam (plotter_params, "EMULATE_COLOR", (void *)init->emulate_color);
+  pl_setplparam (plotter_params, "MAX_LINE_LENGTH",
+                 (void *)init->max_line_length);
+  pl_setplparam (plotter_params, "META_PORTABLE", (void *)init->meta_portable);
+  pl_setplparam (plotter_params, "PAGESIZE", (void *)init->page_size);
+  pl_setplparam (plotter_params, "ROTATION", (void *)init->rotation_angle);
 
   /* create Plotter and open it */
-  plotter = pl_newpl_r (output_format, NULL, _stdout, _stderr, plotter_params);
+  plotter = pl_newpl_r (init->output_format, NULL, init->_stdout, init->_stderr,
+                        plotter_params);
   if (plotter == (plPlotter *)NULL)
     return (Multigrapher *)NULL;
   pl_deleteplparams (plotter_params);
   multigrapher->plotter = plotter;
   if (pl_openpl_r (plotter) < 0)
     return (Multigrapher *)NULL;
-  multigrapher->bg_color = bg_color;
+  multigrapher->bg_color = init->bg_color;
 
   /* if called for, erase it; set up the user->device coor map */
-  if (!save_screen || bg_color)
+  if (!init->save_screen || init->bg_color)
     pl_erase_r (plotter);
   pl_fspace_r (plotter, 0.0, 0.0, (double)PLOT_SIZE, (double)PLOT_SIZE);
 
@@ -879,18 +895,81 @@ end_graph (Multigrapher *multigrapher)
    double blankout_fraction	= 1.0 means blank out whole box before plot
    bool transpose_axes */
 void
-set_graph_parameters (
-    Multigrapher *multigrapher, double frame_line_width,
-    const char *frame_color, const char *title, const char *title_font_name,
-    double title_font_size, double tick_size, grid_type grid_spec,
-    double x_min, double x_max, double x_spacing, double y_min, double y_max,
-    double y_spacing, bool spec_x_spacing, bool spec_y_spacing, double width,
-    double height, double up, double right, const char *x_font_name,
-    double x_font_size, const char *x_label, const char *y_font_name,
-    double y_font_size, const char *y_label, bool no_rotate_y_label,
-    int log_axis, int round_to_next_tick, int switch_axis_end, int omit_ticks,
-    int clip_mode, double blankout_fraction, bool transpose_axes)
+set_graph_parameters (const set_graph_parameters_init *init)
 {
+  Multigrapher *multigrapher;
+  double frame_line_width;
+  const char *frame_color;
+  const char *title;
+  const char *title_font_name;
+  double title_font_size;
+  double tick_size;
+  grid_type grid_spec;
+  double x_min;
+  double x_max;
+  double x_spacing;
+  double y_min;
+  double y_max;
+  double y_spacing;
+  bool spec_x_spacing;
+  bool spec_y_spacing;
+  double width;
+  double height;
+  double up;
+  double right;
+  const char *x_font_name;
+  double x_font_size;
+  const char *x_label;
+  const char *y_font_name;
+  double y_font_size;
+  const char *y_label;
+  bool no_rotate_y_label;
+  int log_axis;
+  int round_to_next_tick;
+  int switch_axis_end;
+  int omit_ticks;
+  int clip_mode;
+  double blankout_fraction;
+  bool transpose_axes;
+
+  if (init == NULL)
+    return;
+
+  multigrapher = init->multigrapher;
+  frame_line_width = init->frame_line_width;
+  frame_color = init->frame_color;
+  title = init->title;
+  title_font_name = init->title_font_name;
+  title_font_size = init->title_font_size;
+  tick_size = init->tick_size;
+  grid_spec = init->grid_spec;
+  x_min = init->x_min;
+  x_max = init->x_max;
+  x_spacing = init->x_spacing;
+  y_min = init->y_min;
+  y_max = init->y_max;
+  y_spacing = init->y_spacing;
+  spec_x_spacing = init->spec_x_spacing;
+  spec_y_spacing = init->spec_y_spacing;
+  width = init->width;
+  height = init->height;
+  up = init->up;
+  right = init->right;
+  x_font_name = init->x_font_name;
+  x_font_size = init->x_font_size;
+  x_label = init->x_label;
+  y_font_name = init->y_font_name;
+  y_font_size = init->y_font_size;
+  y_label = init->y_label;
+  no_rotate_y_label = init->no_rotate_y_label;
+  log_axis = init->log_axis;
+  round_to_next_tick = init->round_to_next_tick;
+  switch_axis_end = init->switch_axis_end;
+  omit_ticks = init->omit_ticks;
+  clip_mode = init->clip_mode;
+  blankout_fraction = init->blankout_fraction;
+  transpose_axes = init->transpose_axes;
+
   double x_subsubtick_spacing = 0.0, y_subsubtick_spacing = 0.0;
   /* local portmanteau variables */
   int reverse_axis = 0;               /* min > max on an axis? */
