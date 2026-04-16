@@ -1,4 +1,4 @@
-name: Ubuntu 22.04
+name: MacOS 26
 
 on:
   push:
@@ -9,14 +9,15 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-22.04
+    runs-on: macos-26
 
     steps:
     - uses: actions/checkout@v6
     - name: env
-      run: export LANG=C.UTF-8 TERM=dumb VERBOSE=true DEBIAN_FRONTEND=noninteractive TZ=America/Los_Angeles
+      run: export LANG=C.UTF-8 TERM=dumb VERBOSE=true TZ=America/Los_Angeles
     - name: install packages
-      run: sudo apt-get install -y guile-3.0-dev texlive texlive-plain-generic plotutils libplot-dev
+      run: |
+        brew install guile plotutils autoconf automake texinfo
     - name: look for guile
       run: ls -l /usr/bin/gu*
     - name: make dist directory
