@@ -1,10 +1,12 @@
 #ifndef GUPL_TYPES_H
 #define GUPL_TYPES_H
 
-#include "visibility.h"
+#include <stdio.h>
+
 #include <libguile.h>
 #include <plot.h>
-#include <stdio.h>
+
+#include "visibility.h"
 
 /* TYPES */
 

@@ -1,12 +1,15 @@
 #define _GNU_SOURCE
 #define _LARGEFILE64_SOURCE
+
+#include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include <unistd.h>
+
+#include <libguile.h>
 
 #include "guile_plot.h"
 #include "plot.h"
-#include <assert.h>
-#include <libguile.h>
-#include <unistd.h>
 
 #define PORT_ERR (-1)
 #define PORT_OK (0)
