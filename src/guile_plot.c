@@ -125,7 +125,10 @@ print_plparams (SCM x, SCM port, scm_print_state *pstate)
       if (asprintf (&str, "%p", (void *)plparams) < 0)
         scm_puts ("???", port);
       else
-        scm_puts (str, port);
+        {
+          scm_puts (str, port);
+          free (str);
+        }
     }
   scm_puts (">", port);
 
@@ -242,7 +245,10 @@ print_plotter (SCM x, SCM port, scm_print_state *pstate)
       if (asprintf (&str, "%p", (void *)plotter) < 0)
         scm_puts ("???", port);
       else
-        scm_puts (str, port);
+        {
+          scm_puts (str, port);
+          free (str);
+        }
     }
   scm_puts (">", port);
 
@@ -263,6 +269,8 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
   char *c_type;
   plPlotter *ret;
   plPlotterParams *c_param;
+  bool outp_opened = false;
+  bool errp_opened = false;
 
   SCM_ASSERT (scm_is_string (type), type, SCM_ARG1, "newpl");
   SCM_ASSERT (scm_is_true (scm_output_port_p (outp)), outp, SCM_ARG2, "newpl");
@@ -272,12 +280,40 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
   SCM outp_fileno = scm_fileno (outp);
   int c_outp_fileno_orig = scm_to_int (outp_fileno);
   int c_outp_fileno = dup (c_outp_fileno_orig);
-  FILE *c_outp = fdopen (c_outp_fileno, "w");
+  FILE *c_outp;
+
+  if (c_outp_fileno < 0)
+    scm_misc_error ("newpl", "failed to duplicate output port", SCM_EOL);
+
+  c_outp = fdopen (c_outp_fileno, "w");
+  if (c_outp == NULL)
+    {
+      close (c_outp_fileno);
+      scm_misc_error ("newpl", "failed to open duplicated output port",
+                      SCM_EOL);
+    }
+  outp_opened = true;
 
   SCM errp_fileno = scm_fileno (errp);
   int c_errp_fileno_orig = scm_to_int (errp_fileno);
   int c_errp_fileno = dup (c_errp_fileno_orig);
-  FILE *c_errp = fdopen (c_errp_fileno, "w");
+  FILE *c_errp;
+
+  if (c_errp_fileno < 0)
+    {
+      fclose (c_outp);
+      scm_misc_error ("newpl", "failed to duplicate error port", SCM_EOL);
+    }
+
+  c_errp = fdopen (c_errp_fileno, "w");
+  if (c_errp == NULL)
+    {
+      close (c_errp_fileno);
+      fclose (c_outp);
+      scm_misc_error ("newpl", "failed to open duplicated error port",
+                      SCM_EOL);
+    }
+  errp_opened = true;
 
   /* Don't buffer port here, since the underlying Guile port also has
      port buffering.  Double buffering causes problems.  */
@@ -295,7 +331,13 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
   free (c_type);
 
   if (ret == NULL)
-    return SCM_BOOL_F;
+    {
+      if (outp_opened)
+        fclose (c_outp);
+      if (errp_opened)
+        fclose (c_errp);
+      return SCM_BOOL_F;
+    }
 
   return _scm_from_plotter (ret);
 }
