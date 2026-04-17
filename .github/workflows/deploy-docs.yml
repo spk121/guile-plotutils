@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -60,7 +60,7 @@ jobs:
         with:
           # This uploads the *contents* of the docs/ directory
           # so they become the root of the /guile_plotutils page
-          path: './docs'
+          path: './docs/guile-plotutils.html/'
 
       - name: Deploy to GitHub Pages
         id: deployment
