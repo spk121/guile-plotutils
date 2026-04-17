@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'        # Trigger on tags like v1.2.3
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Needed for proper versioning if you use it
+      - name: env
+        run: export LANG=C.UTF-8 TERM=dumb VERBOSE=true DEBIAN_FRONTEND=noninteractive TZ=America/Los_Angeles
+      - name: install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y guile-3.0-dev texlive texlive-plain-generic plotutils libplot-dev
+
+      - name: Bootstrap and generate configure
+        run: autoreconf -vif
+
+      - name: Configure
+        run: ./configure
+
+      - name: Make distcheck
+        run: make distcheck
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Import GPG signing key
+        id: import_gpg
+        continue-on-error: true
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_config_global: true
+          git_user_signingkey: true
+
+      - name: Sign the distribution tarball with GPG
+        id: sign_tarball
+        continue-on-error: true
+        run: |
+          gpg --armor --detach-sign ${{ steps.get_version.outputs.VERSION }}.tar.gz
+          echo "Created signature: ${{ steps.get_version.outputs.VERSION }}.tar.gz.asc"
+
+      - name: Upload signed tarball + signature to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ steps.get_version.outputs.VERSION }}.tar.gz
+            ${{ steps.get_version.outputs.VERSION }}.tar.gz.asc
+          generate_release_notes: true
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
