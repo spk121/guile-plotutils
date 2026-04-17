@@ -1,4 +1,4 @@
-name: Ubuntu 22.04
+name: Ubuntu 24.04
 
 on:
   push:
@@ -32,8 +32,6 @@ jobs:
         make check
         cat test-suite.log
       shell: bash {0}
-    - name: make install
-      run: make install
     - name: make distcheck
       run: make distcheck
     - name: Archive production artifacts
