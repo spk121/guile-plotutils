@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-graph-logistic.scm — The Logistic Map orbit diagram
 ;;; x_{n+1} = r·x_n·(1 − x_n)
 ;;; For different values of the parameter r, the long-term behavior
@@ -26,8 +23,19 @@ Returns (r-list . x-list) for plotting."
                 (collect (+ j 1) xnew
                          (cons r rs) (cons xnew xs))))))))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((r-min 2.5)
+  (let* ((output-file (if (> (length args) 1) (cadr args) "graph-logistic.svg"))
+         (output-format (output-format-from-filename output-file))
+         (r-min 2.5)
          (r-max 4.0)
          (n-r 600)
          (r-step (/ (- r-max r-min) n-r))
@@ -44,10 +52,10 @@ Returns (r-list . x-list) for plotting."
                         (append (cdr orb) all-x))))))
          (xs (car result))
          (ys (cdr result)))
-    (with-output-to-file "graph-logistic.svg"
+    (with-output-to-file output-file
       (lambda ()
         (graph xs ys
-               #:output-format "svg"
+               #:output-format output-format
                #:top-label "Logistic Map Bifurcation Diagram"
                #:x-label "r"
                #:y-label "x*"
@@ -58,3 +66,5 @@ Returns (r-list . x-list) for plotting."
                #:grid-style 2
                #:font-name "HersheySerif"))
       #:binary #t)))
+
+(main (command-line))

@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-plot-spirograph.scm — Spirograph (Hypotrochoid and Epitrochoid) curves
 ;;; A hypotrochoid is traced by a point attached to a circle of radius r
 ;;; rolling inside a fixed circle of radius R:
@@ -59,11 +56,22 @@
                   (cont! plotter x y)
                   (loop (+ i 1)))))))))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((fp (open-output-file "plot-spirograph.svg" #:binary #t))
+  (let* ((output-file (if (> (length args) 1) (cadr args) "plot-spirograph.svg"))
+         (output-format (output-format-from-filename output-file))
+         (fp (open-output-file output-file #:binary #t))
          (param (newplparams)))
     (setplparam! param "BITMAPSIZE" "800x800")
-    (let ((plotter (newpl "svg" fp (current-error-port) param)))
+    (let ((plotter (newpl output-format fp (current-error-port) param)))
       (openpl! plotter)
       (space! plotter -220.0 -220.0 220.0 220.0)
       (linewidth! plotter 0.4)

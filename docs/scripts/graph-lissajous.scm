@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-graph-lissajous.scm — Lissajous figures (parametric curves)
 ;;; x(t) = sin(a·t + δ), y(t) = sin(b·t)
 ;;; These curves arise in physics when two perpendicular harmonic
@@ -19,16 +16,27 @@
          (ys (map (lambda (t) (sin (* b t))) ts)))
     (cons xs ys)))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((n 1000)
+  (let* ((output-file (if (> (length args) 1) (cadr args) "graph-lissajous.svg"))
+         (output-format (output-format-from-filename output-file))
+         (n 1000)
          (fig1 (lissajous 3 2 (/ pi 4) n))    ; 3:2
          (fig2 (lissajous 5 4 (/ pi 2) n))    ; 5:4
          (fig3 (lissajous 3 4 (/ pi 3) n)))   ; 3:4
-    (with-output-to-file "graph-lissajous.svg"
+    (with-output-to-file output-file
       (lambda ()
         (graph (merge (car fig1) (car fig2) (car fig3))
                (merge (cdr fig1) (cdr fig2) (cdr fig3))
-               #:output-format "svg"
+               #:output-format output-format
                #:top-label "Lissajous Figures (3:2, 5:4, 3:4)"
                #:x-label "x(t) = sin(a t + \\delta)"
                #:y-label "y(t) = sin(b t)"
@@ -39,3 +47,5 @@
                #:line-width 0.003
                #:font-name "HersheySerif"))
       #:binary #t)))
+
+(main (command-line))

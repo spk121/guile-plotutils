@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-plot-sierpinski-triangle.scm — Sierpiński Triangle
 ;;; The Sierpiński triangle (Sierpiński gasket) is a fractal attractor
 ;;; described by Wacław Sierpiński in 1915.  It is formed by recursively
@@ -39,11 +36,22 @@
         ;; Top triangle
         (sierpinski (- depth 1) mx13 my13 mx23 my23 x3 y3))))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((fp (open-output-file "plot-sierpinski-triangle.svg" #:binary #t))
+  (let* ((output-file (if (> (length args) 1) (cadr args) "plot-sierpinski-triangle.svg"))
+         (output-format (output-format-from-filename output-file))
+         (fp (open-output-file output-file #:binary #t))
          (param (newplparams)))
     (setplparam! param "BITMAPSIZE" "800x800")
-    (let ((plotter (newpl "svg" fp (current-error-port) param)))
+    (let ((plotter (newpl output-format fp (current-error-port) param)))
       (set! *plotter* plotter)
       (openpl! plotter)
       (space! plotter -50.0 -50.0 850.0 850.0)

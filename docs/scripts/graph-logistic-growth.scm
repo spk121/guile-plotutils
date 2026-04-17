@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-graph-logistic-growth.scm — Logistic growth and predator-prey dynamics
 ;;; 1) Logistic growth: dP/dt = r·P·(1 − P/K), solution P(t) = K/(1 + ((K−P₀)/P₀)e^{−rt})
 ;;; Models population growth with carrying capacity (Verhulst, 1838).
@@ -10,11 +7,6 @@
 
 (use-modules (srfi srfi-1)
              (plotutils graph))
-
-;;; --- Logistic growth curves ---
-(define (logistic-curve r k p0)
-  (lambda (t)
-    (/ k (+ 1.0 (* (/ (- k p0) p0) (exp (* (- r) t)))))))
 
 ;;; --- Lotka-Volterra via Euler method ---
 (define (lotka-volterra alpha beta delta gamma x0 y0 dt n)
@@ -29,45 +21,29 @@
                 (+ x dx) (+ y dy)
                 (cons t ts) (cons x xs) (cons y ys))))))
 
-(define (main args)
-  (let* (;; Logistic growth
-         (n 400)
-         (tmax 10.0)
-         (step (/ tmax n))
-         (ts (iota n 0.0 step))
-         (p1 (map (logistic-curve 1.0 100.0 2.0) ts))
-         (p2 (map (logistic-curve 0.5 100.0 2.0) ts))
-         (p3 (map (logistic-curve 2.0 100.0 2.0) ts))
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
 
+(define (main args)
+  (let* ((output-file (if (> (length args) 1) (cadr args) "graph-lotka-volterra.svg"))
+         (output-format (output-format-from-filename output-file))
          ;; Lotka-Volterra
          (lv (lotka-volterra 1.1 0.4 0.1 0.4 10.0 10.0 0.005 6000))
          (lv-ts (car lv))
          (lv-xs (cadr lv))
          (lv-ys (caddr lv)))
-
-    ;; Plot 1: Logistic growth curves
-    (with-output-to-file "graph-logistic-growth.svg"
-      (lambda ()
-        (graph (merge ts ts ts)
-               (merge p1 p2 p3)
-               #:output-format "svg"
-               #:top-label "Logistic Growth P(t) = K/(1 + ce^{-rt})"
-               #:x-label "Time"
-               #:y-label "Population"
-               #:x-limits '(0.0 10.0)
-               #:y-limits '(0.0 110.0)
-               #:toggle-use-color #t
-               #:grid-style 3
-               #:line-width 0.005
-               #:font-name "HersheySerif"))
-      #:binary #t)
-
-    ;; Plot 2: Lotka-Volterra time series
-    (with-output-to-file "graph-lotka-volterra.svg"
+    ;; Lotka-Volterra time series
+    (with-output-to-file output-file
       (lambda ()
         (graph (merge lv-ts lv-ts)
                (merge lv-xs lv-ys)
-               #:output-format "svg"
+               #:output-format output-format
                #:top-label "Lotka-Volterra Predator-Prey Dynamics"
                #:x-label "Time"
                #:y-label "Population"
@@ -76,3 +52,5 @@
                #:line-width 0.004
                #:font-name "HersheySerif"))
       #:binary #t)))
+
+(main (command-line))

@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-graph-fourier.scm — Fourier series approximation of a square wave
 ;;; Demonstrates Gibbs phenomenon: partial sums of the Fourier series
 ;;; overshoot near the discontinuity by ~9%, no matter how many terms.
@@ -21,8 +18,19 @@
             (loop (+ k 1)
                   (+ acc (* (/ 4.0 pi) (/ (sin (* m x)) m)))))))))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((n 800)
+  (let* ((output-file (if (> (length args) 1) (cadr args) "graph-fourier.svg"))
+         (output-format (output-format-from-filename output-file))
+         (n 800)
          (xmin (- pi))
          (xmax (* 3 pi))
          (step (/ (- xmax xmin) n))
@@ -31,11 +39,11 @@
          (y2 (map (fourier-square-wave 5) xs))
          (y3 (map (fourier-square-wave 25) xs))
          (y4 (map (fourier-square-wave 100) xs)))
-    (with-output-to-file "graph-fourier.svg"
+    (with-output-to-file output-file
       (lambda ()
         (graph (merge xs xs xs xs)
                (merge y1 y2 y3 y4)
-               #:output-format "svg"
+               #:output-format output-format
                #:top-label "Fourier Series of Square Wave"
                #:x-label "x"
                #:y-label "S\\sbN\\eb(x)"

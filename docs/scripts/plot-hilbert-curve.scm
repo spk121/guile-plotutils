@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-plot-hilbert-curve.scm — Hilbert space-filling curve
 ;;; The Hilbert curve is a continuous fractal space-filling curve
 ;;; first described by David Hilbert in 1891.  At each level of
@@ -45,11 +42,22 @@
     (hilbert (- level 1) size (- parity))
     (turtle-left! (* parity 90))))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((fp (open-output-file "plot-hilbert-curve.svg" #:binary #t))
+  (let* ((output-file (if (> (length args) 1) (cadr args) "plot-hilbert-curve.svg"))
+         (output-format (output-format-from-filename output-file))
+         (fp (open-output-file output-file #:binary #t))
          (param (newplparams)))
     (setplparam! param "BITMAPSIZE" "800x800")
-    (let* ((plotter (newpl "svg" fp (current-error-port) param))
+    (let* ((plotter (newpl output-format fp (current-error-port) param))
            (order 6)
            (cells (- (expt 2 order) 1))
            (step (/ 760.0 cells)))
@@ -70,3 +78,5 @@
 
       (closepl! plotter)
       (close fp))))
+
+(main (command-line))

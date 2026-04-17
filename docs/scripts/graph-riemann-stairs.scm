@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-graph-riemann-stairs.scm — Prime-counting function and the logarithmic integral
 ;;; π(x) = number of primes ≤ x  (the prime-counting staircase)
 ;;; Li(x) = ∫₂ˣ dt/ln(t)       (the logarithmic integral)
@@ -46,8 +43,19 @@
       (integrate-simpson (lambda (t) (/ 1.0 (log t)))
                          2.0 x 200)))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* (;; Staircase π(x) sampled at integers from 2 to 200
+  (let* ((output-file (if (> (length args) 1) (cadr args) "graph-prime-counting.svg"))
+         (output-format (output-format-from-filename output-file))
+         ;; Staircase π(x) sampled at integers from 2 to 200
          (xmax 200)
          (integers (iota (- xmax 1) 2))
          (xs-pi (map exact->inexact integers))
@@ -61,11 +69,11 @@
 
          ;; x/ln(x) as comparison
          (ys-xlogx (map (lambda (x) (/ x (log x))) xs-li)))
-    (with-output-to-file "graph-prime-counting.svg"
+    (with-output-to-file output-file
       (lambda ()
         (graph (merge xs-pi xs-li xs-li)
                (merge ys-pi ys-li ys-xlogx)
-               #:output-format "svg"
+               #:output-format output-format
                #:top-label "Prime Counting: \\pi(x), Li(x), x/ln(x)"
                #:x-label "x"
                #:y-label "Count of primes"
@@ -76,3 +84,5 @@
                #:line-width 0.003
                #:font-name "HersheySerif"))
       #:binary #t)))
+
+(main (command-line))

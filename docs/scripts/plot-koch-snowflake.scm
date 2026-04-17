@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-plot-koch-snowflake.scm — Koch Snowflake fractal
 ;;; The Koch snowflake is constructed by starting with an equilateral
 ;;; triangle and recursively replacing the middle third of each edge
@@ -50,11 +47,22 @@
   (turtle-right! 120)
   (koch-segment side depth))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((fp (open-output-file "plot-koch-snowflake.svg" #:binary #t))
+  (let* ((output-file (if (> (length args) 1) (cadr args) "plot-koch-snowflake.svg"))
+         (output-format (output-format-from-filename output-file))
+         (fp (open-output-file output-file #:binary #t))
          (param (newplparams)))
     (setplparam! param "BITMAPSIZE" "800x800")
-    (let ((plotter (newpl "svg" fp (current-error-port) param)))
+    (let ((plotter (newpl output-format fp (current-error-port) param)))
       (set! *plotter* plotter)
       (openpl! plotter)
       (space! plotter -50.0 -50.0 850.0 850.0)
@@ -73,3 +81,5 @@
 
       (closepl! plotter)
       (close fp))))
+
+(main (command-line))

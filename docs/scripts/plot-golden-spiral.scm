@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-plot-golden-spiral.scm — Golden Spiral constructed from Fibonacci arcs
 ;;; The golden spiral is a logarithmic spiral whose growth factor is ϕ,
 ;;; the golden ratio (1+√5)/2 ≈ 1.618.  Here it is approximated by
@@ -19,11 +16,22 @@
         (let ((c (+ a b)))
           (loop (+ i 1) b c (cons c acc))))))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((fp (open-output-file "plot-golden-spiral.svg" #:binary #t))
+  (let* ((output-file (if (> (length args) 1) (cadr args) "plot-golden-spiral.svg"))
+         (output-format (output-format-from-filename output-file))
+         (fp (open-output-file output-file #:binary #t))
          (param (newplparams)))
     (setplparam! param "BITMAPSIZE" "800x800")
-    (let ((plotter (newpl "svg" fp (current-error-port) param)))
+    (let ((plotter (newpl output-format fp (current-error-port) param)))
       (openpl! plotter)
       (space! plotter -10.0 -10.0 60.0 60.0)
       (erase! plotter)
@@ -91,3 +99,5 @@
 
       (closepl! plotter)
       (close fp))))
+
+(main (command-line))

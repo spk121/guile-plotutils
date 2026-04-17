@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-graph-elliptic-integral.scm — Complete elliptic integrals K(k) and E(k)
 ;;; K(k) = ∫₀^{π/2} dθ / √(1 − k²sin²θ)   (first kind)
 ;;; E(k) = ∫₀^{π/2} √(1 − k²sin²θ) dθ      (second kind)
@@ -37,14 +34,18 @@
    (lambda (theta) (sqrt (- 1.0 (* k k (sin theta) (sin theta)))))
    0.0 (/ pi 2.0) 500))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((n 400)
-         (kmin 0.0)
-         (kmax 0.995)
-         (step (/ (- kmax kmin) n))
-         (ks (iota n kmin step))
-         (k-vals (map elliptic-k ks))
-         (e-vals (map elliptic-e ks))
+  (let* ((output-file (if (> (length args) 1) (cadr args) "graph-pendulum-period.svg"))
+         (output-format (output-format-from-filename output-file))
          ;; Exact pendulum period T/T_0 = (2/π)K(k) where k = sin(θ_0/2)
          ;; Show for θ_0 from 0 to ~170°
          (n2 300)
@@ -55,27 +56,11 @@
          (period-ratio (map (lambda (t)
                               (* (/ 2.0 pi) (elliptic-k (sin (/ t 2.0)))))
                             thetas)))
-    ;; Plot 1: K(k) and E(k)
-    (with-output-to-file "graph-elliptic.svg"
-      (lambda ()
-        (graph (merge ks ks)
-               (merge k-vals e-vals)
-               #:output-format "svg"
-               #:top-label "Complete Elliptic Integrals K(k) and E(k)"
-               #:x-label "k (modulus)"
-               #:y-label "K(k), E(k)"
-               #:x-limits '(0.0 1.0)
-               #:y-limits '(0.5 6.0)
-               #:toggle-use-color #t
-               #:grid-style 3
-               #:line-width 0.004
-               #:font-name "HersheySerif"))
-      #:binary #t)
-    ;; Plot 2: Exact pendulum period ratio
-    (with-output-to-file "graph-pendulum-period.svg"
+    ;; Exact pendulum period ratio
+    (with-output-to-file output-file
       (lambda ()
         (graph theta-deg period-ratio
-               #:output-format "svg"
+               #:output-format output-format
                #:top-label "Exact Pendulum Period T/T\\sb0\\eb vs Amplitude"
                #:x-label "Amplitude \\*H\\sb0\\eb (degrees)"
                #:y-label "T / T\\sb0\\eb"

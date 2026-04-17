@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-graph-damped-oscillator.scm — Damped harmonic oscillator
 ;;; x(t) = A·e^(−γt)·cos(ωt − φ)
 ;;; The fundamental solution to the second-order ODE of a mass-spring-damper
@@ -25,8 +22,19 @@
     (+ (* 0.5 (exp (* r1 t)))
        (* 0.5 (exp (* r2 t))))))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((n 500)
+  (let* ((output-file (if (> (length args) 1) (cadr args) "graph-damped-oscillator.svg"))
+         (output-format (output-format-from-filename output-file))
+         (n 500)
          (tmin 0.0)
          (tmax 10.0)
          (step (/ (- tmax tmin) n))
@@ -40,11 +48,11 @@
          ;; Envelope for underdamped
          (y-env+ (map (lambda (t) (exp (* -0.3 t))) ts))
          (y-env- (map (lambda (t) (- (exp (* -0.3 t)))) ts)))
-    (with-output-to-file "graph-damped-oscillator.svg"
+    (with-output-to-file output-file
       (lambda ()
         (graph (merge ts ts ts ts ts)
                (merge y-under y-crit y-over y-env+ y-env-)
-               #:output-format "svg"
+               #:output-format output-format
                #:top-label "Damped Harmonic Oscillator"
                #:x-label "Time t"
                #:y-label "Displacement x(t)"

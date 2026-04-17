@@ -17,12 +17,12 @@
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 AUTOMAKE_OPTIONS = subdir-objects
 AM_DISTCHECK_CONFIGURE_FLAGS = --with-gnu-filesystem-hierarchy
+AM_DISTCHECK_DVI_TARGET = html
 
 #################
 #  Directories  #
 #################
 
-exampledir = $(datadir)/doc/guile-plotutils
 guilesitedir = $(GUILE_SITE)
 guileextensiondir = $(GUILE_EXTENSION)
 guileobjectdir = $(GUILE_SITE_CCACHE)
@@ -34,90 +34,10 @@ pkgguileobjectdir = $(guileobjectdir)/plotutils
 #################
 
 dist: \
-  README \
-  $(srcdir)/docs/guile-plotutils.info \
-  $(srcdir)/docs/ex-sine-wave.scm \
-  $(srcdir)/docs/ex-plot-curve.scm \
-  $(srcdir)/docs/index.html
+  README
 
 README: README.md
 	$(LN_S) $< $@
-
-#################
-# Documentation #
-#################
-
-info_TEXINFOS = docs/guile-plotutils.texi
-
-# Prefer using HTML as our distcheck documentation target, rather than
-# DVI, because for some of our automated builds, downloading texlive
-# or basictex takes a fair amount of time.
-AM_DISTCHECK_DVI_TARGET = html
-
-dvi-local:
-
-docs/guile-plotutils.info: \
-	$(srcdir)/docs/sine-wave.png \
-	$(srcdir)/docs/sine-wave2.png \
-	$(srcdir)/docs/plot-curve.png \
-	$(srcdir)/docs/sine-wave.eps \
-	$(srcdir)/docs/sine-wave2.eps \
-	$(srcdir)/docs/plot-curve.eps \
-	$(srcdir)/docs/colors.txt
-
-if MAKEINFO_CSS
-$(srcdir)/docs/index.html: $(srcdir)/docs/guile-plotutils.texi
-	makeinfo $(srcdir)/docs/guile-plotutils.texi --css-ref=document-1.0.1.css --html --output=$(srcdir)/docs
-else
-$(srcdir)/docs/index.html: $(srcdir)/docs/guile-plotutils.texi
-	makeinfo $(srcdir)/docs/guile-plotutils.texi --html --output=$(srcdir)/docs
-endif
-
-$(srcdir)/docs/sine-wave.png: $(srcdir)/docs/ex-sine-wave.scm $(guileobject_DATA) $(pkgguileobject_DATA) $(guileextension_LTLIBRARIES)
-
-	$(builddir)/tools/uninstalled-env \
-	  $(srcdir)/docs/ex-sine-wave.scm \
-	  $(srcdir)/docs/sine-wave.png png
-
-$(srcdir)/docs/sine-wave2.png: $(srcdir)/docs/ex-sine-wave2.scm  $(guileobject_DATA) $(pkgguileobject_DATA) $(guileextension_LTLIBRARIES)
-	$(builddir)/tools/uninstalled-env \
-	  $(srcdir)/docs/ex-sine-wave2.scm \
-	  $(srcdir)/docs/sine-wave2.png png
-
-$(srcdir)/docs/plot-curve.png: $(srcdir)/docs/ex-plot-curve.scm  $(guileobject_DATA) $(pkgguileobject_DATA) $(guileextension_LTLIBRARIES)
-	$(builddir)/tools/uninstalled-env \
-	  $(srcdir)/docs/ex-plot-curve.scm \
-	  $(srcdir)/docs/plot-curve.png png
-
-$(srcdir)/docs/sine-wave.eps: $(srcdir)/docs/ex-sine-wave.scm $(guileobject_DATA) $(pkgguileobject_DATA) $(guileextension_LTLIBRARIES)
-
-	$(builddir)/tools/uninstalled-env \
-	  $(srcdir)/docs/ex-sine-wave.scm \
-	  $(srcdir)/docs/sine-wave.eps ps
-
-$(srcdir)/docs/sine-wave2.eps: $(srcdir)/docs/ex-sine-wave2.scm  $(guileobject_DATA) $(pkgguileobject_DATA) $(guileextension_LTLIBRARIES)
-	$(builddir)/tools/uninstalled-env \
-	  $(srcdir)/docs/ex-sine-wave2.scm \
-	  $(srcdir)/docs/sine-wave2.eps ps
-
-$(srcdir)/docs/plot-curve.eps: $(srcdir)/docs/ex-plot-curve.scm  $(guileobject_DATA) $(pkgguileobject_DATA) $(guileextension_LTLIBRARIES)
-	$(builddir)/tools/uninstalled-env \
-	  $(srcdir)/docs/ex-plot-curve.scm \
-	  $(srcdir)/docs/plot-curve.eps ps
-
-
--distclean-docs:
-	-rm -rf $(srcdir)/docs/*.html
-
-#################
-#    Examples   #
-#################
-
-dist_example_DATA = \
-  examples/ex-graph.scm \
-  examples/ex-plot1.scm \
-  examples/ex-plot2.scm \
-  examples/ex-plot3.scm
 
 ########################
 #  libguile-plotutils  #
@@ -240,8 +160,8 @@ test: check
 #  Local rules  #
 #################
 
-distclean-local: -distclean-docs
-html-local: docs
+# Prerequisites needed by docs/Makefile.am before generating images.
+docs-prereqs: libguile-plotutils.la $(guileobject_DATA) $(pkgguileobject_DATA)
 
 check-syntax:
 	$(CC) -std=c11 $(GUILE_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) \
@@ -251,28 +171,23 @@ check-syntax:
 indent:
 	VERSION_CONTROL=none indent $(libguile_plotutils_la_SOURCES)
 
-.PHONY: check-syntax docs indent test
+.PHONY: check-syntax docs-prereqs indent test
 
 #################
 #   Variables   #
 #################
 
-DISTCLEANFILES = \
-  $(srcdir)/docs/*.info \
-  $(srcdir)/docs/*.html
-
 CLEANFILES = \
   ChangeLog README \
   $(guileobject_DATA) $(pkgguileobject_DATA) \
-  $(BUILT_SOURCES) \
   $(check_DATA) \
   *.log
+
+
 
 EXTRA_DIST = \
   README.md \
   build-aux/config.rpath \
-  docs/fdl-1.3.texi \
-  docs/document-1.0.1.css \
   m4/attributes.m4 \
   tools/uninstalled-env.in \
   tools/uninstalled-test-env.in \
@@ -283,3 +198,5 @@ EXTRA_DIST = \
   $(TESTS) \
   $(noinst_DATA) \
   docs
+
+SUBDIRS = . docs

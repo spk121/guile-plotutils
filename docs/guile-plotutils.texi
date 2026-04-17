@@ -191,13 +191,13 @@ The end of the X range
 @end enumerate
 
 @example
-@include ex-sine-wave.scm
+@verbatiminclude scripts/graph-sine-wave.scm
 @end example
 
 The script samples a few hundred points of the procedure and plots the
 result.
 
-@image{sine-wave,,,,.png}
+@image{images/graph-sine-wave,,,,.png}
 
 You can also call @code{graph} with four arguments. In that case, the
 fourth argument is the step size on the x-axis.
@@ -205,10 +205,10 @@ fourth argument is the step size on the x-axis.
 Here's the same plot with just a dozen sample points
 
 @example
-@include ex-sine-wave2.scm
+@verbatiminclude scripts/graph-sine-wave2.scm
 @end example
 
-@image{sine-wave2,,,,.png}
+@image{images/graph-sine-wave2,,,,.png}
 
 @subsection Graphing Data
 
@@ -235,7 +235,6 @@ helper procedure.
 (define x1 (list -1 0 1 2 3 4 5))
 (define y2 (list  1 2 1 2 1 2 1))
 (define x2 (list -1 0 1 2 3 4 5))
- Plotting Tutorial
 (define y2 (list  8 7 6 5 4 3 3))
 (graph (merge x1 x2) (merge y1 y2))
 @end lisp
@@ -248,12 +247,12 @@ that are used by the graphing library. They can be used on their own
 for drawing.
 
 @example
-@include ex-plot-curve.scm
+@verbatiminclude scripts/plot-dragon-curve.scm
 @end example
 
 The script draws a fractal pattern of c curves.
 
-@image{plot-curve,,,,.png}
+@image{images/plot-dragon-curve,,,,.png}
 
 @node Reference Guide, Apendices, Tutorial, Top
 @chapter Reference Guide
@@ -263,6 +262,7 @@ The @code{guile-plotutils} project provides two Guile modules:
 
 @c -----------------------------------------------------------------
 @menu
+* Gallery::
 * The Plotting Library::
 * Plotter Parameters::
 * The Graphing Library::
@@ -270,7 +270,247 @@ The @code{guile-plotutils} project provides two Guile modules:
 @end menu
 
 @c -----------------------------------------------------------------
-@node The Plotting Library, Plotter Parameters, Reference Guide, Reference Guide
+@node Gallery, The Plotting Library, Reference Guide, Reference Guide
+@section Gallery
+
+This gallery collects the example plots generated from the scripts in
+@file{docs/scripts}.  Each subsection includes a brief description, the
+generated image, and the full script source.
+
+@subsection Bessel Functions
+
+This plot shows the Bessel functions of the first kind @math{J_n(x)} for
+several low orders.  These functions arise naturally in cylindrical wave
+and diffusion problems.
+
+@image{images/graph-bessel,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-bessel.scm
+@end example
+
+@subsection Chebyshev Polynomials
+
+This plot draws Chebyshev polynomials @math{T_n(x)}, a classical family
+of orthogonal polynomials used heavily in approximation theory and
+spectral methods.
+
+@image{images/graph-chebyshev,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-chebyshev.scm
+@end example
+
+@subsection Damped Harmonic Oscillator
+
+This plot illustrates damped oscillatory behavior, covering underdamped,
+critical, and overdamped regimes for a mass-spring-damper model.
+
+@image{images/graph-damped-oscillator,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-damped-oscillator.scm
+@end example
+
+@subsection Elliptic-Integral Pendulum Period
+
+This plot shows the exact pendulum period ratio as amplitude increases,
+using the complete elliptic integral of the first kind.
+
+@image{images/graph-elliptic-integral,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-elliptic-integral.scm
+@end example
+
+@subsection Fourier Series Approximation
+
+This plot visualizes partial sums of a Fourier series approximation to a
+square wave, including the Gibbs overshoot near jump discontinuities.
+
+@image{images/graph-fourier,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-fourier.scm
+@end example
+
+@subsection Cornu Spiral from Fresnel Integrals
+
+This plot draws the Cornu (Euler) spiral, parameterized by Fresnel
+integrals, a central curve in diffraction theory.
+
+@image{images/graph-fresnel,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-fresnel.scm
+@end example
+
+@subsection Gamma Function
+
+This plot shows the Gamma function @math{\Gamma(x)} on the real line,
+including behavior near poles at non-positive integers.
+
+@image{images/graph-gamma,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-gamma.scm
+@end example
+
+@subsection Gaussian Density Curves
+
+This plot compares Gaussian probability density functions with different
+standard deviations, emphasizing how variance controls spread.
+
+@image{images/graph-gaussian,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-gaussian.scm
+@end example
+
+@subsection Lissajous Figures
+
+This plot draws parametric Lissajous curves created by combining two
+perpendicular harmonic oscillations with different frequency ratios.
+
+@image{images/graph-lissajous,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-lissajous.scm
+@end example
+
+@subsection Lotka-Volterra Dynamics
+
+This plot shows predator-prey oscillations in the Lotka-Volterra model,
+computed by numerical integration.
+
+@image{images/graph-logistic-growth,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-logistic-growth.scm
+@end example
+
+@subsection Logistic Map Orbit Diagram
+
+This plot presents the logistic map bifurcation structure, showing the
+route from fixed points to period doubling and chaos.
+
+@image{images/graph-logistic,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-logistic.scm
+@end example
+
+@subsection Prime Counting and Logarithmic Integral
+
+This plot compares the prime-counting staircase @math{\pi(x)} with
+smooth approximations such as @math{\mathrm{Li}(x)} and @math{x/\log x}.
+
+@image{images/graph-riemann-stairs,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-riemann-stairs.scm
+@end example
+
+@subsection Weierstrass Function
+
+This plot draws a classic continuous but nowhere-differentiable
+Weierstrass function built from a cosine series.
+
+@image{images/graph-weierstrass,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-weierstrass.scm
+@end example
+
+@subsection Riemann Zeta on the Real Line
+
+This plot shows numerical behavior of @math{\zeta(s)} for real
+@math{s > 1}, including the blow-up near the pole at @math{s=1}.
+
+@image{images/graph-zeta,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-zeta.scm
+@end example
+
+@subsection Dragon Curve
+
+This plot draws the Heighway dragon, a recursive fractal related to the
+paper-folding sequence.
+
+@image{images/plot-dragon-curve,,,,.png}
+
+@example
+@verbatiminclude scripts/plot-dragon-curve.scm
+@end example
+
+@subsection Gaussian Histogram
+
+This plot uses drawing primitives to render a histogram-like view of a
+Gaussian distribution with filled bars, axes, and labels.
+
+@image{images/plot-gaussian-histogram,,,,.png}
+
+@example
+@verbatiminclude scripts/plot-gaussian-histogram.scm
+@end example
+
+@subsection Golden Spiral
+
+This plot constructs a golden spiral approximation from Fibonacci-sized
+squares and quarter-circle arcs.
+
+@image{images/plot-golden-spiral,,,,.png}
+
+@example
+@verbatiminclude scripts/plot-golden-spiral.scm
+@end example
+
+@subsection Hilbert Curve
+
+This plot draws a Hilbert space-filling curve, a recursive path that
+visits each cell of a grid in a locality-preserving order.
+
+@image{images/plot-hilbert-curve,,,,.png}
+
+@example
+@verbatiminclude scripts/plot-hilbert-curve.scm
+@end example
+
+@subsection Koch Snowflake
+
+This plot draws the Koch snowflake, a fractal curve with infinite
+perimeter but finite enclosed area.
+
+@image{images/plot-koch-snowflake,,,,.png}
+
+@example
+@verbatiminclude scripts/plot-koch-snowflake.scm
+@end example
+
+@subsection Sierpinski Triangle
+
+This plot draws the Sierpinski triangle (gasket), a canonical
+self-similar fractal obtained by recursive subdivision.
+
+@image{images/plot-sierpinski-triangle,,,,.png}
+
+@example
+@verbatiminclude scripts/plot-sierpinski-triangle.scm
+@end example
+
+@subsection Spirograph Curves
+
+This plot draws hypotrochoid and epitrochoid-style roulette curves,
+popularized by mechanical spirograph toys.
+
+@image{images/plot-spirograph,,,,.png}
+
+@example
+@verbatiminclude scripts/plot-spirograph.scm
+@end example
+
+@node The Plotting Library, Plotter Parameters, Gallery, Reference Guide
 @section The Plotting Library
 @cindex plotting
 

@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-graph-bessel.scm — Bessel functions of the first kind J_n(x)
 ;;; J_n(x) = Σ_{m=0}^{∞} (−1)^m / (m! · Γ(m+n+1)) · (x/2)^(2m+n)
 ;;; Bessel functions arise as solutions to Laplace's equation in
@@ -27,8 +24,19 @@
                  (den (* (factorial m) (factorial (+ m order)))))
             (loop (+ m 1) (+ acc (/ (* sign num) den))))))))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((n 500)
+  (let* ((output-file (if (> (length args) 1) (cadr args) "graph-bessel.svg"))
+         (output-format (output-format-from-filename output-file))
+         (n 500)
          (xmin 0.0)
          (xmax 20.0)
          (step (/ (- xmax xmin) n))
@@ -37,11 +45,11 @@
          (j1 (map (lambda (x) (bessel-j 1 x)) xs))
          (j2 (map (lambda (x) (bessel-j 2 x)) xs))
          (j3 (map (lambda (x) (bessel-j 3 x)) xs)))
-    (with-output-to-file "graph-bessel.svg"
+    (with-output-to-file output-file
       (lambda ()
         (graph (merge xs xs xs xs)
                (merge j0 j1 j2 j3)
-               #:output-format "svg"
+               #:output-format output-format
                #:top-label "Bessel Functions J\\sb0\\eb, J\\sb1\\eb, J\\sb2\\eb, J\\sb3\\eb"
                #:x-label "x"
                #:y-label "J\\sbn\\eb(x)"

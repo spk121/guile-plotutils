@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-graph-fresnel.scm — Fresnel integrals S(x) and C(x)
 ;;; S(x) = ∫₀ˣ sin(π/2·t²) dt,  C(x) = ∫₀ˣ cos(π/2·t²) dt
 ;;; These arise in diffraction theory (Fresnel diffraction at a straight
@@ -34,14 +31,18 @@ with n subintervals."
       (integrate-simpson (lambda (t) (cos (* (/ pi 2.0) t t)))
                          0.0 x 200)))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((n 400)
-         (xmin 0.0)
-         (xmax 7.0)
-         (step (/ (- xmax xmin) n))
-         (xs (iota n xmin step))
-         (ys-s (map fresnel-s xs))
-         (ys-c (map fresnel-c xs))
+  (let* ((output-file (if (> (length args) 1) (cadr args) "graph-cornu-spiral.svg"))
+         (output-format (output-format-from-filename output-file))
          ;; Cornu spiral: parametric (C(t), S(t)) for t in [-7, 7]
          (nt 600)
          (tmin -7.0)
@@ -50,27 +51,11 @@ with n subintervals."
          (ts (iota nt tmin tstep))
          (spiral-x (map fresnel-c ts))
          (spiral-y (map fresnel-s ts)))
-    ;; Plot 1: S(x) and C(x)
-    (with-output-to-file "graph-fresnel.svg"
-      (lambda ()
-        (graph (merge xs xs)
-               (merge ys-s ys-c)
-               #:output-format "svg"
-               #:top-label "Fresnel Integrals S(x) and C(x)"
-               #:x-label "x"
-               #:y-label "S(x), C(x)"
-               #:x-limits '(0.0 7.0)
-               #:y-limits '(-0.2 1.0)
-               #:toggle-use-color #t
-               #:grid-style 3
-               #:line-width 0.004
-               #:font-name "HersheySerif"))
-      #:binary #t)
-    ;; Plot 2: Cornu (Euler) spiral
-    (with-output-to-file "graph-cornu-spiral.svg"
+    ;; Cornu (Euler) spiral
+    (with-output-to-file output-file
       (lambda ()
         (graph spiral-x spiral-y
-               #:output-format "svg"
+               #:output-format output-format
                #:top-label "Cornu (Euler) Spiral"
                #:x-label "C(t)"
                #:y-label "S(t)"

@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-plot-gaussian-histogram.scm — Gaussian histogram with filled bins
 ;;; Uses (plotutils plot) primitives to draw a histogram of a normal PDF
 ;;; with fixed bin width 0.25, including axes, ticks, labels, and title.
@@ -88,8 +85,18 @@
   (alabel! plotter 'c 'c "Frequency")
   (textangle! plotter 0.0))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((output-file "plot-gaussian-histogram.svg")
+  (let* ((output-file (if (> (length args) 1) (cadr args) "plot-gaussian-histogram.svg"))
+         (output-format (output-format-from-filename output-file))
          (fp (open-output-file output-file #:binary #t))
          (param (newplparams))
          (bin-width 0.25)
@@ -103,7 +110,7 @@
 
     (setplparam! param "BITMAPSIZE" "900x600")
 
-    (let ((plotter (newpl "svg" fp (current-error-port) param)))
+    (let ((plotter (newpl output-format fp (current-error-port) param)))
       (openpl! plotter)
 
       ;; Leave margins for axis labels and title.
@@ -117,3 +124,5 @@
 
       (closepl! plotter)
       (close fp))))
+
+(main (command-line))

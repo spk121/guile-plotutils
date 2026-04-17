@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-graph-chebyshev.scm — Chebyshev polynomials of the first kind T_n(x)
 ;;; T_0(x) = 1,  T_1(x) = x,  T_{n+1}(x) = 2x·T_n(x) − T_{n−1}(x)
 ;;; Chebyshev polynomials are orthogonal on [−1,1] w.r.t. the weight
@@ -23,8 +20,19 @@
             t-next
             (loop (+ k 1) t-curr t-next)))))))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((n 600)
+  (let* ((output-file (if (> (length args) 1) (cadr args) "graph-chebyshev.svg"))
+         (output-format (output-format-from-filename output-file))
+         (n 600)
          (xmin -1.0)
          (xmax 1.0)
          (step (/ (- xmax xmin) n))
@@ -35,11 +43,11 @@
          (t4 (map (lambda (x) (chebyshev 4 x)) xs))
          (t5 (map (lambda (x) (chebyshev 5 x)) xs))
          (t6 (map (lambda (x) (chebyshev 6 x)) xs)))
-    (with-output-to-file "graph-chebyshev.svg"
+    (with-output-to-file output-file
       (lambda ()
         (graph (merge xs xs xs xs xs xs)
                (merge t1 t2 t3 t4 t5 t6)
-               #:output-format "svg"
+               #:output-format output-format
                #:top-label "Chebyshev Polynomials T\\sb1\\eb through T\\sb6\\eb"
                #:x-label "x"
                #:y-label "T\\sbn\\eb(x)"

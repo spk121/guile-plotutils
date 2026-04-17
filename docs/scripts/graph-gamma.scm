@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-graph-gamma.scm — The Gamma function Γ(x) via Lanczos approximation
 ;;; Γ extends the factorial to real numbers: Γ(n) = (n−1)! for positive
 ;;; integers.  Has poles at non-positive integers.  Plotted in two
@@ -39,8 +36,19 @@
              (exp (- t))
              ag)))))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((n 300)
+  (let* ((output-file (if (> (length args) 1) (cadr args) "graph-gamma.svg"))
+         (output-format (output-format-from-filename output-file))
+         (n 300)
          ;; Segment from 0.1 to 5.0 (avoiding pole at 0)
          (xs1-min 0.08)
          (xs1-max 5.0)
@@ -67,11 +75,11 @@
          ;; Clamp values for display
          (clamp (lambda (v) (if v (max -8.0 (min 8.0 v)) #f)))
          (ys2-clamped (map clamp ys2-parts)))
-    (with-output-to-file "graph-gamma.svg"
+    (with-output-to-file output-file
       (lambda ()
         (graph (merge xs2-parts xs1)
                (merge ys2-clamped ys1)
-               #:output-format "svg"
+               #:output-format output-format
                #:top-label "Gamma Function \\Gamma(x)"
                #:x-label "x"
                #:y-label "\\Gamma(x)"
@@ -82,3 +90,5 @@
                #:line-width 0.004
                #:font-name "HersheySerif"))
       #:binary #t)))
+
+(main (command-line))

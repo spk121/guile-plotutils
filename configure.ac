@@ -93,19 +93,15 @@ LT_INIT([disable-fast-install disable-static win32-dll])
 # Initial guess of platform specific options
 
 AS_CASE([$host_os],
-        [mingw*], [building_dll=yes;dll_version_info=no;makeinfo_css=no],
-        [cygwin*], [building_dll=yes;dll_version_info=yes;makeinfo_css=yes],
-        [pw32*], [building_dll=yes;dll_version_info=yes;makeinfo_css=no],
-        [cegcc*], [building_dll=yes;dll_version_info=yes;makeinfo_css=no],
-        [darwin*], [building_dll=no;dll_version_info=yes;makeinfo_css=no],
-        [building_dll=no;dll_version_info=yes;makeinfo_css=yes])
+    [mingw*], [building_dll=yes;dll_version_info=no],
+    [cygwin*], [building_dll=yes;dll_version_info=yes],
+    [pw32*], [building_dll=yes;dll_version_info=yes],
+    [cegcc*], [building_dll=yes;dll_version_info=yes],
+    [darwin*], [building_dll=no;dll_version_info=yes],
+    [building_dll=no;dll_version_info=yes])
 
 AM_CONDITIONAL([BUILDING_DLL], [test "$building_dll" = yes])
 AM_CONDITIONAL([DLL_VERSION_INFO], [test "$dll_version_info" = yes])
-
-# FIXME: a hack to workaround an apparent lack of the --css-ref flag
-# in some MacOS makeinfo executables
-AM_CONDITIONAL([MAKEINFO_CSS], [test "$makeinfo_css" = yes])
 
 ################
 # Check for libraries
@@ -180,9 +176,7 @@ AM_CONDITIONAL([GUILD], [test x$guild = xtrue])
 # Output
 
 AC_CONFIG_FILES([Makefile])
-AC_CONFIG_FILES([docs/ex-sine-wave.scm], [chmod +x docs/ex-sine-wave.scm])
-AC_CONFIG_FILES([docs/ex-sine-wave2.scm], [chmod +x docs/ex-sine-wave2.scm])
-AC_CONFIG_FILES([docs/ex-plot-curve.scm], [chmod +x docs/ex-plot-curve.scm])
+AC_CONFIG_FILES([docs/Makefile])
 AC_CONFIG_FILES([tools/uninstalled-env], [chmod +x tools/uninstalled-env])
 AC_CONFIG_FILES([tools/uninstalled-test-env], [chmod +x tools/uninstalled-test-env])
 AC_CONFIG_FILES([tools/run-guile], [chmod +x tools/run-guile])

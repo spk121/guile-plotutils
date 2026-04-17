@@ -1,6 +1,3 @@
-#!/usr/bin/guile \
--e main -s
-!#
 ;;; ex-graph-gaussian.scm — Gaussian (Normal) probability density functions
 ;;; Plots the bell curve for three different standard deviations,
 ;;; illustrating how variance controls the spread of a distribution.
@@ -16,8 +13,19 @@
     (/ (exp (- (/ (* x x) (* 2.0 sigma sigma))))
        (* sigma (sqrt (* 2.0 pi))))))
 
+(define (output-format-from-filename path)
+  (let loop ((i (- (string-length path) 1)))
+    (cond
+     ((< i 0) "svg")
+     ((char=? (string-ref path i) #\.)
+      (let ((ext (string-downcase (substring path (+ i 1) (string-length path)))))
+        (if (string=? ext "eps") "ps" ext)))
+     (else (loop (- i 1))))))
+
 (define (main args)
-  (let* ((n 500)
+  (let* ((output-file (if (> (length args) 1) (cadr args) "graph-gaussian.svg"))
+         (output-format (output-format-from-filename output-file))
+         (n 500)
          (xmin -5.0)
          (xmax 5.0)
          (step (/ (- xmax xmin) n))
@@ -25,11 +33,11 @@
          (y1 (map (gaussian 0.5) xs))
          (y2 (map (gaussian 1.0) xs))
          (y3 (map (gaussian 2.0) xs)))
-    (with-output-to-file "graph-gaussian.svg"
+    (with-output-to-file output-file
       (lambda ()
         (graph (merge xs xs xs)
                (merge y1 y2 y3)
-               #:output-format "svg"
+               #:output-format output-format
                #:top-label "Gaussian PDF: \\sigma=0.5, 1.0, 2.0"
                #:x-label "x"
                #:y-label "f(x)"
@@ -39,3 +47,5 @@
                #:grid-style 3
                #:font-name "HersheySerif"))
       #:binary #t)))
+
+(main (command-line))
