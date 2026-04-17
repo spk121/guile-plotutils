@@ -48,7 +48,9 @@ jobs:
           ./configure --prefix=/usr
 
       - name: Build HTML documentation
-        run: make html
+        run: |
+          make html
+          ls -R docs
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
