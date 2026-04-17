@@ -1,6 +1,6 @@
-## Autoconf macros for working with Guile.
+a## Autoconf macros for working with Guile.
 ##
-##   Copyright (C) 1998,2001, 2006, 2010, 2012, 2013, 2014, 2020 Free Software Foundation, Inc.
+##   Copyright (C) 1998, 2001, 2006, 2010, 2012, 2013, 2014, 2020, 2025 Free Software Foundation, Inc.
 ##
 ## This library is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU Lesser General Public License
@@ -12,10 +12,8 @@
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ## Lesser General Public License for more details.
 ##
-## You should have received a copy of the GNU Lesser General Public
-## License along with this library; if not, write to the Free Software
-## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-## 02110-1301 USA
+## You should have received a copy of the GNU Lesser General Public License
+## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # serial 11
 
@@ -49,7 +47,7 @@
 # By default, this macro will search for the latest stable version of
 # Guile (e.g. 3.0), falling back to the previous stable version
 # (e.g. 2.2) if it is available.  If no guile-@var{VERSION}.pc file is
-# found, an error is signalled.  The found version is stored in
+# found, an error is signaled.  The found version is stored in
 # @var{GUILE_EFFECTIVE_VERSION}.
 #
 # If @code{GUILE_PROGS} was already invoked, this macro ensures that the
@@ -180,18 +178,18 @@ AC_DEFUN([GUILE_SITE_DIR],
  [AC_REQUIRE([GUILE_PKG])
   AC_REQUIRE([GUILE_PROGS])
   AC_MSG_CHECKING(for Guile site directory)
-  GUILE_SITE=`$PKG_CONFIG --print-errors --variable=sitedir guile-$GUILE_EFFECTIVE_VERSION`
+  GUILE_SITE=$($PKG_CONFIG --print-errors --variable=sitedir guile-$GUILE_EFFECTIVE_VERSION)
   AC_MSG_RESULT($GUILE_SITE)
   if test "$GUILE_SITE" = ""; then
      AC_MSG_FAILURE(sitedir not found)
   fi
   AC_SUBST(GUILE_SITE)
   AC_MSG_CHECKING([for Guile site-ccache directory using pkgconfig])
-  GUILE_SITE_CCACHE=`$PKG_CONFIG --variable=siteccachedir guile-$GUILE_EFFECTIVE_VERSION`
+  GUILE_SITE_CCACHE=$($PKG_CONFIG --variable=siteccachedir guile-$GUILE_EFFECTIVE_VERSION)
   if test "$GUILE_SITE_CCACHE" = ""; then
     AC_MSG_RESULT(no)
     AC_MSG_CHECKING([for Guile site-ccache directory using interpreter])
-    GUILE_SITE_CCACHE=`$GUILE -c "(display (if (defined? '%site-ccache-dir) (%site-ccache-dir) \"\"))"`
+    GUILE_SITE_CCACHE=$($GUILE -c "(display (if (defined? '%site-ccache-dir) (%site-ccache-dir) \"\"))")
     if test $? != "0" -o "$GUILE_SITE_CCACHE" = ""; then
       AC_MSG_RESULT(no)
       GUILE_SITE_CCACHE=""
@@ -201,7 +199,7 @@ AC_DEFUN([GUILE_SITE_DIR],
   AC_MSG_RESULT($GUILE_SITE_CCACHE)
   AC_SUBST([GUILE_SITE_CCACHE])
   AC_MSG_CHECKING(for Guile extensions directory)
-  GUILE_EXTENSION=`$PKG_CONFIG --print-errors --variable=extensiondir guile-$GUILE_EFFECTIVE_VERSION`
+  GUILE_EXTENSION=$($PKG_CONFIG --print-errors --variable=extensiondir guile-$GUILE_EFFECTIVE_VERSION)
   AC_MSG_RESULT($GUILE_EXTENSION)
   if test "$GUILE_EXTENSION" = ""; then
     GUILE_EXTENSION=""
@@ -245,7 +243,7 @@ AC_DEFUN([GUILE_PROGS],
 
   _guile_candidates=guile
   _tmp=
-  for v in `echo "$_guile_required_version" | tr . ' '`; do
+  for v in $(echo "$_guile_required_version" | tr . ' '); do
     if test -n "$_tmp"; then _tmp=$_tmp.; fi
     _tmp=$_tmp$v
     _guile_candidates="guile-$_tmp guile$_tmp $_guile_candidates"
@@ -256,23 +254,23 @@ AC_DEFUN([GUILE_PROGS],
       AC_MSG_ERROR([guile required but not found])
   fi
 
-  _guile_suffix=`echo "$GUILE" | sed -e 's,^.*/guile\(.*\)$,\1,'`
-  _guile_effective_version=`$GUILE -c "(display (effective-version))"`
+  _guile_suffix=$(echo "$GUILE" | sed -e 's,^.*/guile\(.*\)$,\1,')
+  _guile_effective_version=$($GUILE -c "(display (effective-version))")
   if test -z "$GUILE_EFFECTIVE_VERSION"; then
     GUILE_EFFECTIVE_VERSION=$_guile_effective_version
   elif test "$GUILE_EFFECTIVE_VERSION" != "$_guile_effective_version"; then
     AC_MSG_ERROR([found development files for Guile $GUILE_EFFECTIVE_VERSION, but $GUILE has effective version $_guile_effective_version])
   fi
 
-  _guile_major_version=`$GUILE -c "(display (major-version))"`
-  _guile_minor_version=`$GUILE -c "(display (minor-version))"`
-  _guile_micro_version=`$GUILE -c "(display (micro-version))"`
+  _guile_major_version=$($GUILE -c "(display (major-version))")
+  _guile_minor_version=$($GUILE -c "(display (minor-version))")
+  _guile_micro_version=$($GUILE -c "(display (micro-version))")
   _guile_prog_version="$_guile_major_version.$_guile_minor_version.$_guile_micro_version"
 
   AC_MSG_CHECKING([for Guile version >= $_guile_required_version])
-  _major_version=`echo $_guile_required_version | cut -d . -f 1`
-  _minor_version=`echo $_guile_required_version | cut -d . -f 2`
-  _micro_version=`echo $_guile_required_version | cut -d . -f 3`
+  _major_version=$(echo $_guile_required_version | cut -d . -f 1)
+  _minor_version=$(echo $_guile_required_version | cut -d . -f 2)
+  _micro_version=$(echo $_guile_required_version | cut -d . -f 3)
   if test "$_guile_major_version" -gt "$_major_version"; then
     true
   elif test "$_guile_major_version" -eq "$_major_version"; then
