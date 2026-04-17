@@ -49,6 +49,7 @@ jobs:
 
       - name: Build HTML documentation
         run: |
+          make
           make html
           ls -R docs
 
