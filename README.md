@@ -27,13 +27,9 @@ distrubtions and operating systems. GNU Plotutils is rarely used as an
 upstream used by other programs, and some OSs and distros just don't
 build or install libplot in a way that is usable by other program.
 
-It appears to work on some GNU/Linux distros.
+It appears to work on some GNU/Linux distros.  Some Debian-based
+distros still have a package for the nearly extinct libplot.
 
-## Running from source
 
-To run one of the examples or your own code with Guile-Plotutils built
-directly from source, use `tools/uninstalled-env`.  For example
-
-    $ tools/uninstalled-env tools/run-guile examples/ex-plot3.scm
 
 
