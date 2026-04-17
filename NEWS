@@ -1,0 +1,11 @@
+Guile-Plotutils NEWS - History of user-visible changes
+
+Changes in 1.0.2 (since 1.0.1)
+* Fixed bug where toggle-auto-bump! was actually transposing axes
+* Fixed bug where title-font-size! failed to change the font size
+* Fixed various memory leaks.
+* Changed default install directories to those reported by Guile
+  macros during configure by default.
+* Adds the configure option '--with-gnu-filesystem-hierarchy'
+  to install in directories under $datadir and $libdir instead.
+  This configure option is used by default under 'make distcheck'
