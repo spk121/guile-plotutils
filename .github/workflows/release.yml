@@ -43,20 +43,26 @@ jobs:
           git_config_global: true
           git_user_signingkey: true
 
+      - name: Find the distribution tarball
+        id: dist
+        run: |
+          TAR_FILE=$(ls *.tar.gz | head -n1)
+          echo "tar_file=$TAR_FILE" >> $GITHUB_OUTPUT
+          echo "Found tarball: $TAR_FILE"
+
       - name: Sign the distribution tarball with GPG
-        id: sign_tarball
         continue-on-error: true
         run: |
-          gpg --armor --detach-sign ${{ steps.get_version.outputs.VERSION }}.tar.gz
-          echo "Created signature: ${{ steps.get_version.outputs.VERSION }}.tar.gz.asc"
+          if [ -f "${{ steps.dist.outputs.tar_file }}" ]; then
+            gpg --armor --detach-sign ${{ steps.dist.outputs.tar_file }}
+          fi
 
-      - name: Upload signed tarball + signature to GitHub Release
+      - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ${{ steps.get_version.outputs.VERSION }}.tar.gz
-            ${{ steps.get_version.outputs.VERSION }}.tar.gz.asc
+            ${{ steps.dist.outputs.tar_file }}
+            ${{ steps.dist.outputs.tar_file }}.asc
           generate_release_notes: true
-          draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
