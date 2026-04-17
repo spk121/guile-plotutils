@@ -18,7 +18,7 @@ dnl Process this file with autoconf to produce a configure script
 ################
 # Package Info
 
-AC_INIT([Guile Plotutils], [1.0.1], [spk121@yahoo.com], [guile_plotutils])
+AC_INIT([Guile Plotutils], [1.0.2], [spk121@yahoo.com], [guile_plotutils])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([src/guile_plot.c])
@@ -32,7 +32,7 @@ AC_CONFIG_MACRO_DIR([m4])
 ################
 # Libtool versioning
 
-LIBGUILE_PLOTUTILS_INTERFACE="1:0:0"
+LIBGUILE_PLOTUTILS_INTERFACE="2:0:0"
 AC_SUBST([LIBGUILE_PLOTUTILS_INTERFACE])
 
 ################
