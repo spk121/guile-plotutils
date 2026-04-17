@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script
 
-#    Copyright (C) 2018, 2019, 2020, 2021 Michael L. Gran
+#    Copyright (C) 2018, 2019, 2020, 2021, 2026 Michael L. Gran
 
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -53,25 +53,35 @@ dnl AC_PROG_SED
 GUILE_PKG([3.0 2.2])
 GUILE_PROGS
 GUILE_FLAGS
+
+# Allow overriding to GNU FHS-style layout for distcheck and custom prefixes
+AC_ARG_WITH([gnu-filesystem-hierarchy],
+    [AS_HELP_STRING([--with-gnu-filesystem-hierarchy],
+        [Install using GNU FHS layout under datadir/libdir instead of Guile's site dirs (useful for distcheck)])],
+    [with_gnu_fhs=$withval], [with_gnu_fhs=no])
+
+# Get the standard Guile directories first
 GUILE_SITE_DIR
 
-# Installed .scm scheme libraries go here
-AC_MSG_CHECKING([Guile site directory])
-guilesitedir="\${datadir}/guile/site/$GUILE_EFFECTIVE_VERSION"
-AC_MSG_RESULT([$guilesitedir])
-AC_SUBST(guilesitedir)
+# Override with FHS-style paths when requested (or for distcheck)
+if test "x$with_gnu_fhs" = "xyes"; then
+    AC_MSG_NOTICE([Using GNU FHS layout for Guile files])
 
-# Compiled libguile-*.so extension libraries go here
-AC_MSG_CHECKING([Guile extension directory])
-guileextensiondir="\${libdir}/guile/$GUILE_EFFECTIVE_VERSION/extensions"
-AC_MSG_RESULT([$guileextensiondir])
-AC_SUBST(guileextensiondir)
+    GUILE_SITE='${datadir}/guile/site/${GUILE_EFFECTIVE_VERSION}'
+    GUILE_EXTENSION='${libdir}/guile/${GUILE_EFFECTIVE_VERSION}/extensions'
+    GUILE_SITE_CCACHE='${libdir}/guile/${GUILE_EFFECTIVE_VERSION}/site-ccache'
+    AC_MSG_CHECKING([for GNU FSH Guile site directory])
+    AC_MSG_RESULT([$GUILE_SITE])
+    AC_MSG_CHECKING([for GNU FSH Guile extension directory])
+    AC_MSG_RESULT([$GUILE_EXTENSION])
+    AC_MSG_CHECKING([for GNU FSH Guile site-ccache directory])
+    AC_MSG_RESULT([$GUILE_SITE_CCACHE])
+fi
 
-# Compiled .go scheme libraries go here
-AC_MSG_CHECKING([Guile object directory])
-guileobjectdir="\${libdir}/guile/$GUILE_EFFECTIVE_VERSION/site-ccache"
-AC_MSG_RESULT([$guileobjectdir])
-AC_SUBST(guileobjectdir)
+# These are already AC_SUBST'ed by GUILE_SITE_DIR, in case we overrode them
+AC_SUBST([GUILE_SITE])
+AC_SUBST([GUILE_EXTENSION])
+AC_SUBST([GUILE_SITE_CCACHE])
 
 ################
 # Check for Libtool

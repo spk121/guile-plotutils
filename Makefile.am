@@ -1,5 +1,5 @@
 # Makefile.am - top level
-# Copyright (C) 2018, 2019, 2020, 2021 Michael L. Gran
+# Copyright (C) 2018, 2019, 2020, 2021, 2026 Michael L. Gran
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,6 +23,9 @@ AM_DISTCHECK_CONFIGURE_FLAGS = --with-gnu-filesystem-hierarchy
 #################
 
 exampledir = $(datadir)/doc/guile-plotutils
+guilesitedir = $(GUILE_SITE)
+guileextensiondir = $(GUILE_EXTENSION)
+guileobjectdir = $(GUILE_SITE_CCACHE)
 pkgguilesitedir = $(guilesitedir)/plotutils
 pkgguileobjectdir = $(guileobjectdir)/plotutils
 
