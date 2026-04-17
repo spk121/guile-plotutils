@@ -55,3 +55,6 @@
                #:line-width 0.004
                #:font-name "HersheySerif"))
       #:binary #t)))
+
+(main (command-line))
+

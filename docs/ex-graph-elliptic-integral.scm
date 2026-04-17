@@ -76,12 +76,14 @@
       (lambda ()
         (graph theta-deg period-ratio
                #:output-format "svg"
-               #:top-label "Exact Pendulum Period T/T_0 vs Amplitude"
-               #:x-label "Amplitude \\theta_0 (degrees)"
-               #:y-label "T / T_0"
+               #:top-label "Exact Pendulum Period T/T\\sb0\\eb vs Amplitude"
+               #:x-label "Amplitude \\*H\\sb0\\eb (degrees)"
+               #:y-label "T / T\\sb0\\eb"
                #:x-limits '(0.0 170.0)
                #:y-limits '(0.9 4.0)
                #:grid-style 3
                #:line-width 0.005
                #:font-name "HersheySerif"))
       #:binary #t)))
+
+(main (command-line))

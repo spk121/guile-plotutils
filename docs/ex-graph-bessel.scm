@@ -42,9 +42,9 @@
         (graph (merge xs xs xs xs)
                (merge j0 j1 j2 j3)
                #:output-format "svg"
-               #:top-label "Bessel Functions J_0, J_1, J_2, J_3"
+               #:top-label "Bessel Functions J\\sb0\\eb, J\\sb1\\eb, J\\sb2\\eb, J\\sb3\\eb"
                #:x-label "x"
-               #:y-label "J_n(x)"
+               #:y-label "J\\sbn\\eb(x)"
                #:x-limits '(0.0 20.0)
                #:y-limits '(-0.5 1.1)
                #:toggle-use-color #t
@@ -52,3 +52,4 @@
                #:line-width 0.004
                #:font-name "HersheySerif"))
       #:binary #t)))
+(main (command-line))

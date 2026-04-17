@@ -40,9 +40,9 @@
         (graph (merge xs xs xs xs xs xs)
                (merge t1 t2 t3 t4 t5 t6)
                #:output-format "svg"
-               #:top-label "Chebyshev Polynomials T_1 through T_6"
+               #:top-label "Chebyshev Polynomials T\\sb1\\eb through T\\sb6\\eb"
                #:x-label "x"
-               #:y-label "T_n(x)"
+               #:y-label "T\\sbn\\eb(x)"
                #:x-limits '(-1.0 1.0)
                #:y-limits '(-1.1 1.1)
                #:toggle-use-color #t
@@ -50,3 +50,5 @@
                #:line-width 0.004
                #:font-name "HersheySerif"))
       #:binary #t)))
+
+(main (command-line))

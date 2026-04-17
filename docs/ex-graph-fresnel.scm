@@ -13,7 +13,8 @@
 (define pi (* 4.0 (atan 1.0)))
 
 (define (integrate-simpson f a b n)
-  "Numerical integration of f from a to b using Simpson's rule with n subintervals."
+  "Numerical integration of f from a to b using Simpson's rule
+with n subintervals."
   (let* ((h (/ (- b a) n))
          (sum (+ (f a) (f b))))
     (let loop ((i 1) (s sum))
@@ -79,3 +80,5 @@
                #:line-width 0.003
                #:font-name "HersheySerif"))
       #:binary #t)))
+
+(main (command-line))

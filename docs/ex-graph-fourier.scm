@@ -36,12 +36,14 @@
         (graph (merge xs xs xs xs)
                (merge y1 y2 y3 y4)
                #:output-format "svg"
-               #:top-label "Fourier Series of Square Wave (Gibbs Phenomenon)"
+               #:top-label "Fourier Series of Square Wave"
                #:x-label "x"
-               #:y-label "S_N(x)"
+               #:y-label "S\\sbN\\eb(x)"
                #:x-limits (list (- pi) (* 3 pi))
                #:y-limits '(-1.4 1.4)
                #:toggle-use-color #t
                #:grid-style 2
                #:font-name "HersheySerif"))
       #:binary #t)))
+
+(main (command-line))

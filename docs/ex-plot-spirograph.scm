@@ -80,3 +80,5 @@
 
       (closepl! plotter)
       (close fp))))
+
+(main (command-line))
