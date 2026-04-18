@@ -75,7 +75,7 @@
                (merge ys-pi ys-li ys-xlogx)
                #:output-format output-format
                #:bitmap-size "1000x1000"
-               #:top-label "Prime Counting: \\pi(x), Li(x), x/ln(x)"
+               #:top-label "Prime Counting: \\*p(x), Li(x), x/ln(x)"
                #:x-label "x"
                #:y-label "Count of primes"
                #:x-limits '(2.0 200.0)
