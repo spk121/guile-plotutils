@@ -45,7 +45,7 @@ jobs:
       - name: Bootstrap and configure
         run: |
           autoreconf -vif
-          ./configure --prefix=/usr
+          ./configure --prefix=/usr --enable-maintainer-mode
 
       - name: Build HTML documentation
         run: |
