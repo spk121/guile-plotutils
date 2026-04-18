@@ -80,10 +80,10 @@
         (graph (merge xs2-parts xs1)
                (merge ys2-clamped ys1)
                #:output-format output-format
-               #:bitmap-size "800x600"
-               #:top-label "Gamma Function \\Gamma(x)"
+               #:bitmap-size "1000x1000"
+               #:top-label "Gamma Function \\*G(x)"
                #:x-label "x"
-               #:y-label "\\Gamma(x)"
+               #:y-label "\\*G(x)"
                #:x-limits '(-4.0 5.0)
                #:y-limits '(-8.0 8.0)
                #:toggle-use-color #t

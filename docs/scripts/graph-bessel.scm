@@ -50,7 +50,7 @@
         (graph (merge xs xs xs xs)
                (merge j0 j1 j2 j3)
                #:output-format output-format
-               #:bitmap-size "800x600"
+               #:bitmap-size "1000x1000"
                #:top-label "Bessel Functions J\\sb0\\eb, J\\sb1\\eb, J\\sb2\\eb, J\\sb3\\eb"
                #:x-label "x"
                #:y-label "J\\sbn\\eb(x)"

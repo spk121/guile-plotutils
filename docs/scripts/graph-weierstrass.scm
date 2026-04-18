@@ -45,7 +45,7 @@
         (graph (merge xs xs)
                (merge y1 y2)
                #:output-format output-format
-               #:bitmap-size "800x600"
+               #:bitmap-size "1000x1000"
                #:top-label "Weierstrass Function (nowhere differentiable)"
                #:x-label "x"
                #:y-label "W(x)"

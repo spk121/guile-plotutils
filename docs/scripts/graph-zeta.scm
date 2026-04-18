@@ -35,10 +35,10 @@
       (lambda ()
         (graph xs ys
                #:output-format output-format
-               #:bitmap-size "800x600"
-               #:top-label "Riemann Zeta Function \\zeta(s) for s > 1"
+               #:bitmap-size "1000x1000"
+               #:top-label "Riemann Zeta Function \\*z(s) for s > 1"
                #:x-label "s"
-               #:y-label "\\zeta(s)"
+               #:y-label "\\*z(s)"
                #:x-limits '(1.0 8.0)
                #:y-limits '(0.0 10.0)
                #:grid-style 3

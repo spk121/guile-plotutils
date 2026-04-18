@@ -74,7 +74,7 @@
         (graph (merge xs-pi xs-li xs-li)
                (merge ys-pi ys-li ys-xlogx)
                #:output-format output-format
-               #:bitmap-size "800x600"
+               #:bitmap-size "1000x1000"
                #:top-label "Prime Counting: \\pi(x), Li(x), x/ln(x)"
                #:x-label "x"
                #:y-label "Count of primes"

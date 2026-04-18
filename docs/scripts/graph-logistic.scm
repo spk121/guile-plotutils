@@ -56,7 +56,7 @@ Returns (r-list . x-list) for plotting."
       (lambda ()
         (graph xs ys
                #:output-format output-format
-               #:bitmap-size "800x600"
+               #:bitmap-size "1000x1000"
                #:top-label "Logistic Map Bifurcation Diagram"
                #:x-label "r"
                #:y-label "x*"

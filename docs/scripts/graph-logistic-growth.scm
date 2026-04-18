@@ -44,7 +44,7 @@
         (graph (merge lv-ts lv-ts)
                (merge lv-xs lv-ys)
                #:output-format output-format
-               #:bitmap-size "800x600"
+               #:bitmap-size "1000x1000"
                #:top-label "Lotka-Volterra Predator-Prey Dynamics"
                #:x-label "Time"
                #:y-label "Population"

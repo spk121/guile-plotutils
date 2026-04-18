@@ -291,7 +291,7 @@ and diffusion problems.
 
 @subsection Chebyshev Polynomials
 
-This plot draws Chebyshev polynomials @math{T_n(x)}, a classical family
+This plot draws Chebyshev polynomials @math{T@sub{n}(x)}, a classical family
 of orthogonal polynomials used heavily in approximation theory and
 spectral methods.
 
@@ -347,7 +347,7 @@ integrals, a central curve in diffraction theory.
 
 @subsection Gamma Function
 
-This plot shows the Gamma function @math{\Gamma(x)} on the real line,
+This plot shows the Gamma function @math{Gamma(x)} on the real line,
 including behavior near poles at non-positive integers.
 
 @image{images/graph-gamma,,,,.png}
@@ -424,7 +424,7 @@ Weierstrass function built from a cosine series.
 
 @subsection Riemann Zeta on the Real Line
 
-This plot shows numerical behavior of @math{\zeta(s)} for real
+This plot shows numerical behavior of @math{zeta(s)} for real
 @math{s > 1}, including the blow-up near the pole at @math{s=1}.
 
 @image{images/graph-zeta,,,,.png}

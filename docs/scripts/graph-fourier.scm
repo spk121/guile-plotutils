@@ -44,7 +44,7 @@
         (graph (merge xs xs xs xs)
                (merge y1 y2 y3 y4)
                #:output-format output-format
-               #:bitmap-size "800x600"
+               #:bitmap-size "1000x1000"
                #:top-label "Fourier Series of Square Wave"
                #:x-label "x"
                #:y-label "S\\sbN\\eb(x)"
