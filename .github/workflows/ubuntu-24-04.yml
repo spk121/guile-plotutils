@@ -24,7 +24,7 @@ jobs:
     - name: autoreconf
       run: autoreconf -vif -Wall -Werror
     - name: configure
-      run: ./configure --prefix=`pwd`/dist
+      run: ./configure --prefix=`pwd`/dist --enable-maintainer-mode
     - name: make
       run: make
     - name: make check
