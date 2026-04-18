@@ -51,7 +51,9 @@ SCM_SRC = \
 	scripts/plot-spirograph.scm
 
 IMAGES_PNG = $(SCM_SRC:scripts/%.scm=images/%.png)
+HTML_IMAGES_PNG = $(SCM_SRC:scripts/%.scm=guile-plotutils.html/images/%.png)
 IMAGES_EPS = $(SCM_SRC:scripts/%.scm=images/%.eps)
+noinst_SCRIPTS = $(SCM_SRC)
 
 # Files the guile-plotutils manual depends on: the included fdl
 # appendix, the embedded images, and the verbatim-included scripts.
@@ -70,9 +72,11 @@ EXTRA_DIST = document-1.0.1.css
 # the generated HTML.  The browser resolves that relative to the
 # HTML file's directory (guile-plotutils.html/), not the Makefile's
 # directory, so we have to stage the images into the HTML tree.
-html-local: $(IMAGES_PNG)
-	$(MKDIR_P) guile-plotutils.html/images
-	cp $(IMAGES_PNG) guile-plotutils.html/images/
+html-local: $(HTML_IMAGES_PNG)
+
+guile-plotutils.html/images/%.png: images/%.png
+	@mkdir -p $(dir $@)
+	cp $< $@
 
 # ------------------------------------------------------------------
 # Rules to regenerate the images (maintainer only)
