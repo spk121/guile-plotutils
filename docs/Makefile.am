@@ -55,6 +55,13 @@ HTML_IMAGES_PNG = $(SCM_SRC:scripts/%.scm=guile-plotutils.html/images/%.png)
 IMAGES_EPS = $(SCM_SRC:scripts/%.scm=images/%.eps)
 noinst_SCRIPTS = $(SCM_SRC)
 
+version.texi:
+	@echo "@set VERSION $(VERSION)" > $@
+	@echo "@set UPDATED $(shell date '+%B %Y')" >> $@
+
+BUILT_SOURCES = version.texi
+CLEANFILES = version.texi
+
 # Files the guile-plotutils manual depends on: the included fdl
 # appendix, the embedded images, and the verbatim-included scripts.
 # Listing them here both distributes them in the tarball and makes
@@ -62,6 +69,7 @@ noinst_SCRIPTS = $(SCM_SRC)
 guile_plotutils_TEXINFOS = \
 	fdl-1.3.texi \
 	colors.txt \
+	version.texi \
 	$(SCM_SRC) \
 	$(IMAGES_PNG) \
 	$(IMAGES_EPS)
@@ -77,6 +85,7 @@ html-local: $(HTML_IMAGES_PNG)
 guile-plotutils.html/images/%.png: images/%.png
 	@mkdir -p $(dir $@)
 	cp $< $@
+
 
 # ------------------------------------------------------------------
 # Rules to regenerate the images (maintainer only)
