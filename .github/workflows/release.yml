@@ -53,6 +53,10 @@ jobs:
           echo "tar_file=$TAR_FILE" >> $GITHUB_OUTPUT
           echo "Found tarball: $TAR_FILE"
 
+      - name: Generate checksums
+        run: |
+          sha256sum ${{ steps.dist.outputs.tar_file }} > ${{ steps.dist.outputs.tar_file }}.sha256
+
       - name: Sign the distribution tarball with GPG
         continue-on-error: true
         run: |
@@ -66,6 +70,7 @@ jobs:
           files: |
             ${{ steps.dist.outputs.tar_file }}
             ${{ steps.dist.outputs.tar_file }}.asc
+            ${{ steps.dist.outputs.tar_file }}.sha256
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
