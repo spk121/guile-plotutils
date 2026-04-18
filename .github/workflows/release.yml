@@ -38,7 +38,7 @@ jobs:
       - name: Import GPG signing key
         id: import_gpg
         continue-on-error: true
-        uses: crazy-max/ghaction-import-gpg@v6
+        uses: crazy-max/ghaction-import-gpg@v7
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
@@ -60,7 +60,7 @@ jobs:
           fi
 
       - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             ${{ steps.dist.outputs.tar_file }}
