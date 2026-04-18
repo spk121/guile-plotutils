@@ -56,6 +56,7 @@ with n subintervals."
       (lambda ()
         (graph spiral-x spiral-y
                #:output-format output-format
+               #:bitmap-size "800x600"
                #:top-label "Cornu (Euler) Spiral"
                #:x-label "C(t)"
                #:y-label "S(t)"

@@ -37,6 +37,7 @@
         (graph (merge (car fig1) (car fig2) (car fig3))
                (merge (cdr fig1) (cdr fig2) (cdr fig3))
                #:output-format output-format
+               #:bitmap-size "800x600"
                #:top-label "Lissajous Figures (3:2, 5:4, 3:4)"
                #:x-label "x(t) = sin(a t + \\delta)"
                #:y-label "y(t) = sin(b t)"

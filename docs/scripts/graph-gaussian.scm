@@ -38,6 +38,7 @@
         (graph (merge xs xs xs)
                (merge y1 y2 y3)
                #:output-format output-format
+               #:bitmap-size "800x600"
                #:top-label "Gaussian PDF: \\sigma=0.5, 1.0, 2.0"
                #:x-label "x"
                #:y-label "f(x)"

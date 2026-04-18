@@ -48,6 +48,7 @@
         (graph (merge xs xs xs xs xs xs)
                (merge t1 t2 t3 t4 t5 t6)
                #:output-format output-format
+               #:bitmap-size "800x600"
                #:top-label "Chebyshev Polynomials T\\sb1\\eb through T\\sb6\\eb"
                #:x-label "x"
                #:y-label "T\\sbn\\eb(x)"

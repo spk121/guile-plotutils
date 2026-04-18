@@ -53,6 +53,7 @@
         (graph (merge ts ts ts ts ts)
                (merge y-under y-crit y-over y-env+ y-env-)
                #:output-format output-format
+               #:bitmap-size "800x600"
                #:top-label "Damped Harmonic Oscillator"
                #:x-label "Time t"
                #:y-label "Displacement x(t)"

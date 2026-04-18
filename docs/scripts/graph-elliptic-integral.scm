@@ -61,6 +61,7 @@
       (lambda ()
         (graph theta-deg period-ratio
                #:output-format output-format
+               #:bitmap-size "800x600"
                #:top-label "Exact Pendulum Period T/T\\sb0\\eb vs Amplitude"
                #:x-label "Amplitude \\*H\\sb0\\eb (degrees)"
                #:y-label "T / T\\sb0\\eb"

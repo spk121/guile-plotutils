@@ -30,6 +30,7 @@
       (lambda ()
         (graph xs ys
                #:output-format output-format
+               #:bitmap-size "800x600"
                #:top-label "Sine Wave y = sin(x)"
                #:x-label "x"
                #:y-label "sin(x)"
