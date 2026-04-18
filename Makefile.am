@@ -1,4 +1,4 @@
-# Makefile.am - top level
+## Makefile.am -- top level
 # Copyright (C) 2018, 2019, 2020, 2021, 2026 Michael L. Gran
 
 # This program is free software: you can redistribute it and/or modify
@@ -19,12 +19,17 @@ AUTOMAKE_OPTIONS = subdir-objects
 AM_DISTCHECK_CONFIGURE_FLAGS = --with-gnu-filesystem-hierarchy
 AM_DISTCHECK_DVI_TARGET = html
 
+# Build src/ first (produces libguile-plotutils.la), then the current
+# directory (compiles the Guile modules, which depend on the library),
+# then docs/ (which in maintainer mode runs scripts that load the
+# library).
+SUBDIRS = src module/plotutils . docs
+
 #################
 #  Directories  #
 #################
 
 guilesitedir = $(GUILE_SITE)
-guileextensiondir = $(GUILE_EXTENSION)
 guileobjectdir = $(GUILE_SITE_CCACHE)
 pkgguilesitedir = $(guilesitedir)/plotutils
 pkgguileobjectdir = $(guileobjectdir)/plotutils
@@ -33,71 +38,10 @@ pkgguileobjectdir = $(guileobjectdir)/plotutils
 #   Top Level   #
 #################
 
-dist: \
-  README
+dist: README
 
 README: README.md
 	$(LN_S) $< $@
-
-########################
-#  libguile-plotutils  #
-########################
-
-guileextension_LTLIBRARIES = libguile-plotutils.la
-
-libguile_plotutils_la_c_sources = \
-  src/compat.c \
-  src/display.c \
-  src/fontlist.c \
-  src/guile_graph.c \
-  src/guile_plot.c \
-  src/linemode.c \
-  src/misc.c \
-  src/plotter.c \
-  src/reader.c \
-  src/xmalloc.c \
-  src/xstrdup.c
-
-libguile_plotutils_la_internal_headers = \
-  src/guile_graph.h \
-  src/guile_plot.h \
-  src/plot.h \
-  src/visibility.h \
-  src/libcommon.h \
-  src/sys-defines.h \
-  src/fontlist.h \
-  src/extern.h
-
-libguile_plotutils_la_SOURCES = \
-  $(libguile_plotutils_la_internal_headers) \
-  $(libguile_plotutils_la_c_sources)
-
-libguile_plotutils_la_CPPFLAGS = \
-  -DHAVE_STRERROR=1 \
-  -UX_DISPLAY_MISSING \
-  -DINCLUDE_PNG_SUPPORT=1
-
-if BUILDING_DLL
-libguile_plotutils_la_CPPFLAGS += -DGUPL_DLL -DGUPL_DLL_EXPORTS
-endif
-
-libguile_plotutils_la_CFLAGS = \
-  -std=c11 \
-  $(GUILE_CFLAGS)
-
-libguile_plotutils_la_LDFLAGS = \
- -no-undefined \
- -version-info $(LIBGUILE_PLOTUTILS_INTERFACE) \
- -export-symbols-regex '^gupl_' \
- $(GUILE_LDFLAGS)
-
-if !DLL_VERSION_INFO
-libguile_plotutils_la_LDFLAGS += -avoid-version
-endif
-
-libguile_plotutils_la_LIBADD = \
- $(GUILE_LIBS) \
- -lplot
 
 #################
 # Guile Modules #
@@ -116,21 +60,21 @@ pkgguileobject_DATA = \
   $(nodist_pkgguilesite_DATA:%.scm=%.go)
 
 GUILEC_FLAGS = \
- -O2 \
- -Warity-mismatch \
- -Wformat \
- -Wmacro-use-before-definition \
- -Wunbound-variable \
- --load-path=$(abs_srcdir)/module \
- --load-path=$(abs_builddir)/module
+  -O2 \
+  -Warity-mismatch \
+  -Wformat \
+  -Wmacro-use-before-definition \
+  -Wunbound-variable \
+  --load-path=$(abs_srcdir)/module \
+  --load-path=$(abs_builddir)/module
 
 .scm.go:
 	GUILE_AUTO_COMPILE=0 \
-	LTDL_LIBRARY_PATH=$(abs_builddir)/.libs \
+	LTDL_LIBRARY_PATH=$(abs_builddir)/src/.libs \
 	$(GUILE_TOOLS) compile --target="$(host)" $(GUILEC_FLAGS) \
-	-o "$@" "$<"
+	  -o "$@" "$<"
 
-$(guileobject_DATA) $(pkgguileobject_DATA): $(guileextension_LTLIBRARIES)
+$(guileobject_DATA) $(pkgguileobject_DATA): src/libguile-plotutils.la
 endif
 
 #################
@@ -139,8 +83,7 @@ endif
 
 TEST_EXTENSIONS = .scm
 
-EVERYTHING_TESTS =
-TESTS_LTDLOPEN = -dlopen ${top_builddir}/libguile-plotutils.la
+TESTS_LTDLOPEN = -dlopen $(top_builddir)/src/libguile-plotutils.la
 
 TESTS = \
   test/_setup.scm \
@@ -160,18 +103,11 @@ test: check
 #  Local rules  #
 #################
 
-# Prerequisites needed by docs/Makefile.am before generating images.
-docs-prereqs: libguile-plotutils.la $(guileobject_DATA) $(pkgguileobject_DATA)
+# Prerequisites needed by docs/Makefile.am before regenerating images
+# in maintainer mode.
+docs-prereqs: src/libguile-plotutils.la $(guileobject_DATA) $(pkgguileobject_DATA)
 
-check-syntax:
-	$(CC) -std=c11 $(GUILE_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) \
-	 $(GOBJECT_INTROSPECTION_CFLAGS) $(FFI_CFLAGS) \
-	 -DG_LOG_DOMAIN=\"GuileGI\" $(CFLAGS) -fsyntax-only $(libguile_plotutils_la_c_sources)
-
-indent:
-	VERSION_CONTROL=none indent $(libguile_plotutils_la_SOURCES)
-
-.PHONY: check-syntax docs-prereqs indent test
+.PHONY: docs-prereqs test
 
 #################
 #   Variables   #
@@ -183,10 +119,9 @@ CLEANFILES = \
   $(check_DATA) \
   *.log
 
-
-
 EXTRA_DIST = \
   README.md \
+  NEWS \
   build-aux/config.rpath \
   m4/attributes.m4 \
   tools/uninstalled-env.in \
@@ -196,7 +131,4 @@ EXTRA_DIST = \
   tools/gdb-guile.in \
   tools/gdb-test.in \
   $(TESTS) \
-  $(noinst_DATA) \
-  docs
-
-SUBDIRS = . docs
+  $(noinst_DATA)

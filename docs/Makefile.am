@@ -1,126 +1,106 @@
-info_TEXINFOS = guile-plotutils.texi fdl-1.3.texi
+## docs/Makefile.am -- build the guile-plotutils manual
 
-# Avoid automake's in-srcdir texinfo regeneration in read-only distcheck
-# trees; docs are still available via explicit info/html targets.
-INFO_DEPS =
+info_TEXINFOS = guile-plotutils.texi
 
-# Prefer using HTML as our distcheck documentation target, rather than
-# DVI, because for some of our automated builds, downloading texlive
-# or basictex takes a fair amount of time.
+# Use HTML (not DVI) for distcheck's documentation build; pulling in
+# texlive/basictex in CI is slow.
 AM_DISTCHECK_DVI_TARGET = html
 
-# ------------------------------------------------------------------
-# Plots
-# ------------------------------------------------------------------
-PLOTS = \
- graph-sine-wave \
- graph-bessel \
- graph-chebyshev \
- graph-damped-oscillator \
- graph-elliptic-integral \
- graph-fourier \
- graph-fresnel \
- graph-gamma \
- graph-gaussian \
- graph-lissajous \
- graph-logistic-growth \
- graph-logistic \
- graph-riemann-stairs \
- graph-weierstrass \
- graph-zeta \
- graph-sine-wave2 \
- plot-dragon-curve \
- plot-gaussian-histogram \
- plot-golden-spiral \
- plot-hilbert-curve \
- plot-koch-snowflake \
- plot-sierpinski-triangle \
- plot-spirograph
- 
-# ------------------------------------------------------------------
-# Generated images
-# ------------------------------------------------------------------
-IMAGES_PNG = $(addprefix images/,$(PLOTS:=.png))
-IMAGES_EPS = $(addprefix images/,$(PLOTS:=.eps))
-
-# Extra files to distribute
-EXTRA_DIST = \
-	scripts/$(PLOTS:=.scm) \
-	document-1.0.1.css
-
-# Automake's texinfo dependency scanner may record verbatiminclude files
-# as bare basenames for distdir. Provide a build-time mapping from docs/
-# to docs/scripts/ so VPATH/distcheck can satisfy those dependencies.
-SCM_BASENAMES = $(addsuffix .scm,$(PLOTS))
-
-$(SCM_BASENAMES): %.scm: scripts/%.scm
-	cp -f $(srcdir)/scripts/$*.scm $@
-
-CLEANFILES = $(SCM_BASENAMES)
+# Custom CSS for the HTML manual.
+AM_MAKEINFOHTMLFLAGS = --css-include=$(srcdir)/document-1.0.1.css
 
 # ------------------------------------------------------------------
-# Generate images from Scheme scripts
+# Scripts and the images they generate
 # ------------------------------------------------------------------
-top-build-prereqs:
-	$(MAKE) -C $(top_builddir) docs-prereqs
+# Each script in scripts/FOO.scm generates an image when run with an
+# output path argument:
+#
+#     guile scripts/FOO.scm images/FOO.png
+#     guile scripts/FOO.scm images/FOO.eps
+#
+# The manual includes the scripts verbatim and embeds the images;
+# .png is used for info/html/pdf, .eps is used for dvi/ps.
+#
+# The generated images are shipped in the distribution tarball, so
+# end users can build the manual without running guile at all.  The
+# rules that regenerate them are gated on MAINTAINER_MODE below.
 
-images/%.png images/%.eps: top-build-prereqs scripts/%.scm
-	$(MKDIR_P) images
-	$(AM_V_GEN)$(LIBTOOL) --mode=execute \
+SCM_SRC = \
+	scripts/graph-sine-wave.scm \
+	scripts/graph-sine-wave2.scm \
+	scripts/graph-bessel.scm \
+	scripts/graph-chebyshev.scm \
+	scripts/graph-damped-oscillator.scm \
+	scripts/graph-elliptic-integral.scm \
+	scripts/graph-fourier.scm \
+	scripts/graph-fresnel.scm \
+	scripts/graph-gamma.scm \
+	scripts/graph-gaussian.scm \
+	scripts/graph-lissajous.scm \
+	scripts/graph-logistic-growth.scm \
+	scripts/graph-logistic.scm \
+	scripts/graph-riemann-stairs.scm \
+	scripts/graph-weierstrass.scm \
+	scripts/graph-zeta.scm \
+	scripts/plot-dragon-curve.scm \
+	scripts/plot-gaussian-histogram.scm \
+	scripts/plot-golden-spiral.scm \
+	scripts/plot-hilbert-curve.scm \
+	scripts/plot-koch-snowflake.scm \
+	scripts/plot-sierpinski-triangle.scm \
+	scripts/plot-spirograph.scm
+
+IMAGES_PNG = $(SCM_SRC:scripts/%.scm=images/%.png)
+IMAGES_EPS = $(SCM_SRC:scripts/%.scm=images/%.eps)
+
+# Files the guile-plotutils manual depends on: the included fdl
+# appendix, the embedded images, and the verbatim-included scripts.
+# Listing them here both distributes them in the tarball and makes
+# the manual rebuild when any of them changes.
+guile_plotutils_TEXINFOS = \
+	fdl-1.3.texi \
+	colors.txt \
+	$(SCM_SRC) \
+	$(IMAGES_PNG) \
+	$(IMAGES_EPS)
+
+EXTRA_DIST = document-1.0.1.css
+
+# ------------------------------------------------------------------
+# Rules to regenerate the images (maintainer only)
+# ------------------------------------------------------------------
+# End users build from a tarball that already contains the images, so
+# they never need guile or the plotutils extension library to build
+# the manual.  Only the maintainer regenerates images, via
+#     ./configure --enable-maintainer-mode
+
+if MAINTAINER_MODE
+
+# Running a .scm from an uninstalled build needs the in-tree modules
+# and the compiled extension library on the right search paths.
+GUILE_RUN = \
+	$(LIBTOOL) --mode=execute \
 		env \
-			GUILE_EXTENSIONS_PATH="$(top_builddir)/.libs$${GUILE_EXTENSIONS_PATH:+:$${GUILE_EXTENSIONS_PATH}}" \
-			LTDL_LIBRARY_PATH="$(top_builddir)/.libs$${LTDL_LIBRARY_PATH:+:$${LTDL_LIBRARY_PATH}}" \
-		$(GUILE) -L $(top_builddir)/module -L $(top_srcdir)/module \
-		$(srcdir)/scripts/$*.scm $@
+			GUILE_EXTENSIONS_PATH="$(abs_top_builddir)/src/.libs$${GUILE_EXTENSIONS_PATH:+:$${GUILE_EXTENSIONS_PATH}}" \
+			LTDL_LIBRARY_PATH="$(abs_top_builddir)/src/.libs$${LTDL_LIBRARY_PATH:+:$${LTDL_LIBRARY_PATH}}" \
+		$(GUILE) \
+			-L $(abs_top_builddir)/module \
+			-L $(abs_top_srcdir)/module
 
-BUILT_SOURCES = $(IMAGES_PNG) $(IMAGES_EPS)
+images/%.png: scripts/%.scm
+	$(AM_V_GEN)$(MKDIR_P) images
+	$(AM_V_at)$(GUILE_RUN) $< $@
 
-# ------------------------------------------------------------------
-# HTML support — images + CSS
-# ------------------------------------------------------------------
-html-local:
-	$(MKDIR_P) guile-plotutils.html/images
-	cp -f $(IMAGES_PNG) guile-plotutils.html/images/ 2>/dev/null || true
-	cp -f document-1.0.1.css guile-plotutils.html/ 2>/dev/null || true
+images/%.eps: scripts/%.scm
+	$(AM_V_GEN)$(MKDIR_P) images
+	$(AM_V_at)$(GUILE_RUN) $< $@
 
-# Tell texi2any to use our custom CSS file
-AM_MAKEINFOHTMLFLAGS = --css-include=document-1.0.1.css
+# The images are shipped artifacts, so only `make maintainer-clean`
+# removes them.  A plain `make clean` in an end-user build must not
+# delete files that came from the tarball.
+MAINTAINERCLEANFILES = $(IMAGES_PNG) $(IMAGES_EPS)
 
-# ------------------------------------------------------------------
-# Other documentation targets
-# ------------------------------------------------------------------
-pdf-local:
-	$(MKDIR_P) images
-	cp -f $(IMAGES_PNG) images/ 2>/dev/null || true
+maintainer-clean-local:
+	-rm -rf images
 
-dvi-local ps-local:
-	$(MKDIR_P) images
-	cp -f $(IMAGES_EPS) images/ 2>/dev/null || true
-
-info-local:
-	$(MKDIR_P) images
-	cp -f $(IMAGES_PNG) images/ 2>/dev/null || true
-
-# ------------------------------------------------------------------
-# Install rules
-# ------------------------------------------------------------------
-install-html-local:
-	$(MKDIR_P) $(DESTDIR)$(docdir)/guile-plotutils/images
-	cp -f $(IMAGES_PNG) $(DESTDIR)$(docdir)/guile-plotutils/images/ 2>/dev/null || true
-	cp -f document-1.0.1.css $(DESTDIR)$(docdir)/guile-plotutils/ 2>/dev/null || true
-
-install-pdf-local install-dvi-local install-ps-local install-info-local:
-	$(MKDIR_P) $(DESTDIR)$(docdir)/guile-plotutils
-	cp -f $(IMAGES_PNG) $(DESTDIR)$(docdir)/guile-plotutils/ 2>/dev/null || true
-
-# ------------------------------------------------------------------
-# Cleanup
-# ------------------------------------------------------------------
-mostlyclean-local:
-	rm -rf images guile-plotutils.html/images
-
-# Keep distributed .info files fresher than sources so distcheck does not
-# attempt to regenerate them in its read-only source tree.
-dist-hook: $(INFO_DEPS)
-
-.PHONY: top-build-prereqs
+endif

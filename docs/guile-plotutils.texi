@@ -403,7 +403,7 @@ route from fixed points to period doubling and chaos.
 @subsection Prime Counting and Logarithmic Integral
 
 This plot compares the prime-counting staircase @math{\pi(x)} with
-smooth approximations such as @math{\mathrm{Li}(x)} and @math{x/\log x}.
+smooth approximations such as @math{Li(x)} and @math{x/\log x}.
 
 @image{images/graph-riemann-stairs,,,,.png}
 

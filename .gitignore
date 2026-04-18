@@ -17,6 +17,10 @@ configure
 doc/.dirstamp
 doc/stamp-vti
 doc/version.texi
+*.aux
+*.cp
+*.toc
+*.err
 pre-inst-env
 m4/libtool.m4
 m4/ltoptions.m4
