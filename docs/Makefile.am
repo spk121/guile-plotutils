@@ -66,6 +66,14 @@ guile_plotutils_TEXINFOS = \
 
 EXTRA_DIST = document-1.0.1.css
 
+# Texinfo's @image directive produces <img src="images/foo.png"> in
+# the generated HTML.  The browser resolves that relative to the
+# HTML file's directory (guile-plotutils.html/), not the Makefile's
+# directory, so we have to stage the images into the HTML tree.
+html-local: $(IMAGES_PNG)
+	$(MKDIR_P) guile-plotutils.html/images
+	cp $(IMAGES_PNG) guile-plotutils.html/images/
+
 # ------------------------------------------------------------------
 # Rules to regenerate the images (maintainer only)
 # ------------------------------------------------------------------
