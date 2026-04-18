@@ -1,19 +1,29 @@
 # Guile Plotutils
 
+[![Ubuntu 24.04](https://github.com/spk121/guile-plotutils/actions/workflows/ubuntu-24-04.yml/badge.svg)](https://github.com/spk121/guile-plotutils/actions/workflows/ubuntu-24-04.yml)
+
 This is a library for [GNU Guile](https://gnu.org/software/guile) to
 use the plotting and graphing functionality provided by
 [GNU Plotutils](https://gnu.org/software/plotutils).
 
-GNU Guile is an implementation of Scheme, which is a Lisp-like language.
-This library allows Guile draw plots using a PCL-like plotting functions.
-It also allows Guile to make plots of y or x,y data.
+GNU Guile is an implementation of Scheme, which is a Lisp-like
+language.  This library allows Guile draw plots using a PCL-like
+plotting functions.  It also allows Guile to make plots of y or x,y
+data.
+
+Documentation is available at
+[spk121.github.io/guile-plotutils](https://spk121.github.io/guile-plotutils/),
+including a
+[gallery of sample plots](https://spk121.github.io/guile-plotutils/Gallery.html).
+
 
 Guile Plotutils has two primary components.
 
 * The `(plotutils plot)` and `(plotutils graph)` scheme modules
 
-* `libguile-plotutils.so` or `libguile-plotutils.dll`: a compiled module that
-  contains glue code to interface with GNU Plotutils's libplot library
+* `libguile-plotutils.so` or `libguile-plotutils.dll`: a compiled
+  module that contains glue code to interface with GNU Plotutils's
+  libplot library
 
 ## Requirements
 
@@ -29,7 +39,3 @@ build or install libplot in a way that is usable by other program.
 
 It appears to work on some GNU/Linux distros.  Some Debian-based
 distros still have a package for the nearly extinct libplot.
-
-
-
-

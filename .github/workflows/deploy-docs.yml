@@ -12,6 +12,10 @@ on:
   # Or trigger manually from the Actions tab
   workflow_dispatch:
 
+env:
+  DEBIAN_FRONTEND: noninteractive
+  TZ: America/Los_Angeles
+
 # Sets permissions for deploying to GitHub Pages
 permissions:
   contents: read
@@ -37,15 +41,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: env
-        run: export LANG=C.UTF-8 TERM=dumb VERBOSE=true DEBIAN_FRONTEND=noninteractive TZ=America/Los_Angeles
       - name: install packages
         run: sudo apt-get install -y guile-3.0-dev texlive texlive-plain-generic plotutils libplot-dev
 
       - name: Bootstrap and configure
         run: |
           autoreconf -vif
-          ./configure --prefix=/usr --enable-maintainer-mode
+          ./configure --prefix=/usr
 
       - name: Build HTML documentation
         run: |

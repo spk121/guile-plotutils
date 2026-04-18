@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*'        # Trigger on tags like v1.2.3
 
+env:
+  DEBIAN_FRONTEND: noninteractive
+  TZ: America/Los_Angeles
+
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
@@ -13,8 +17,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0   # Needed for proper versioning if you use it
-      - name: env
-        run: export LANG=C.UTF-8 TERM=dumb VERBOSE=true DEBIAN_FRONTEND=noninteractive TZ=America/Los_Angeles
+
       - name: install packages
         run: |
           sudo apt-get update
@@ -24,9 +27,7 @@ jobs:
         run: autoreconf -vif
 
       - name: Configure
-        run: ./configure --enable-maintainer-mode
-      - name: Make
-        run: make
+        run: ./configure
 
       - name: Make distcheck
         run: make distcheck
