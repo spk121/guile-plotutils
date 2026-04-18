@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0   # Needed for proper versioning if you use it
       - name: env
@@ -24,7 +24,9 @@ jobs:
         run: autoreconf -vif
 
       - name: Configure
-        run: ./configure
+        run: ./configure --enable-maintainer-mode
+      - name: Make
+        run: make
 
       - name: Make distcheck
         run: make distcheck
