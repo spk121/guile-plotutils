@@ -38,11 +38,6 @@ pkgguileobjectdir = $(guileobjectdir)/plotutils
 #   Top Level   #
 #################
 
-dist: README
-
-README: README.md
-	$(LN_S) $< $@
-
 #################
 # Guile Modules #
 #################
@@ -114,7 +109,7 @@ docs-prereqs: src/libguile-plotutils.la $(guileobject_DATA) $(pkgguileobject_DAT
 #################
 
 CLEANFILES = \
-  ChangeLog README \
+  ChangeLog \
   $(guileobject_DATA) $(pkgguileobject_DATA) \
   $(check_DATA) \
   *.log
@@ -126,9 +121,5 @@ EXTRA_DIST = \
   m4/attributes.m4 \
   tools/uninstalled-env.in \
   tools/uninstalled-test-env.in \
-  tools/run-guile.in \
-  tools/run-test.in \
-  tools/gdb-guile.in \
-  tools/gdb-test.in \
   $(TESTS) \
   $(noinst_DATA)
