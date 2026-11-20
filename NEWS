@@ -1,5 +1,9 @@
 Guile-Plotutils NEWS - History of user-visible changes
 
+Changes in 1.0.3 (since 1.0.2)
+* Fixed 'make dist' and 'make distcheck', which failed because
+  removed helper scripts were still listed in EXTRA_DIST.
+
 Changes in 1.0.2 (since 1.0.1)
 * Fixed bug where toggle-auto-bump! was actually transposing axes
 * Fixed bug where title-font-size! failed to change the font size
