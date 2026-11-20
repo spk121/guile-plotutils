@@ -121,9 +121,5 @@ EXTRA_DIST = \
   m4/attributes.m4 \
   tools/uninstalled-env.in \
   tools/uninstalled-test-env.in \
-  tools/run-guile.in \
-  tools/run-test.in \
-  tools/gdb-guile.in \
-  tools/gdb-test.in \
   $(TESTS) \
   $(noinst_DATA)
