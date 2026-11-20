@@ -18,7 +18,7 @@ dnl Process this file with autoconf to produce a configure script
 ################
 # Package Info
 
-AC_INIT([Guile Plotutils], [1.0.2], [spk121@yahoo.com], [guile_plotutils])
+AC_INIT([Guile Plotutils], [1.0.3], [spk121@yahoo.com], [guile_plotutils])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([src/guile_plot.c])
