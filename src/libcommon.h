@@ -48,10 +48,6 @@
 ___BEGIN_DECLS
 
 extern char *xstrdup (const char *s);
-extern void display_usage (const char *progname, const int *omit_vals,
-                           const char *appendage, int info);
-extern void display_version (const char *progname, const char *written,
-                             const char *copyright);
 extern void *xmalloc (size_t length);
 extern void *xrealloc (void *p, size_t length);
 

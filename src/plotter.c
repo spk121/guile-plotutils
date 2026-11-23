@@ -3085,8 +3085,8 @@ plot_errorbar (Multigrapher *multigrapher, const Point *p)
 /* An alternative means of ending a polyline in progress.  Rather than
    ending it by passing plot_point() a point with the `pendown' flag not
    set, one may call this function.  This yields faster response in
-   real-time work; e.g. in reader.c it is called by read_and_plot_file()
-   after all dataset(s) have been read from the file and plotted. */
+   real-time work; e.g. generate calls it before redrawing the frame on
+   top of the plot. */
 
 void
 end_polyline_and_flush (Multigrapher *multigrapher)

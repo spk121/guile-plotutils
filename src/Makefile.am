@@ -16,14 +16,12 @@ guileextension_LTLIBRARIES = libguile-plotutils.la
 
 libguile_plotutils_la_c_sources = \
   compat.c \
-  display.c \
   fontlist.c \
   guile_graph.c \
   guile_plot.c \
   linemode.c \
   misc.c \
   plotter.c \
-  reader.c \
   xmalloc.c \
   xstrdup.c
 
