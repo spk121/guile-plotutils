@@ -29,6 +29,7 @@
    array_bounds() is called in graph.c, just before a graph is begun. */
 
 #include <float.h>
+#include <math.h>
 
 #include "extern.h"
 // #include "sys-defines.h"
@@ -202,6 +203,43 @@ array_bounds (const array_bounds_init *init)
             local_max_x = DMAX (local_max_x, xxr[j]);
           if (!spec_max_y)
             local_max_y = DMAX (local_max_y, yyr[j]);
+        }
+
+      /* Make room for the point's error bars, if the point itself is
+         within the user-specified bounds (and so will be plotted).  The
+         points were transposed when read, so on transposed axes the
+         bar along x is the point's y error bar, and vice versa.  Only
+         finite ends count: on a log axis a bar reaching zero or below
+         has a lower end of -infinity, and is clipped when drawn.  */
+      if (compute_relevant_points (xx, yy, xx, yy, 0, user_min_x,
+                                   user_min_y, user_max_x, user_max_y,
+                                   spec_min_x, spec_min_y, spec_max_x,
+                                   spec_max_y, xxr, yyr)
+          > 0)
+        {
+          bool have_xbar = (transpose_axes ? p[i].have_y_errorbar
+                                           : p[i].have_x_errorbar);
+          bool have_ybar = (transpose_axes ? p[i].have_x_errorbar
+                                           : p[i].have_y_errorbar);
+          double xbar_lo = (transpose_axes ? p[i].ymin : p[i].xmin);
+          double xbar_hi = (transpose_axes ? p[i].ymax : p[i].xmax);
+          double ybar_lo = (transpose_axes ? p[i].xmin : p[i].ymin);
+          double ybar_hi = (transpose_axes ? p[i].xmax : p[i].ymax);
+
+          if (have_xbar)
+            {
+              if (!spec_min_x && isfinite (xbar_lo))
+                local_min_x = DMIN (local_min_x, xbar_lo);
+              if (!spec_max_x && isfinite (xbar_hi))
+                local_max_x = DMAX (local_max_x, xbar_hi);
+            }
+          if (have_ybar)
+            {
+              if (!spec_min_y && isfinite (ybar_lo))
+                local_min_y = DMIN (local_min_y, ybar_lo);
+              if (!spec_max_y && isfinite (ybar_hi))
+                local_max_y = DMAX (local_max_y, ybar_hi);
+            }
         }
 #undef DMIN
 #undef DMAX

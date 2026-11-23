@@ -54,10 +54,14 @@ struct VecReaderStruct /* point reader datatype */
      affect the computation of the returned point structures */
   bool transpose_axes; /* x <-> y ? */
   int log_axis;        /* x,y axes are logarithmic? (portmanteau) */
-  SCM xvec;
+  SCM xvec;               /* the data lists given to xy-data! */
   SCM yvec;
+  SCM xerrvec;            /* error bars: lists of #f or (lower . upper) */
   SCM yerrvec;
-  size_t i_vec;            /* index of current vector element */
+  SCM xcur;               /* the unread remainder of each list */
+  SCM ycur;
+  SCM xerrcur;
+  SCM yerrcur;
   data_type format_type;   /* stream format (T_ASCII, T_DOUBLE, etc.) */
   bool auto_abscissa;      /* auto-generate x values?  */
   double delta_x;          /* increment for x value, if auto-generated */
@@ -272,10 +276,20 @@ static void free_graph_allocations (graph_t *graph);
 void gupl_graph_init (void);
 static void reset_vec_reader (VecReader *reader);
 
+/* Convert an argument that must be an integer (checked with
+   scm_is_integer), accepting integer-valued reals such as 2.0.  */
+static int
+scm_to_int_arg (SCM x)
+{
+  return scm_to_int (scm_is_exact (x) ? x : scm_inexact_to_exact (x));
+}
+
 #define NEW_POINT_ARRAY_LENGTH(old_len)                                       \
-  ((old_len) * sizeof (Point) < 10000000                                      \
-       ? 2 * (old_len)                                                        \
-       : (old_len) + 10000000 / sizeof (Point))
+  ((old_len) <= 0                                                             \
+       ? 1024 /* an empty array must still grow */                            \
+       : (old_len) * sizeof (Point) < 10000000                                \
+             ? 2 * (old_len)                                                  \
+             : (old_len) + (int)(10000000 / sizeof (Point)))
 
 void
 initialize_struct_graph (graph_t *p)
@@ -318,7 +332,7 @@ initialize_struct_graph (graph_t *p)
 
   p->multigrapher = NULL;
 
-  p->output_format = "X"; /* by default, pop up X window */
+  p->output_format = "meta"; /* the documented default, as in GNU graph */
   p->bg_color = NULL;
   p->bitmap_size = NULL;
   p->emulate_color = NULL;
@@ -413,10 +427,14 @@ initialize_struct_graph (graph_t *p)
 static void
 replace_graph_string_from_scm (const char **slot, bool *owned, SCM s_value)
 {
+  /* Convert first: scm_to_locale_string can throw, and the old string
+     must still be valid (and owned) if it does. */
+  char *value = scm_to_locale_string (s_value);
+
   if (*owned && *slot)
     free ((void *)*slot);
 
-  *slot = scm_to_locale_string (s_value);
+  *slot = value;
   *owned = true;
 }
 
@@ -516,7 +534,21 @@ equalp_graph (SCM x1, SCM x2)
 SCM
 mark_graph (SCM x)
 {
-  // No SCMs in the graph type: nothing to do here.
+  graph_t *graph = (graph_t *)SCM_SMOB_DATA (x);
+
+  /* The vector reader holds the data lists most recently passed to
+     xy-data!; keep them alive for as long as the reader refers to them. */
+  if (graph != NULL && graph->reader != NULL)
+    {
+      scm_gc_mark (graph->reader->xvec);
+      scm_gc_mark (graph->reader->yvec);
+      scm_gc_mark (graph->reader->xerrvec);
+      scm_gc_mark (graph->reader->yerrvec);
+      scm_gc_mark (graph->reader->xcur);
+      scm_gc_mark (graph->reader->ycur);
+      scm_gc_mark (graph->reader->xerrcur);
+      scm_gc_mark (graph->reader->yerrcur);
+    }
   return (SCM_BOOL_F);
 }
 
@@ -551,7 +583,10 @@ print_graph (SCM x, SCM port, scm_print_state *pstate)
       if (asprintf (&str, "%p", (void *)graph) < 0)
         scm_puts ("???", port);
       else
-        scm_puts (str, port);
+        {
+          scm_puts (str, port);
+          free (str);
+        }
     }
   scm_puts (">", port);
 
@@ -709,7 +744,7 @@ gupl_grid_style_x (SCM s_graph, SCM s_grid_style)
   SCM_ASSERT (scm_is_integer (s_grid_style), s_grid_style, SCM_ARG2,
               "grid-style!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->local_grid_style = scm_to_int (s_grid_style);
+  c_graph->local_grid_style = scm_to_int_arg (s_grid_style);
   if (c_graph->local_grid_style > 4 || c_graph->local_grid_style < 0)
     scm_out_of_range ("grid-style!", s_grid_style);
   switch (c_graph->local_grid_style)
@@ -756,7 +791,7 @@ gupl_clip_mode_x (SCM s_graph, SCM s_mode)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "clip-mode!");
   SCM_ASSERT (scm_is_integer (s_mode), s_mode, SCM_ARG2, "clip-mode!");
   c_graph = _scm_to_graph (s_graph);
-  c_mode = scm_to_int (s_mode);
+  c_mode = scm_to_int_arg (s_mode);
   c_graph->local_clip_mode = c_mode;
   if (c_mode < 0 || c_mode > 2)
     scm_out_of_range ("clip-mode!", s_mode);
@@ -811,7 +846,7 @@ gupl_line_mode_x (SCM s_graph, SCM s_index)
   SCM_ASSERT (scm_is_integer (s_index), s_index, SCM_ARG2, "line-mode!");
   c_graph = _scm_to_graph (s_graph);
   c_graph->new_linemode = true;
-  c_index = scm_to_int (s_index);
+  c_index = scm_to_int_arg (s_index);
   c_graph->linemode_index = c_index;
   return SCM_UNSPECIFIED;
 }
@@ -1173,6 +1208,23 @@ gupl_auto_abscissa_x (SCM s_graph, SCM s_delta_x, SCM s_x_start)
   return SCM_UNSPECIFIED;
 }
 
+/* Set one axis limit from an optional Scheme argument: an unbound or #f
+   argument leaves the limit unspecified (computed from the data).  */
+static void
+set_axis_limit (SCM s_val, int pos, const char *who, bool *spec,
+                double *val, double *local_val)
+{
+  if (SCM_UNBNDP (s_val) || scm_is_false (s_val))
+    {
+      *spec = false;
+      return;
+    }
+  SCM_ASSERT (scm_is_real (s_val), s_val, pos, who);
+  *local_val = scm_to_double (s_val);
+  *val = *local_val;
+  *spec = true;
+}
+
 SCM
 gupl_x_limits_x (SCM s_graph, SCM s_min, SCM s_max, SCM s_spacing)
 {
@@ -1180,40 +1232,14 @@ gupl_x_limits_x (SCM s_graph, SCM s_min, SCM s_max, SCM s_spacing)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "x-limits!");
 
   c_graph = _scm_to_graph (s_graph);
-  c_graph->matched = 0;
-
-  if (SCM_UNBNDP (s_min) || scm_is_false (s_min))
-    {
-      c_graph->spec_min_x = false;
-      c_graph->spec_max_x = false;
-      c_graph->spec_spacing_x = false;
-      return SCM_UNSPECIFIED;
-    }
-  c_graph->local_min_x = scm_to_double (s_min);
-  c_graph->matched = 1;
-  c_graph->spec_min_x = true;
-  c_graph->min_x = c_graph->local_min_x;
-
-  if (SCM_UNBNDP (s_max) || scm_is_false (s_max))
-    {
-      c_graph->spec_max_x = false;
-      c_graph->spec_spacing_x = false;
-      return SCM_UNSPECIFIED;
-    }
-  c_graph->local_max_x = scm_to_double (s_max);
-  c_graph->matched = 2;
-  c_graph->spec_max_x = true;
-  c_graph->max_x = c_graph->local_max_x;
-
-  if (SCM_UNBNDP (s_spacing) || scm_is_false (s_spacing))
-    {
-      c_graph->spec_spacing_x = false;
-      return SCM_UNSPECIFIED;
-    }
-  c_graph->local_spacing_x = scm_to_double (s_spacing);
-  c_graph->matched = 3;
-  c_graph->spec_spacing_x = true;
-  c_graph->spacing_x = c_graph->local_spacing_x;
+  set_axis_limit (s_min, SCM_ARG2, "x-limits!", &c_graph->spec_min_x,
+                  &c_graph->min_x, &c_graph->local_min_x);
+  set_axis_limit (s_max, SCM_ARG3, "x-limits!", &c_graph->spec_max_x,
+                  &c_graph->max_x, &c_graph->local_max_x);
+  set_axis_limit (s_spacing, SCM_ARG4, "x-limits!", &c_graph->spec_spacing_x,
+                  &c_graph->spacing_x, &c_graph->local_spacing_x);
+  c_graph->matched = (c_graph->spec_min_x + c_graph->spec_max_x
+                      + c_graph->spec_spacing_x);
   return SCM_UNSPECIFIED;
 }
 
@@ -1224,40 +1250,14 @@ gupl_y_limits_x (SCM s_graph, SCM s_min, SCM s_max, SCM s_spacing)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "y-limits!");
 
   c_graph = _scm_to_graph (s_graph);
-  c_graph->matched = 0;
-
-  if (SCM_UNBNDP (s_min) || scm_is_false (s_min))
-    {
-      c_graph->spec_min_y = false;
-      c_graph->spec_max_y = false;
-      c_graph->spec_spacing_y = false;
-      return SCM_UNSPECIFIED;
-    }
-  c_graph->local_min_y = scm_to_double (s_min);
-  c_graph->matched = 1;
-  c_graph->spec_min_y = true;
-  c_graph->min_y = c_graph->local_min_y;
-
-  if (SCM_UNBNDP (s_max) || scm_is_false (s_max))
-    {
-      c_graph->spec_max_y = false;
-      c_graph->spec_spacing_y = false;
-      return SCM_UNSPECIFIED;
-    }
-  c_graph->local_max_y = scm_to_double (s_max);
-  c_graph->matched = 2;
-  c_graph->spec_max_y = true;
-  c_graph->max_y = c_graph->local_max_y;
-
-  if (SCM_UNBNDP (s_spacing) || scm_is_false (s_spacing))
-    {
-      c_graph->spec_spacing_y = false;
-      return SCM_UNSPECIFIED;
-    }
-  c_graph->local_spacing_y = scm_to_double (s_spacing);
-  c_graph->matched = 3;
-  c_graph->spec_spacing_y = true;
-  c_graph->spacing_y = c_graph->local_spacing_y;
+  set_axis_limit (s_min, SCM_ARG2, "y-limits!", &c_graph->spec_min_y,
+                  &c_graph->min_y, &c_graph->local_min_y);
+  set_axis_limit (s_max, SCM_ARG3, "y-limits!", &c_graph->spec_max_y,
+                  &c_graph->max_y, &c_graph->local_max_y);
+  set_axis_limit (s_spacing, SCM_ARG4, "y-limits!", &c_graph->spec_spacing_y,
+                  &c_graph->spacing_y, &c_graph->local_spacing_y);
+  c_graph->matched = (c_graph->spec_min_y + c_graph->spec_max_y
+                      + c_graph->spec_spacing_y);
   return SCM_UNSPECIFIED;
 }
 
@@ -1273,7 +1273,8 @@ gupl_symbol_x (SCM s_graph, SCM s_index, SCM s_size)
   if (SCM_UNBNDP (s_index))
     return SCM_UNSPECIFIED;
 
-  c_graph->local_symbol_index = scm_to_int (s_index);
+  SCM_ASSERT (scm_is_integer (s_index), s_index, SCM_ARG2, "symbol!");
+  c_graph->local_symbol_index = scm_to_int_arg (s_index);
   if (c_graph->local_symbol_index < 0 || c_graph->local_symbol_index > 255)
     scm_out_of_range ("symbol!", s_index);
   c_graph->symbol_index = c_graph->local_symbol_index;
@@ -1420,71 +1421,7 @@ gupl_reposition_x (SCM s_graph, SCM s_trans_x, SCM s_trans_y, SCM s_scale)
 void
 pre_finalize_axes_parameters (graph_t *c_graph)
 {
-  /* Set up the axes parameters, just in case the user has provided
-     enough information about the plot so that the axes don't have to
-     be computed automatically */
-
-  if (c_graph->log_axis & X_AXIS)
-    {
-      if (c_graph->spec_min_x)
-        {
-          if (c_graph->min_x > 0.0)
-            c_graph->min_x = log10 (c_graph->min_x);
-          else
-            {
-              fprintf (stderr,
-                       "%s: error: the limit %g on a logarithmic axis is "
-                       "nonpositive\n",
-                       progname, c_graph->min_x);
-              // return EXIT_FAILURE;
-            }
-        }
-      if (c_graph->spec_max_x)
-        {
-          if (c_graph->max_x > 0.0)
-            c_graph->max_x = log10 (c_graph->max_x);
-          else
-            {
-              fprintf (stderr,
-                       "%s: error: the limit %g on a logarithmic axis is "
-                       "nonpositive\n",
-                       progname, c_graph->max_x);
-              // return EXIT_FAILURE;
-            }
-        }
-    }
-
-  if (c_graph->log_axis & Y_AXIS)
-    {
-      if (c_graph->spec_min_y)
-        {
-          if (c_graph->min_y > 0.0)
-            c_graph->min_y = log10 (c_graph->min_y);
-          else
-            {
-              fprintf (stderr,
-                       "%s: error: the limit %g on a logarithmic axis is "
-                       "nonpositive\n",
-                       progname, c_graph->min_y);
-              // return EXIT_FAILURE;
-            }
-        }
-      if (c_graph->spec_max_y)
-        {
-          if (c_graph->max_y > 0.0)
-            c_graph->max_y = log10 (c_graph->max_y);
-          else
-            {
-              fprintf (stderr,
-                       "%s: error: the limit %g on a logarithmic axis is "
-                       "nonpositive\n",
-                       progname, c_graph->max_y);
-              // return EXIT_FAILURE;
-            }
-        }
-    }
-
-  /* We now finalize the following parameters (arguments to
+  /* Finalize the following parameters (arguments to
      set_graph_parameters()), even though we won't call
      set_graph_parameters() for a while yet, if it turns out we
      need to act as a real-time filter. */
@@ -1512,6 +1449,26 @@ pre_finalize_axes_parameters (graph_t *c_graph)
   c_graph->final_spacing_y = c_graph->spacing_y;
   c_graph->final_spec_spacing_y = c_graph->spec_spacing_y;
 
+  /* On log axes the plotter works with log10 of the user's limits.
+     Convert only the final_ copies: the user's values must survive
+     unchanged so that the next graph doesn't take the log twice. */
+#define LOG_LIMIT(AXIS, SPEC, VAL)                                            \
+  if ((c_graph->log_axis & (AXIS)) && c_graph->SPEC)                          \
+    {                                                                         \
+      if (c_graph->VAL > 0.0)                                                 \
+        c_graph->VAL = log10 (c_graph->VAL);                                  \
+      else                                                                    \
+        fprintf (stderr,                                                      \
+                 "%s: error: the limit %g on a logarithmic axis is "          \
+                 "nonpositive\n",                                             \
+                 progname, c_graph->VAL);                                     \
+    }
+  LOG_LIMIT (X_AXIS, final_spec_min_x, final_min_x);
+  LOG_LIMIT (X_AXIS, final_spec_max_x, final_max_x);
+  LOG_LIMIT (Y_AXIS, final_spec_min_y, final_min_y);
+  LOG_LIMIT (Y_AXIS, final_spec_max_y, final_max_y);
+#undef LOG_LIMIT
+
   /* If user didn't specify either the lower limit or the upper
      limit for an axis, by default we'll round the axis limits
      to the nearest tick, after computing them.  (If either
@@ -1534,7 +1491,8 @@ pre_finalize_axes_parameters (graph_t *c_graph)
 }
 
 VecReader *
-new_vec_reader (SCM s_xvec, SCM s_yvec, SCM s_yerrvec, data_type format_type,
+new_vec_reader (SCM s_xvec, SCM s_yvec, SCM s_xerrvec, SCM s_yerrvec,
+                data_type format_type,
                 bool auto_abscissa, double delta_x, double abscissa,
                 bool transpose_axes, int log_axis, bool auto_bump, int symbol,
                 double symbol_size, const char *symbol_font_name, int linemode,
@@ -1546,10 +1504,10 @@ new_vec_reader (SCM s_xvec, SCM s_yvec, SCM s_yerrvec, data_type format_type,
   reader = (VecReader *)xmalloc (sizeof (VecReader));
 
   reader->need_break = true; /* next point will have pen up */
-  reader->xvec = s_xvec;
-  reader->yvec = s_yvec;
-  reader->yerrvec = s_yerrvec;
-  reader->i_vec = 0;
+  reader->xvec = reader->xcur = s_xvec;
+  reader->yvec = reader->ycur = s_yvec;
+  reader->xerrvec = reader->xerrcur = s_xerrvec;
+  reader->yerrvec = reader->yerrcur = s_yerrvec;
   reader->format_type = format_type;
   reader->auto_abscissa = auto_abscissa;
   reader->delta_x = delta_x;
@@ -1571,7 +1529,7 @@ new_vec_reader (SCM s_xvec, SCM s_yvec, SCM s_yerrvec, data_type format_type,
 
 void
 alter_vec_reader_parameters (
-    VecReader *reader, SCM s_xvec, SCM s_yvec, SCM s_yerrvec,
+    VecReader *reader, SCM s_xvec, SCM s_yvec, SCM s_xerrvec, SCM s_yerrvec,
     data_type format_type, bool auto_abscissa, double delta_x, double abscissa,
     int symbol, double symbol_size, const char *symbol_font_name, int linemode,
     double line_width, double fill_fraction, bool use_color, bool new_symbol,
@@ -1579,9 +1537,11 @@ alter_vec_reader_parameters (
     bool new_line_width, bool new_fill_fraction, bool new_use_color)
 {
   reader->need_break = true; /* force break in polyline */
-  reader->xvec = s_xvec;
-  reader->yvec = s_yvec;
-  reader->yerrvec = s_yerrvec;
+  /* start at the beginning of the new lists */
+  reader->xvec = reader->xcur = s_xvec;
+  reader->yvec = reader->ycur = s_yvec;
+  reader->xerrvec = reader->xerrcur = s_xerrvec;
+  reader->yerrvec = reader->yerrcur = s_yerrvec;
   reader->format_type = format_type;
   reader->auto_abscissa = auto_abscissa;
   reader->delta_x = delta_x;
@@ -1670,6 +1630,9 @@ read_vector_dataset (VecReader *reader, Point **p_addr, int *length,
           old_length = *length;
           new_length = NEW_POINT_ARRAY_LENGTH (old_length);
           p = (Point *)xrealloc (p, new_length * sizeof (Point));
+          /* publish the new buffer immediately: reading a point can throw
+             a Scheme error, which would otherwise leave *p_addr dangling */
+          *p_addr = p;
           *length = new_length;
         }
 
@@ -1699,23 +1662,22 @@ read_vector_point (VecReader *reader, Point *point)
   point->line_width = reader->line_width;
   point->fill_fraction = reader->fill_fraction;
   point->use_color = reader->use_color;
-  point->have_x_errorbar = false; /* not supported yet */
-  point->have_y_errorbar
-      = (reader->format_type == T_ASCII_ERRORBAR ? true : false);
+  /* read_point_from_list sets the error bar flags */
+  point->have_x_errorbar = false;
+  point->have_y_errorbar = false;
 
 head:
 
-  if (scm_is_true (scm_list_p (reader->yvec)))
-    status = read_point_from_list (reader, point);
-  // else if (scm_is_true (scm_f64vector_p (reader->yvec)))
-  // status = read_point_from_f64vector (reader, point);
-  else
-    scm_misc_error (NULL, "bad format", SCM_BOOL_F);
+  /* xy-data! has checked that the data are lists */
+  status = read_point_from_list (reader, point);
 
   if (status == IN_PROGRESS)
     /* got a point; if not, we just pass back the return code */
     {
       bool bad_point = false;
+      /* the point as given, for the warning (x and y may be replaced by
+         their logs below) */
+      double given_x = point->x, given_y = point->y;
 
       /* If we have log axes, the values we work with ALL refer to the log10
          values of the data.  A nonpositive value generates a warning, and a
@@ -1728,10 +1690,12 @@ head:
             bad_point = true;
           if (point->have_x_errorbar)
             {
+              /* A bar reaching zero or below keeps its point: its lower
+                 end is clipped at the bottom of the axis when drawn. */
               if (point->xmin > 0.0)
                 point->xmin = log10 (point->xmin);
               else
-                bad_point = true;
+                point->xmin = -INFINITY;
               if (point->xmax > 0.0)
                 point->xmax = log10 (point->xmax);
               else
@@ -1744,7 +1708,7 @@ head:
                        "%s: the inappropriate point (%g,%g) is dropped, as "
                        "this is a "
                        "log plot\n",
-                       progname, point->x, point->y);
+                       progname, given_x, given_y);
               reader->need_break = true;
               goto head; /* on to next point */
             }
@@ -1758,10 +1722,12 @@ head:
 
           if (point->have_y_errorbar)
             {
+              /* A bar reaching zero or below keeps its point: its lower
+                 end is clipped at the bottom of the axis when drawn. */
               if (point->ymin > 0.0)
                 point->ymin = log10 (point->ymin);
               else
-                bad_point = true;
+                point->ymin = -INFINITY;
               if (point->ymax > 0.0)
                 point->ymax = log10 (point->ymax);
               else
@@ -1774,7 +1740,7 @@ head:
                        "%s: the inappropriate point (%g,%g) is dropped, as "
                        "this is a "
                        "log plot\n",
-                       progname, point->x, point->y);
+                       progname, given_x, given_y);
               reader->need_break = true;
               goto head; /* on to next point */
             }
@@ -1812,12 +1778,54 @@ head:
   return status;
 }
 
+/* Return the next element of the list *CURSOR and advance the cursor, or
+   return SCM_UNDEFINED if the list is used up.  */
+static SCM
+take_list_element (SCM *cursor)
+{
+  SCM elt;
+
+  if (!scm_is_pair (*cursor))
+    return SCM_UNDEFINED;
+  elt = scm_car (*cursor);
+  *cursor = scm_cdr (*cursor);
+  return elt;
+}
+
+/* Decode the error bar ELT for a point at VALUE: #f (or a used-up list)
+   means no bar; a real number E means VALUE-E to VALUE+E; a pair
+   (LOWER . UPPER) means VALUE-LOWER to VALUE+UPPER.  The amounts must not
+   be negative.  Returns whether there is a bar.  */
+static bool
+read_error_bar (SCM elt, double value, double *min, double *max)
+{
+  double lower, upper;
+
+  if (SCM_UNBNDP (elt) || scm_is_false (elt))
+    return false;
+  if (scm_is_pair (elt))
+    {
+      lower = scm_to_double (scm_car (elt));
+      upper = scm_to_double (scm_cdr (elt));
+    }
+  else
+    lower = upper = scm_to_double (elt);
+  if (!(lower >= 0.0 && upper >= 0.0)) /* also rejects NaN */
+    scm_out_of_range ("xy-data!", elt);
+  *min = value - lower;
+  *max = value + upper;
+  return true;
+}
+
+/* Read the next point from the data lists.  The lists are walked with
+   cursors, all advanced together, so reading n points takes O(n) time.  */
 static dataset_status_t
 read_point_from_list (VecReader *reader, Point *point)
 {
-  size_t i = reader->i_vec;
-
-  reader->i_vec++;
+  SCM sx = take_list_element (&reader->xcur);
+  SCM sy = take_list_element (&reader->ycur);
+  SCM sxerr = take_list_element (&reader->xerrcur);
+  SCM syerr = take_list_element (&reader->yerrcur);
 
   /* read coordinate(s) */
   if (reader->auto_abscissa)
@@ -1827,80 +1835,52 @@ read_point_from_list (VecReader *reader, Point *point)
     }
   else
     {
-      size_t x_len = scm_to_size_t (scm_length (reader->xvec));
-      SCM sx;
-
-      if (i >= x_len)
+      if (SCM_UNBNDP (sx))
         return ENDED_BY_EOF;
-      sx = scm_list_ref (reader->xvec, scm_from_size_t (i));
-      if (sx == SCM_BOOL_F)
+      if (scm_is_false (sx))
         return ENDED_BY_DATASET_TERMINATOR;
       point->x = scm_to_double (sx);
     }
 
-  {
-    size_t y_len = scm_to_size_t (scm_length (reader->yvec));
-    SCM sy;
+  if (SCM_UNBNDP (sy))
+    return ENDED_BY_EOF;
+  if (scm_is_false (sy))
+    return ENDED_BY_DATASET_TERMINATOR;
+  point->y = scm_to_double (sy);
 
-    if (i >= y_len)
-      return ENDED_BY_EOF;
-    sy = scm_list_ref (reader->yvec, scm_from_size_t (i));
-    if (sy == SCM_BOOL_F)
-      return ENDED_BY_DATASET_TERMINATOR;
-    point->y = scm_to_double (sy);
-  }
-
-  /* Check for the optional y error bar data */
-  if (scm_is_true (scm_list_p (reader->yerrvec)))
-    {
-      size_t yerr_len = scm_to_size_t (scm_length (reader->yerrvec));
-      SCM syerr;
-      double error_size;
-
-      if (i >= yerr_len)
-        {
-          point->have_y_errorbar = false;
-        }
-      else
-        {
-          syerr = scm_list_ref (reader->yerrvec, scm_from_size_t (i));
-          if (syerr == SCM_BOOL_F)
-            {
-              point->have_y_errorbar = false;
-            }
-          else
-            {
-              point->have_y_errorbar = true;
-              error_size = scm_to_double (syerr);
-              point->ymin = point->y - error_size;
-              point->ymax = point->y + error_size;
-            }
-        }
-    }
-  else
-    point->have_y_errorbar = false;
+  /* the optional error bars */
+  point->have_x_errorbar
+      = read_error_bar (sxerr, point->x, &point->xmin, &point->xmax);
+  point->have_y_errorbar
+      = read_error_bar (syerr, point->y, &point->ymin, &point->ymax);
 
   return IN_PROGRESS;
 }
 
-void
-copy_xy_vectors_to_points_array (SCM xvec, SCM yvec, Reader *reader,
-                                 Point **p_addr, int *length,
-                                 int *no_of_points)
-{
-  // size_t i_vec = 0;
-}
-
 SCM
-gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
+gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec, SCM s_xerr, SCM s_yerr)
 {
   graph_t *c_graph;
 
-  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "xy-graph!");
-  // SCM_ASSERT (scm_is_true (scm_f64vector_p (s_xvec)), s_xvec, SCM_ARG2,
-  //"xy-graph!");
-  // SCM_ASSERT (scm_is_true (scm_f64vector_p (s_yvec)), s_yvec, SCM_ARG3,
-  // "xy-graph!");
+  /* The optional error bar lists are #f (no error bars) or lists whose
+     elements are #f, a nonnegative real, or a pair (lower . upper) of
+     nonnegative reals, one element per element of the data lists.  */
+  if (SCM_UNBNDP (s_xerr))
+    s_xerr = SCM_BOOL_F;
+  if (SCM_UNBNDP (s_yerr))
+    s_yerr = SCM_BOOL_F;
+
+  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "xy-data!");
+  /* The x data may be #f when the abscissa is generated automatically.
+     Check the lists once here: the reader walks them without checks.  */
+  SCM_ASSERT (scm_is_false (s_xvec) || scm_is_true (scm_list_p (s_xvec)),
+              s_xvec, SCM_ARG2, "xy-data!");
+  SCM_ASSERT (scm_is_true (scm_list_p (s_yvec)), s_yvec, SCM_ARG3,
+              "xy-data!");
+  SCM_ASSERT (scm_is_false (s_xerr) || scm_is_true (scm_list_p (s_xerr)),
+              s_xerr, SCM_ARG4, "xy-data!");
+  SCM_ASSERT (scm_is_false (s_yerr) || scm_is_true (scm_list_p (s_yerr)),
+              s_yerr, SCM_ARG5, "xy-data!");
 
   c_graph = _scm_to_graph (s_graph);
 
@@ -1915,10 +1895,16 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
 
   if (c_graph->first_file_of_graph)
     {
+      free (c_graph->p);
+      c_graph->p = NULL;
+      /* clear before allocating: a GC here runs mark_graph on the reader */
+      free (c_graph->reader);
+      c_graph->reader = NULL;
+      c_graph->no_of_points = 0;
       c_graph->p = scm_malloc (c_graph->points_length * sizeof (Point));
 
       c_graph->reader = new_vec_reader (
-          s_xvec, s_yvec, SCM_BOOL_F, /* y error bars */
+          s_xvec, s_yvec, s_xerr, s_yerr,
           c_graph->input_type, c_graph->auto_abscissa, c_graph->delta_x,
           c_graph->x_start, c_graph->final_transpose_axes,
           c_graph->final_log_axis, c_graph->auto_bump, c_graph->symbol_index,
@@ -1937,7 +1923,7 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
   else
     {
       alter_vec_reader_parameters (
-          c_graph->reader, s_xvec, s_yvec, SCM_BOOL_F, c_graph->input_type,
+          c_graph->reader, s_xvec, s_yvec, s_xerr, s_yerr, c_graph->input_type,
           c_graph->auto_abscissa, c_graph->delta_x, c_graph->x_start,
           c_graph->symbol_index, c_graph->symbol_size,
           c_graph->symbol_font_name, c_graph->linemode_index,
@@ -1963,6 +1949,28 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
   return SCM_UNSPECIFIED;
 }
 
+/* Return an unbuffered stdio stream on a duplicate of file descriptor FD,
+   or NULL on failure.  The caller owns the stream and must fclose it.  */
+static FILE *
+dup_fd_to_unbuffered_file (int fd)
+{
+  int new_fd = dup (fd);
+  FILE *fp;
+
+  if (new_fd < 0)
+    return NULL;
+  fp = fdopen (new_fd, "w");
+  if (fp == NULL)
+    {
+      close (new_fd);
+      return NULL;
+    }
+  /* Don't buffer here, since the underlying Guile port also has
+     port buffering.  Double buffering causes problems.  */
+  setvbuf (fp, NULL, _IONBF, 0);
+  return fp;
+}
+
 SCM
 gupl_generate (SCM s_graph, SCM outp, SCM errp)
 {
@@ -1974,23 +1982,27 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
   SCM_ASSERT (scm_is_true (scm_output_port_p (errp)), errp, SCM_ARG3,
               "generate");
 
-  SCM outp_fileno = scm_fileno (outp);
-  int c_outp_fileno_orig = scm_to_int (outp_fileno);
-  int c_outp_fileno = dup (c_outp_fileno_orig);
-  FILE *c_outp = fdopen (c_outp_fileno, "w");
+  /* The plotter writes to duplicates of the ports' file descriptors,
+     bypassing the ports' buffers, so write out anything already buffered
+     first to keep it ahead of the graph.  */
+  scm_force_output (outp);
+  scm_force_output (errp);
 
-  SCM errp_fileno = scm_fileno (errp);
-  int c_errp_fileno_orig = scm_to_int (errp_fileno);
-  int c_errp_fileno = dup (c_errp_fileno_orig);
-  FILE *c_errp = fdopen (c_errp_fileno, "w");
+  /* Look up both descriptors before opening anything, since scm_fileno
+     throws for ports that have no file descriptor.  */
+  int c_outp_fileno_orig = scm_to_int (scm_fileno (outp));
+  int c_errp_fileno_orig = scm_to_int (scm_fileno (errp));
+  FILE *c_outp, *c_errp;
 
-  /* Don't buffer port here, since the underlying Guile port also has
-     port buffering.  Double buffering causes problems.  */
-
-  if (c_outp)
-    setvbuf (c_outp, NULL, _IONBF, 0);
-  if (c_errp)
-    setvbuf (c_errp, NULL, _IONBF, 0);
+  c_outp = dup_fd_to_unbuffered_file (c_outp_fileno_orig);
+  if (c_outp == NULL)
+    scm_misc_error ("generate", "failed to duplicate output port", SCM_EOL);
+  c_errp = dup_fd_to_unbuffered_file (c_errp_fileno_orig);
+  if (c_errp == NULL)
+    {
+      fclose (c_outp);
+      scm_misc_error ("generate", "failed to duplicate error port", SCM_EOL);
+    }
 
   c_graph = _scm_to_graph (s_graph);
   if (c_graph->first_file_of_graph == false)
@@ -2036,6 +2048,8 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
                    &init))
               == NULL)
             {
+              fclose (c_outp);
+              fclose (c_errp);
               scm_misc_error ("generate",
                               "the graphing device could not be opened: ~S",
                               scm_list_1 (s_graph));
@@ -2049,16 +2063,18 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
       begin_graph (c_graph->multigrapher, c_graph->reposition_scale,
                    c_graph->reposition_trans_x, c_graph->reposition_trans_y);
 
-      /* font selection, saves typing */
-      if ((c_graph->title_font_name == NULL) && (c_graph->font_name != NULL))
-        c_graph->title_font_name = c_graph->font_name;
+      /* font selection, saves typing.  Don't store the fallback in the
+         graph: font_name may be freed and replaced later. */
+      const char *title_font_name = (c_graph->title_font_name != NULL
+                                         ? c_graph->title_font_name
+                                         : c_graph->font_name);
 
       set_graph_parameters_init graph_params = {
         .multigrapher = c_graph->multigrapher,
         .frame_line_width = c_graph->frame_line_width,
         .frame_color = c_graph->frame_color,
         .title = c_graph->top_label,
-        .title_font_name = c_graph->title_font_name,
+        .title_font_name = title_font_name,
         .title_font_size = c_graph->title_font_size,
         .tick_size = c_graph->tick_size,
         .grid_spec = c_graph->grid_spec,
@@ -2117,16 +2133,25 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
       /* end graph: pop drawing state off the stack of drawing states */
       end_graph (c_graph->multigrapher);
 
+      /* the points array is gone; the next xy-data! starts a new graph */
+      c_graph->first_file_of_graph = true;
+
     } /* end of nonempty-graph case */
 
   /* finish up by deleting our multigrapher (one must have been created,
      since we always read at least stdin) */
-  if (delete_multigrapher (c_graph->multigrapher) < 0)
+  if (c_graph->multigrapher != NULL)
     {
-      fprintf (stderr, "%s: error: the graphing device could not be closed\n",
-               progname);
-      // return EXIT_FAILURE;
+      if (delete_multigrapher (c_graph->multigrapher) < 0)
+        fprintf (stderr,
+                 "%s: error: the graphing device could not be closed\n",
+                 progname);
+      c_graph->multigrapher = NULL;
     }
+
+  /* the Plotter has been deleted, so nothing else writes to these */
+  fclose (c_outp);
+  fclose (c_errp);
   return SCM_UNSPECIFIED;
 }
 
@@ -2170,9 +2195,61 @@ gupl_graph_test (SCM s_graph, SCM s_name)
   else if (!strcmp (c_name, "new_linemode"))
     ret = scm_from_bool (c_graph->new_linemode);
   else if (!strcmp (c_name, "new_plot_line_width"))
+    ret = scm_from_bool (c_graph->new_plot_line_width);
+  else if (!strcmp (c_name, "new_fill_fraction"))
     ret = scm_from_bool (c_graph->new_fill_fraction);
   else if (!strcmp (c_name, "new_use_color"))
     ret = scm_from_bool (c_graph->new_use_color);
+  else if (!strcmp (c_name, "min_x"))
+    ret = scm_from_double (c_graph->min_x);
+  else if (!strcmp (c_name, "max_x"))
+    ret = scm_from_double (c_graph->max_x);
+  else if (!strcmp (c_name, "spacing_x"))
+    ret = scm_from_double (c_graph->spacing_x);
+  else if (!strcmp (c_name, "spec_min_x"))
+    ret = scm_from_bool (c_graph->spec_min_x);
+  else if (!strcmp (c_name, "spec_max_x"))
+    ret = scm_from_bool (c_graph->spec_max_x);
+  else if (!strcmp (c_name, "spec_spacing_x"))
+    ret = scm_from_bool (c_graph->spec_spacing_x);
+  else if (!strcmp (c_name, "min_y"))
+    ret = scm_from_double (c_graph->min_y);
+  else if (!strcmp (c_name, "max_y"))
+    ret = scm_from_double (c_graph->max_y);
+  else if (!strcmp (c_name, "spacing_y"))
+    ret = scm_from_double (c_graph->spacing_y);
+  else if (!strcmp (c_name, "spec_min_y"))
+    ret = scm_from_bool (c_graph->spec_min_y);
+  else if (!strcmp (c_name, "spec_max_y"))
+    ret = scm_from_bool (c_graph->spec_max_y);
+  else if (!strcmp (c_name, "spec_spacing_y"))
+    ret = scm_from_bool (c_graph->spec_spacing_y);
+  else if (!strcmp (c_name, "points"))
+    {
+      /* each stored point as (x y xmin xmax ymin ymax), with #f for the
+         limits of a missing error bar */
+      int i;
+
+      ret = SCM_EOL;
+      for (i = c_graph->no_of_points - 1; i >= 0; i--)
+        {
+          const Point *pt = &c_graph->p[i];
+          ret = scm_cons (
+              scm_list_n (scm_from_double (pt->x), scm_from_double (pt->y),
+                          pt->have_x_errorbar ? scm_from_double (pt->xmin)
+                                              : SCM_BOOL_F,
+                          pt->have_x_errorbar ? scm_from_double (pt->xmax)
+                                              : SCM_BOOL_F,
+                          pt->have_y_errorbar ? scm_from_double (pt->ymin)
+                                              : SCM_BOOL_F,
+                          pt->have_y_errorbar ? scm_from_double (pt->ymax)
+                                              : SCM_BOOL_F,
+                          SCM_UNDEFINED),
+              ret);
+        }
+    }
+  else if (!strcmp (c_name, "no_of_points"))
+    ret = scm_from_int (c_graph->no_of_points);
   else if (!strcmp (c_name, "first_file_of_graph"))
     ret = scm_from_bool (c_graph->first_file_of_graph);
   else if (!strcmp (c_name, "first_graph_of_multigraph"))
@@ -2180,21 +2257,23 @@ gupl_graph_test (SCM s_graph, SCM s_name)
   else if (!strcmp (c_name, "data_type"))
     {
       if (c_graph->input_type == T_ASCII)
-        return scm_from_latin1_symbol ("T_ASCII");
+        ret = scm_from_latin1_symbol ("T_ASCII");
       else if (c_graph->input_type == T_DOUBLE)
-        return scm_from_latin1_symbol ("T_DOUBLE");
+        ret = scm_from_latin1_symbol ("T_DOUBLE");
       else if (c_graph->input_type == T_INTEGER)
-        return scm_from_latin1_symbol ("T_INTEGER");
+        ret = scm_from_latin1_symbol ("T_INTEGER");
       else if (c_graph->input_type == T_GNUPLOT)
-        return scm_from_latin1_symbol ("T_GNUPLOT");
+        ret = scm_from_latin1_symbol ("T_GNUPLOT");
       else if (c_graph->input_type == T_ASCII_ERRORBAR)
-        return scm_from_latin1_symbol ("T_ASCII_ERRORBAR");
+        ret = scm_from_latin1_symbol ("T_ASCII_ERRORBAR");
     }
   else if (!strcmp (c_name, "auto_bump"))
     ret = scm_from_bool (c_graph->auto_bump);
   else if (!strcmp (c_name, "auto_abscissa"))
     ret = scm_from_bool (c_graph->auto_abscissa);
   else if (!strcmp (c_name, "x_start"))
+    ret = scm_from_double (c_graph->x_start);
+  else if (!strcmp (c_name, "delta_x"))
     ret = scm_from_double (c_graph->delta_x);
   else if (!strcmp (c_name, "linemode_index"))
     ret = scm_from_int (c_graph->linemode_index);
@@ -2246,6 +2325,13 @@ gupl_graph_test (SCM s_graph, SCM s_name)
   /* graph-specific parameters (may change from graph to graph) */
 #endif
 
+  else if (!strcmp (c_name, "rotation_angle"))
+    {
+      if (c_graph->rotation_angle)
+        ret = scm_from_latin1_string (c_graph->rotation_angle);
+      else
+        ret = SCM_BOOL_F;
+    }
   else if (!strcmp (c_name, "grid_spec"))
     {
       if (c_graph->grid_spec == NO_AXES)
@@ -2294,6 +2380,10 @@ gupl_graph_test (SCM s_graph, SCM s_name)
 
   else if (!strcmp (c_name, "font_size"))
     ret = scm_from_double (c_graph->font_size);
+  else if (!strcmp (c_name, "blankout_fraction"))
+    ret = scm_from_double (c_graph->blankout_fraction);
+  else if (!strcmp (c_name, "title_font_size"))
+    ret = scm_from_double (c_graph->title_font_size);
 
 #if 0
   double title_font_size;     /* title fontsize */
@@ -2302,7 +2392,12 @@ gupl_graph_test (SCM s_graph, SCM s_name)
 #endif
 
   else if (!strcmp (c_name, "font_name"))
-    ret = scm_from_latin1_string (c_graph->font_name);
+    {
+      if (c_graph->font_name)
+        ret = scm_from_latin1_string (c_graph->font_name);
+      else
+        ret = SCM_BOOL_F;
+    }
 
 #if 0
   const char *title_font_name; /* title font name, NULL -> default */
@@ -2372,6 +2467,9 @@ gupl_graph_test (SCM s_graph, SCM s_name)
 static bool
 parse_pen_string (const char *pen_s)
 {
+  /* which colorstyle[] entries were allocated here (the initial ones are
+     string literals and must not be freed) */
+  static bool owned[NO_OF_LINEMODES];
   const char *charp;
   char name[MAX_COLOR_NAME_LEN];
   int i;
@@ -2436,7 +2534,10 @@ parse_pen_string (const char *pen_s)
         }
 
       /* replace pen color name by user-specified color name */
+      if (owned[pen_num - 1])
+        free ((char *)colorstyle[pen_num - 1]);
       colorstyle[pen_num - 1] = xstrdup (name);
+      owned[pen_num - 1] = true;
     }
   return true;
 }
@@ -2515,7 +2616,7 @@ gupl_graph_init (void)
       scm_c_define_gsubr ("y-limits!", 1, 3, 0, gupl_y_limits_x);
       scm_c_define_gsubr ("symbol!", 1, 2, 0, gupl_symbol_x);
       // scm_c_define_gsubr ("reposition!", 4, 0, 0, gupl_reposition_x);
-      scm_c_define_gsubr ("xy-data!", 3, 0, 0, gupl_xy_data_x);
+      scm_c_define_gsubr ("xy-data!", 3, 2, 0, gupl_xy_data_x);
       scm_c_define_gsubr ("generate", 3, 0, 0, gupl_generate);
       scm_c_define_gsubr ("%graph-test", 2, 0, 0, gupl_graph_test);
     }

@@ -2,6 +2,7 @@
 #define _LARGEFILE64_SOURCE
 
 #include <assert.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -17,6 +18,37 @@
 static scm_t_bits plotter_tag;
 static scm_t_bits plparams_tag;
 
+/* A plotter smob owns its libplot Plotter and the two stdio streams the
+   Plotter writes to, so that all three can be released together.  */
+typedef struct
+{
+  plPlotter *plotter;
+  FILE *outp;
+  FILE *errp;
+  /* The Guile ports the streams were duplicated from.  libplot writes to
+     the duplicated file descriptors directly, bypassing these ports'
+     buffers, so the ports are flushed before every libplot call to keep
+     Scheme output and plotter output in order.  */
+  SCM s_outp;
+  SCM s_errp;
+} gupl_plotter_t;
+
+/* Write out anything buffered in PORT, unless the port has been closed
+   (its file descriptor was duplicated, so the plotter can still write). */
+static void
+flush_port_if_open (SCM port)
+{
+  if (scm_is_false (scm_port_closed_p (port)))
+    scm_force_output (port);
+}
+
+static void
+flush_plotter_ports (gupl_plotter_t *plotter)
+{
+  flush_port_if_open (plotter->s_outp);
+  flush_port_if_open (plotter->s_errp);
+}
+
 static int _scm_is_plparams (SCM x);
 static plPlotterParams *_scm_to_plparams (SCM x);
 static SCM _scm_from_plparams (plPlotterParams *x);
@@ -27,13 +59,14 @@ static int print_plparams (SCM x, SCM port, scm_print_state *pstate);
 
 static int _scm_is_plotter (SCM x);
 static plPlotter *_scm_to_plotter (SCM x);
-static SCM _scm_from_plotter (plPlotter *x);
+static SCM _scm_from_plotter (gupl_plotter_t *x);
 static SCM equalp_plotter (SCM x1, SCM x2);
 static SCM mark_plotter (SCM x);
 static size_t free_plotter (SCM x);
 static int print_plotter (SCM x, SCM port, scm_print_state *pstate);
 
 static int _scm_is_exact_integer (SCM x);
+static int _scm_to_int_arg (SCM x);
 
 int
 _scm_is_plparams (SCM x)
@@ -170,13 +203,19 @@ _scm_is_plotter (SCM x)
 plPlotter *
 _scm_to_plotter (SCM x)
 {
+  gupl_plotter_t *plotter;
+
   assert (_scm_is_plotter (x));
 
-  return (plPlotter *)SCM_SMOB_DATA (x);
+  /* Every plotting procedure gets its Plotter here, just before calling
+     libplot, so this is where pending Scheme output is written out.  */
+  plotter = (gupl_plotter_t *)SCM_SMOB_DATA (x);
+  flush_plotter_ports (plotter);
+  return plotter->plotter;
 }
 
 SCM
-_scm_from_plotter (plPlotter *x)
+_scm_from_plotter (gupl_plotter_t *x)
 {
   SCM s_plotter;
 
@@ -184,7 +223,7 @@ _scm_from_plotter (plPlotter *x)
 
   SCM_NEWSMOB (s_plotter, plotter_tag, x);
 
-  assert (x == (plPlotter *)SCM_SMOB_DATA (s_plotter));
+  assert (x == (gupl_plotter_t *)SCM_SMOB_DATA (s_plotter));
 
   return (s_plotter);
 }
@@ -193,10 +232,10 @@ _scm_from_plotter (plPlotter *x)
 SCM
 equalp_plotter (SCM x1, SCM x2)
 {
-  plPlotter *plotter1, *plotter2;
+  gupl_plotter_t *plotter1, *plotter2;
 
-  plotter1 = (plPlotter *)SCM_SMOB_DATA (x1);
-  plotter2 = (plPlotter *)SCM_SMOB_DATA (x2);
+  plotter1 = (gupl_plotter_t *)SCM_SMOB_DATA (x1);
+  plotter2 = (gupl_plotter_t *)SCM_SMOB_DATA (x2);
 
   if ((plotter1 == NULL) || (plotter2 == NULL))
     return SCM_BOOL_F;
@@ -209,32 +248,65 @@ equalp_plotter (SCM x1, SCM x2)
 SCM
 mark_plotter (SCM x)
 {
-  // No SCMs in the plotter type: nothing to do here.
-  return (SCM_BOOL_F);
+  gupl_plotter_t *plotter = (gupl_plotter_t *)SCM_SMOB_DATA (x);
+
+  if (plotter == NULL)
+    return SCM_BOOL_F;
+  scm_gc_mark (plotter->s_outp);
+  return plotter->s_errp;
+}
+
+/* Delete the libplot Plotter held by smob X and close its streams, if
+   that hasn't been done already.  Returns pl_deletepl_r's result, or 0 if
+   the plotter was already deleted.  */
+static int
+release_plotter (SCM x)
+{
+  gupl_plotter_t *plotter = (gupl_plotter_t *)SCM_SMOB_DATA (x);
+  int ret;
+
+  if (plotter == NULL)
+    return 0;
+
+  /* Clear the smob first, so the plotter can't be used, or released
+     again, if anything below fails.  */
+  SCM_SET_SMOB_DATA (x, 0);
+
+  /* delete the Plotter first: it may flush output to the streams */
+  ret = pl_deletepl_r (plotter->plotter);
+  fclose (plotter->outp);
+  fclose (plotter->errp);
+  free (plotter);
+  return ret;
 }
 
 size_t
 free_plotter (SCM x)
 {
-  plPlotter *plotter;
-
-  // assert (SCM_SMOB_PREDICATE (plotter_tag, x));
-
-  plotter = (plPlotter *)SCM_SMOB_DATA (x);
-  /* Plotters should already be null if delwin has been called on them */
-  if (plotter != NULL)
-    {
-      pl_deletepl_r (plotter);
-      SCM_SET_SMOB_DATA (x, 0);
-    }
-
+  release_plotter (x);
   return 0;
+}
+
+SCM
+gupl_deletepl_x (SCM s_plotter)
+{
+  gupl_plotter_t *plotter;
+
+  SCM_ASSERT (SCM_SMOB_PREDICATE (plotter_tag, s_plotter), s_plotter,
+              SCM_ARG1, "deletepl!");
+  /* Deleting may write output, so flush first.  (The garbage collector's
+     free function can't do this: it must not run port code.)  */
+  plotter = (gupl_plotter_t *)SCM_SMOB_DATA (s_plotter);
+  if (plotter != NULL)
+    flush_plotter_ports (plotter);
+  return scm_from_int (release_plotter (s_plotter));
 }
 
 int
 print_plotter (SCM x, SCM port, scm_print_state *pstate)
 {
-  plPlotter *plotter = (plPlotter *)SCM_SMOB_DATA (x);
+  gupl_plotter_t *data = (gupl_plotter_t *)SCM_SMOB_DATA (x);
+  plPlotter *plotter = data ? data->plotter : NULL;
   char *str;
 
   assert (SCM_SMOB_PREDICATE (plotter_tag, x));
@@ -272,6 +344,7 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
   char *c_type;
   plPlotter *ret;
   plPlotterParams *c_param;
+  gupl_plotter_t *data;
   bool outp_opened = false;
   bool errp_opened = false;
 
@@ -280,31 +353,42 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
   SCM_ASSERT (scm_is_true (scm_output_port_p (errp)), errp, SCM_ARG3, "newpl");
   SCM_ASSERT (_scm_is_plparams (param), param, SCM_ARG4, "newpl");
 
-  SCM outp_fileno = scm_fileno (outp);
-  int c_outp_fileno_orig = scm_to_int (outp_fileno);
+  /* Write out anything already buffered in the ports, so that it comes
+     before the plotter's output.  */
+  flush_port_if_open (outp);
+  flush_port_if_open (errp);
+
+  /* Do everything that can throw before opening any streams.  */
+  int c_outp_fileno_orig = scm_to_int (scm_fileno (outp));
+  int c_errp_fileno_orig = scm_to_int (scm_fileno (errp));
+  c_type = scm_to_locale_string (type);
+
   int c_outp_fileno = dup (c_outp_fileno_orig);
   FILE *c_outp;
 
   if (c_outp_fileno < 0)
-    scm_misc_error ("newpl", "failed to duplicate output port", SCM_EOL);
+    {
+      free (c_type);
+      scm_misc_error ("newpl", "failed to duplicate output port", SCM_EOL);
+    }
 
   c_outp = fdopen (c_outp_fileno, "w");
   if (c_outp == NULL)
     {
       close (c_outp_fileno);
+      free (c_type);
       scm_misc_error ("newpl", "failed to open duplicated output port",
                       SCM_EOL);
     }
   outp_opened = true;
 
-  SCM errp_fileno = scm_fileno (errp);
-  int c_errp_fileno_orig = scm_to_int (errp_fileno);
   int c_errp_fileno = dup (c_errp_fileno_orig);
   FILE *c_errp;
 
   if (c_errp_fileno < 0)
     {
       fclose (c_outp);
+      free (c_type);
       scm_misc_error ("newpl", "failed to duplicate error port", SCM_EOL);
     }
 
@@ -313,6 +397,7 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
     {
       close (c_errp_fileno);
       fclose (c_outp);
+      free (c_type);
       scm_misc_error ("newpl", "failed to open duplicated error port",
                       SCM_EOL);
     }
@@ -326,7 +411,6 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
   if (c_errp)
     setvbuf (c_errp, NULL, _IONBF, 0);
 
-  c_type = scm_to_locale_string (type);
   c_param = _scm_to_plparams (param);
 
   ret = pl_newpl_r (c_type, NULL, c_outp, c_errp, c_param);
@@ -342,13 +426,29 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
       return SCM_BOOL_F;
     }
 
-  return _scm_from_plotter (ret);
+  data = scm_malloc (sizeof (gupl_plotter_t));
+  data->plotter = ret;
+  data->outp = c_outp;
+  data->errp = c_errp;
+  data->s_outp = outp;
+  data->s_errp = errp;
+  return _scm_from_plotter (data);
 }
 
 static int
 _scm_is_exact_integer (SCM x)
 {
-  return (scm_is_integer (x) && scm_is_false (scm_inexact_p (x)));
+  /* Coordinates that are exact integers go to libplot's int functions,
+     but only if they fit in an int; larger ones use the float functions. */
+  return scm_is_signed_integer (x, INT_MIN, INT_MAX);
+}
+
+/* Convert an argument that must be an integer (checked with
+   scm_is_integer), accepting integer-valued reals such as 2.0.  */
+static int
+_scm_to_int_arg (SCM x)
+{
+  return scm_to_int (scm_is_exact (x) ? x : scm_inexact_to_exact (x));
 }
 
 INT_FUNC_PL_INT_INT_STRING (gupl_alabel_x, "%alabel!", pl_alabel_r);
@@ -372,6 +472,7 @@ INT_FUNC_PL_STRING (gupl_capmod_x, "capmod!", pl_capmod_r);
 INT_FUNC_PL_VAL_VAL_VAL (gupl_circle_x, "circle!", pl_circle_r, pl_fcircle_r);
 INT_FUNC_PL_VAL_VAL_VAL (gupl_circlerel_x, "circlerel!", pl_circlerel_r,
                          pl_fcirclerel_r);
+INT_FUNC_PL (gupl_closepath_x, "closepath!", pl_closepath_r);
 INT_FUNC_PL (gupl_closepl_x, "closepl!", pl_closepl_r);
 INT_FUNC_PL_INT_INT_INT (gupl_color_x, "color!", pl_color_r);
 INT_FUNC_PL_STRING (gupl_colorname_x, "colorname!", pl_colorname_r);
@@ -405,6 +506,58 @@ INT_FUNC_PL_STRING (gupl_label_x, "label!", pl_label_r);
 DOUBLE_FUNC_PL_STRING (gupl_labelwidth_x, "labelwidth!", pl_flabelwidth_r);
 INT_FUNC_PL_VAL_VAL_VAL_VAL (gupl_line_x, "line!", pl_line_r, pl_fline_r);
 INT_FUNC_PL_STRING (gupl_linemod_x, "linemod!", pl_linemod_r);
+
+/* (linedash! plotter dashes [offset]): DASHES is a list of real numbers
+   and OFFSET (default 0) a real number.  As with the other procedures,
+   libplot's integer version is used when every value is an exact integer
+   that fits in an int, and the floating-point version otherwise.  */
+SCM
+gupl_linedash_x (SCM s_plotter, SCM s_dashes, SCM s_offset)
+{
+  plPlotter *c_plotter;
+  long n, i;
+  bool all_int;
+  SCM rest;
+  int c_ret;
+
+  SCM_ASSERT (_scm_is_plotter (s_plotter), s_plotter, SCM_ARG1, "linedash!");
+  n = scm_ilength (s_dashes);
+  SCM_ASSERT (n >= 0, s_dashes, SCM_ARG2, "linedash!");
+  if (SCM_UNBNDP (s_offset))
+    s_offset = scm_from_int (0);
+  SCM_ASSERT (scm_is_real (s_offset), s_offset, SCM_ARG3, "linedash!");
+
+  /* Check every element before allocating, so nothing below can throw. */
+  all_int = scm_is_signed_integer (s_offset, INT_MIN, INT_MAX);
+  for (rest = s_dashes; !scm_is_null (rest); rest = scm_cdr (rest))
+    {
+      SCM x = scm_car (rest);
+      SCM_ASSERT (scm_is_real (x), s_dashes, SCM_ARG2, "linedash!");
+      if (!scm_is_signed_integer (x, INT_MIN, INT_MAX))
+        all_int = false;
+    }
+
+  c_plotter = _scm_to_plotter (s_plotter);
+  if (all_int)
+    {
+      int *dashes = scm_malloc ((n > 0 ? n : 1) * sizeof (int));
+      for (i = 0, rest = s_dashes; i < n; i++, rest = scm_cdr (rest))
+        dashes[i] = scm_to_int (scm_car (rest));
+      c_ret = pl_linedash_r (c_plotter, (int)n, dashes,
+                             scm_to_int (s_offset));
+      free (dashes);
+    }
+  else
+    {
+      double *dashes = scm_malloc ((n > 0 ? n : 1) * sizeof (double));
+      for (i = 0, rest = s_dashes; i < n; i++, rest = scm_cdr (rest))
+        dashes[i] = scm_to_double (scm_car (rest));
+      c_ret = pl_flinedash_r (c_plotter, (int)n, dashes,
+                              scm_to_double (s_offset));
+      free (dashes);
+    }
+  return scm_from_int (c_ret);
+}
 INT_FUNC_PL_VAL (gupl_linewidth_x, "linewidth!", pl_linewidth_r,
                  pl_flinewidth_r);
 INT_FUNC_PL_VAL_VAL_VAL_VAL (gupl_linerel_x, "linerel!", pl_linerel_r,
@@ -485,13 +638,14 @@ gupl_plot_init (void)
       scm_c_define_gsubr ("plparams?", 1, 0, 0, gupl_is_plparams_p);
       scm_c_define_gsubr ("newplparams", 0, 0, 0, gupl_newplparams);
 
-      plotter_tag = scm_make_smob_type ("plotter", sizeof (plPlotter *));
+      plotter_tag = scm_make_smob_type ("plotter", sizeof (gupl_plotter_t *));
       scm_set_smob_mark (plotter_tag, mark_plotter);
       scm_set_smob_free (plotter_tag, free_plotter);
       scm_set_smob_print (plotter_tag, print_plotter);
       scm_set_smob_equalp (plotter_tag, equalp_plotter);
       scm_c_define_gsubr ("plotter?", 1, 0, 0, gupl_is_plotter_p);
       scm_c_define_gsubr ("newpl", 4, 0, 0, gupl_newpl);
+      scm_c_define_gsubr ("deletepl!", 1, 0, 0, gupl_deletepl_x);
 
       scm_c_define_gsubr ("%alabel!", 4, 0, 0, gupl_alabel_x);
       scm_c_define_gsubr ("arc!", 7, 0, 0, gupl_arc_x);
@@ -507,6 +661,7 @@ gupl_plot_init (void)
       scm_c_define_gsubr ("capmod!", 2, 0, 0, gupl_capmod_x);
       scm_c_define_gsubr ("circle!", 4, 0, 0, gupl_circle_x);
       scm_c_define_gsubr ("circlerel!", 4, 0, 0, gupl_circlerel_x);
+      scm_c_define_gsubr ("closepath!", 1, 0, 0, gupl_closepath_x);
       scm_c_define_gsubr ("closepl!", 1, 0, 0, gupl_closepl_x);
       scm_c_define_gsubr ("color!", 4, 0, 0, gupl_color_x);
       scm_c_define_gsubr ("colorname!", 2, 0, 0, gupl_colorname_x);
@@ -532,6 +687,7 @@ gupl_plot_init (void)
       scm_c_define_gsubr ("label!", 2, 0, 0, gupl_label_x);
       scm_c_define_gsubr ("labelwidth!", 2, 0, 0, gupl_labelwidth_x);
       scm_c_define_gsubr ("line!", 5, 0, 0, gupl_line_x);
+      scm_c_define_gsubr ("linedash!", 2, 1, 0, gupl_linedash_x);
       scm_c_define_gsubr ("linemod!", 2, 0, 0, gupl_linemod_x);
       scm_c_define_gsubr ("linerel!", 5, 0, 0, gupl_linerel_x);
       scm_c_define_gsubr ("linewidth!", 2, 0, 0, gupl_linewidth_x);

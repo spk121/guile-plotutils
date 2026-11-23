@@ -104,9 +104,11 @@
 /* New (larger) length of a Point array, as function of the old; used when
    reallocating due to exhaustion of storage. */
 #define NEW_POINT_ARRAY_LENGTH(old_len)                                       \
-  ((old_len) * sizeof (Point) < 10000000                                      \
-       ? 2 * (old_len)                                                        \
-       : (old_len) + 10000000 / sizeof (Point))
+  ((old_len) <= 0                                                             \
+       ? 1024 /* an empty array must still grow */                            \
+       : (old_len) * sizeof (Point) < 10000000                                \
+             ? 2 * (old_len)                                                  \
+             : (old_len) + (int)(10000000 / sizeof (Point)))
 
 struct ReaderStruct /* point reader datatype */
 {
@@ -168,6 +170,7 @@ static dataset_status_t read_point_ascii_errorbar (Reader *reader,
 static dataset_status_t read_point_binary (Reader *reader, Point *point);
 static dataset_status_t read_point_gnuplot (Reader *reader, Point *point);
 static void reset_reader (Reader *reader);
+static dataset_status_t read_comment_line (Reader *reader, FILE *input);
 static void skip_all_whitespace (FILE *stream);
 
 /* ARGS: format_type = double, or ascii, etc.
@@ -399,6 +402,36 @@ head:
   return status;
 }
 
+/* Consume a `#' line from an ascii-format stream, leaving its terminating
+   newline (if any) in the stream.  If it is a "#m=%d,S=%d" directive,
+   apply it and return ENDED_BY_MODE_CHANGE.  Otherwise return
+   ENDED_BY_EOF if the stream ended, or IN_PROGRESS if the line was an
+   ordinary comment.  The line is read in full before being parsed, so
+   that the scanf whitespace directives cannot run on into later lines. */
+static dataset_status_t
+read_comment_line (Reader *reader, FILE *input)
+{
+  char buf[256];
+  size_t len = 0;
+  int c, new_symbol, new_linemode;
+
+  while ((c = getc (input)) != EOF && c != '\n')
+    if (len < sizeof (buf) - 1)
+      buf[len++] = (char)c;
+  buf[len] = '\0';
+
+  if (c == '\n')
+    ungetc (c, input); /* push back \n at the end of # line */
+
+  if (sscanf (buf, "# m = %d, S = %d", &new_linemode, &new_symbol) == 2)
+    {
+      reader->linemode = new_linemode;
+      reader->symbol = new_symbol;
+      return ENDED_BY_MODE_CHANGE;
+    }
+  return (c == EOF ? ENDED_BY_EOF : IN_PROGRESS);
+}
+
 static dataset_status_t
 read_point_ascii (Reader *reader, Point *point)
 {
@@ -420,31 +453,11 @@ head:
   ungetc (lookahead, input);
   if (lookahead == (int)'#')
     {
-      int new_symbol, new_linemode;
-      int items_read;
+      dataset_status_t status = read_comment_line (reader, input);
 
-      items_read
-          = fscanf (input, "# m = %d, S = %d", &new_linemode, &new_symbol);
-      if (items_read == 2) /* insist on matching both */
-        {
-          reader->linemode = new_linemode;
-          reader->symbol = new_symbol;
-          return ENDED_BY_MODE_CHANGE;
-        }
-      else /* unknown comment line, ignore it */
-        {
-          char c;
-
-          do
-            {
-              items_read = fread (&c, sizeof (c), 1, input);
-              if (items_read <= 0)
-                return ENDED_BY_EOF;
-            }
-          while (c != '\n');
-          ungetc ((int)'\n', input); /* push back \n at the end of # line */
-          goto head;
-        }
+      if (status == IN_PROGRESS) /* unknown comment line, ignored */
+        goto head;
+      return status;
     }
 
   /* read coordinate(s) */
@@ -494,31 +507,11 @@ head:
   ungetc (lookahead, input);
   if (lookahead == (int)'#')
     {
-      int new_symbol, new_linemode;
-      int items_read;
+      dataset_status_t status = read_comment_line (reader, input);
 
-      items_read
-          = fscanf (input, "# m = %d, S = %d", &new_linemode, &new_symbol);
-      if (items_read == 2) /* insist on matching both */
-        {
-          reader->linemode = new_linemode;
-          reader->symbol = new_symbol;
-          return ENDED_BY_MODE_CHANGE;
-        }
-      else /* unknown comment line, ignore it */
-        {
-          char c;
-
-          do
-            {
-              items_read = fread (&c, sizeof (c), 1, input);
-              if (items_read <= 0)
-                return ENDED_BY_EOF;
-            }
-          while (c != '\n');
-          ungetc ((int)'\n', input); /* push back \n at the end of # line */
-          goto head;
-        }
+      if (status == IN_PROGRESS) /* unknown comment line, ignored */
+        goto head;
+      return status;
     }
 
   /* read coordinate(s) */

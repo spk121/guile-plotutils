@@ -110,6 +110,7 @@
    There is also a function end_polyline_and_flush(), which is useful for
    real-time display. */
 
+#include <limits.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
@@ -569,6 +570,22 @@ spacing_type (double incr)
     return S_UNKNOWN;
 }
 
+/* Most ticks we are willing to draw on one axis. */
+#define MAX_NUM_TICKS 1000
+
+/* Can the tick and subtick counts for [min,max] at this spacing be held in
+   an int, and are there few enough of them to draw?  Subticks are spaced up
+   to 10x more finely than ticks, so leave room for that. */
+static bool
+tick_counts_fit (double min, double max, double spacing)
+{
+  double limit = (double)(INT_MAX / 16);
+
+  return (spacing > 0.0 && fabs (min / spacing) < limit
+          && fabs (max / spacing) < limit
+          && (max - min) / spacing <= MAX_NUM_TICKS);
+}
+
 /* prepare_axis() fills in the Axis structure for an axis, and some of
  * the linear transformation variables in the Transform structure also.
  */
@@ -609,6 +626,27 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
       min = ceil (min - 1.0);
     }
 
+  /* A user-specified spacing on a log axis puts a tick at every multiple
+     of the spacing.  If that would be too many ticks for an int count (or
+     for the plot), or the spacing isn't positive, use the normal log axis
+     ticks instead.  (min and max are logs here.)  */
+  if (user_specified_subsubticks
+      && !tick_counts_fit (pow (10.0, min), pow (10.0, max),
+                           subsubtick_spacing))
+    {
+      if (subsubtick_spacing > 0.0)
+        fprintf (stderr,
+                 "%s: the tick spacing %g on a logarithmic axis gives too "
+                 "many ticks, so it is ignored\n",
+                 progname, subsubtick_spacing);
+      else
+        fprintf (stderr,
+                 "%s: the tick spacing %g on a logarithmic axis is not "
+                 "positive, so it is ignored\n",
+                 progname, subsubtick_spacing);
+      user_specified_subsubticks = false;
+    }
+
   if (log_axis) /* log axis, data are stored in logarithmic form */
     /* compute a tick spacing; user can't specify it */
     {
@@ -623,16 +661,35 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
     {
       if (spacing == 0.0) /* i.e., not specified by user */
         scale1 (min, max, &tick_spacing, &tick_spacing_type);
-      else /* luser is boss, don't use SCALE1 */
+      else if (tick_counts_fit (min, max, spacing))
+        /* luser is boss, don't use SCALE1 */
         {
           tick_spacing = spacing;
           tick_spacing_type = spacing_type (spacing);
+        }
+      else
+        {
+          fprintf (stderr,
+                   "%s: the tick spacing %g gives too many ticks, so it "
+                   "is ignored\n",
+                   progname, spacing);
+          scale1 (min, max, &tick_spacing, &tick_spacing_type);
         }
     }
 
   range = max - min; /* range is not negative */
 
-  if (round_to_next_tick) /* expand both limits to next tick */
+  /* If the tick counts still can't be represented (e.g. a narrow range far
+     from zero), draw no ticks rather than overflow an int below. */
+  bool no_ticks = !user_specified_subsubticks
+                  && !tick_counts_fit (min, max, tick_spacing);
+
+  if (no_ticks)
+    {
+      min_tick_count = 1; /* empty range */
+      max_tick_count = 0;
+    }
+  else if (round_to_next_tick) /* expand both limits to next tick */
     {
       if (user_specified_subsubticks)
         /* Special Case.  If user specified the `spacing' argument to -x or
@@ -680,7 +737,7 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
 
   /* Allow 5 subticks per tick if S_FIVE or S_TWO_FIVE, 2 if S_TWO.  Case
      S_ONE is special; we try 10, 5, and 2 in succession */
-  switch (tick_spacing_type)
+  switch (no_ticks ? S_UNKNOWN : tick_spacing_type)
     {
     case S_FIVE:
     case S_TWO_FIVE:
@@ -717,12 +774,20 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
   if (log_axis && lin_subtick_spacing <= 1.0)
     lin_subtick_spacing = 1.0;
 
-  min_lin_subtick_count
-      = (int)(ceil ((min - FUZZ * range) / lin_subtick_spacing));
-  max_lin_subtick_count
-      = (int)(floor ((max + FUZZ * range) / lin_subtick_spacing));
+  if (no_ticks)
+    {
+      min_lin_subtick_count = 1;
+      max_lin_subtick_count = 0;
+    }
+  else
+    {
+      min_lin_subtick_count
+          = (int)(ceil ((min - FUZZ * range) / lin_subtick_spacing));
+      max_lin_subtick_count
+          = (int)(floor ((max + FUZZ * range) / lin_subtick_spacing));
+    }
   have_lin_subticks
-      = ((tick_spacing_type != S_UNKNOWN /* S_UNKNOWN -> no subticks */
+      = ((!no_ticks && tick_spacing_type != S_UNKNOWN /* -> no subticks */
           && (max_lin_subtick_count - min_lin_subtick_count)
                  <= MAX_NUM_SUBTICKS)
              ? true
@@ -804,6 +869,8 @@ new_multigrapher_with_ports (const multigrapher_create_init *init)
     return (Multigrapher *)NULL;
 
   multigrapher = (Multigrapher *)xmalloc (sizeof (Multigrapher));
+  multigrapher->title = NULL;
+  multigrapher->title_font_name = NULL;
 
   /* set Plotter parameters */
   plotter_params = pl_newplparams ();
@@ -819,12 +886,19 @@ new_multigrapher_with_ports (const multigrapher_create_init *init)
   /* create Plotter and open it */
   plotter = pl_newpl_r (init->output_format, NULL, init->_stdout, init->_stderr,
                         plotter_params);
-  if (plotter == (plPlotter *)NULL)
-    return (Multigrapher *)NULL;
   pl_deleteplparams (plotter_params);
+  if (plotter == (plPlotter *)NULL)
+    {
+      free (multigrapher);
+      return (Multigrapher *)NULL;
+    }
   multigrapher->plotter = plotter;
   if (pl_openpl_r (plotter) < 0)
-    return (Multigrapher *)NULL;
+    {
+      pl_deletepl_r (plotter);
+      free (multigrapher);
+      return (Multigrapher *)NULL;
+    }
   multigrapher->bg_color = init->bg_color;
 
   /* if called for, erase it; set up the user->device coor map */
@@ -844,6 +918,8 @@ delete_multigrapher (Multigrapher *multigrapher)
   if (retval >= 0)
     retval = pl_deletepl_r (multigrapher->plotter);
 
+  free ((char *)multigrapher->title);
+  free ((char *)multigrapher->title_font_name);
   free (multigrapher);
   return retval;
 }
@@ -1111,6 +1187,9 @@ set_graph_parameters (const set_graph_parameters_init *init)
   multigrapher->no_rotate_y_label = no_rotate_y_label;
   multigrapher->blankout_fraction = blankout_fraction;
 
+  /* replace any strings left over from a previous graph */
+  free ((char *)multigrapher->title);
+  free ((char *)multigrapher->title_font_name);
   if (title != NULL)
     multigrapher->title = xstrdup (title);
   else
@@ -2508,7 +2587,7 @@ set_line_style (Multigrapher *multigrapher, int style, bool use_color)
         j = 0;
 
       else /* neg. pl_linemode_r (no line will be drawn)*/
-        j = (-style - 1) % (NO_OF_LINEMODES - 1);
+        j = (-style - 1) % NO_OF_LINEMODES;
 
       pl_colorname_r (multigrapher->plotter, colorstyle[j]);
     }
@@ -2858,36 +2937,70 @@ transpose_portmanteau (int *val)
   *val = newval;
 }
 
+/* Clip the interval [*LO,*HI] to [MIN,MAX], recording which ends were
+   cut.  Returns false if nothing of it is left.  */
+static bool
+clip_interval (double *lo, double *hi, double min, double max,
+               bool *lo_clipped, bool *hi_clipped)
+{
+  *lo_clipped = *lo < min;
+  *hi_clipped = *hi > max;
+  if (*lo_clipped)
+    *lo = min;
+  if (*hi_clipped)
+    *hi = max;
+  return *lo <= *hi;
+}
+
+/* Draw the error bar(s) of point P, clipped to the plotting area.  An end
+   cap is drawn only at an end of a bar that was not clipped.  (On a log
+   axis, a bar that reaches zero or below has a lower end of -infinity,
+   so it is clipped at the bottom of the axis.)  */
 static void
 plot_errorbar (Multigrapher *multigrapher, const Point *p)
 {
   if (p->have_x_errorbar || p->have_y_errorbar)
     /* save & restore state, since we invoke pl_linemod_r() */
     {
+      double half_cap = 0.5 * SS (p->symbol_size);
+      double lo, hi;
+      bool lo_clipped, hi_clipped;
+
       pl_savestate_r (multigrapher->plotter);
       pl_linemod_r (multigrapher->plotter, "solid");
 
-      if (p->have_x_errorbar)
+      lo = p->xmin;
+      hi = p->xmax;
+      if (p->have_x_errorbar
+          && clip_interval (&lo, &hi, multigrapher->x_trans.input_min,
+                            multigrapher->x_trans.input_max, &lo_clipped,
+                            &hi_clipped))
         {
-          pl_fline_r (multigrapher->plotter, XV (p->xmin),
-                      YV (p->y) - 0.5 * SS (p->symbol_size), XV (p->xmin),
-                      YV (p->y) + 0.5 * SS (p->symbol_size));
-          pl_fline_r (multigrapher->plotter, XV (p->xmin), YV (p->y),
-                      XV (p->xmax), YV (p->y));
-          pl_fline_r (multigrapher->plotter, XV (p->xmax),
-                      YV (p->y) - 0.5 * SS (p->symbol_size), XV (p->xmax),
-                      YV (p->y) + 0.5 * SS (p->symbol_size));
+          if (!lo_clipped)
+            pl_fline_r (multigrapher->plotter, XV (lo), YV (p->y) - half_cap,
+                        XV (lo), YV (p->y) + half_cap);
+          pl_fline_r (multigrapher->plotter, XV (lo), YV (p->y), XV (hi),
+                      YV (p->y));
+          if (!hi_clipped)
+            pl_fline_r (multigrapher->plotter, XV (hi), YV (p->y) - half_cap,
+                        XV (hi), YV (p->y) + half_cap);
         }
-      if (p->have_y_errorbar)
+
+      lo = p->ymin;
+      hi = p->ymax;
+      if (p->have_y_errorbar
+          && clip_interval (&lo, &hi, multigrapher->y_trans.input_min,
+                            multigrapher->y_trans.input_max, &lo_clipped,
+                            &hi_clipped))
         {
-          pl_fline_r (multigrapher->plotter,
-                      XV (p->x) - 0.5 * SS (p->symbol_size), YV (p->ymin),
-                      XV (p->x) + 0.5 * SS (p->symbol_size), YV (p->ymin));
-          pl_fline_r (multigrapher->plotter, XV (p->x), YV (p->ymin),
-                      XV (p->x), YV (p->ymax));
-          pl_fline_r (multigrapher->plotter,
-                      XV (p->x) - 0.5 * SS (p->symbol_size), YV (p->ymax),
-                      XV (p->x) + 0.5 * SS (p->symbol_size), YV (p->ymax));
+          if (!lo_clipped)
+            pl_fline_r (multigrapher->plotter, XV (p->x) - half_cap, YV (lo),
+                        XV (p->x) + half_cap, YV (lo));
+          pl_fline_r (multigrapher->plotter, XV (p->x), YV (lo), XV (p->x),
+                      YV (hi));
+          if (!hi_clipped)
+            pl_fline_r (multigrapher->plotter, XV (p->x) - half_cap, YV (hi),
+                        XV (p->x) + half_cap, YV (hi));
         }
 
       pl_restorestate_r (multigrapher->plotter);

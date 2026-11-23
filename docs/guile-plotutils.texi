@@ -104,8 +104,8 @@ that describe the output surface upon which graphics will be drawn.
 Create a <plotter> object, initialized with the <plparams> object,
 and then use its methods to draw upon the surface.
 @item
-Use appropriate methods to close the <plotter> object and the port,
-which writes the file.
+Close the <plotter> object with @code{closepl!}, delete it with
+@code{deletepl!}, and then close the port, which completes the file.
 @end enumerate
 
 A simple example could be this below, which opens a bitmap surface,
@@ -125,6 +125,7 @@ completion, a PNG file is created.
 (erase! plotter)
 (move! plotter 600.0 300.0)
 (closepl! plotter)
+(deletepl! plotter)
 (close fp)
 @end lisp
 
@@ -134,11 +135,12 @@ which can plot data or functions on a set of xy axes.
 @lisp
 (use-modules (plotutils graph))
 (define xvalues (iota 101 0 0.1))
-(with-output-to-port ``tmp.png''
+(define yvalues (map (lambda (x) (* x x)) xvalues))
+(with-output-to-file "tmp.png"
   (lambda ()
     (graph xvalues yvalues
-           #:output-format ``png''
-           #:top-label ``Title''))
+           #:output-format "png"
+           #:top-label "Title"))
   #:binary #t)
 @end lisp 
 
@@ -219,13 +221,17 @@ In this section we'll be calling @code{graph} using lists of data. When
 using data, you either call @code{graph} with a single list of data, or
 create an xy plot using two lists of data.
 
+The default output format is GNU Plotutils metafile format, written to
+the current output port.  To see the plot in a window instead, ask for
+the X output format.
+
 @lisp
 (define x (list -1 0 1 2 3 4 5))
 (define y (list 1 2 1 2 1 2 1))
 ;; Plot the y data with an automatic abscissa
-(graph y)
+(graph y #:output-format "X")
 ;; Plot the x,y pairs
-(graph x y)
+(graph x y #:output-format "X")
 @end lisp
 
 You can also plot multiple graphs on the same axes using the @code{merge}
@@ -233,10 +239,10 @@ helper procedure.
 
 @lisp
 (define x1 (list -1 0 1 2 3 4 5))
-(define y2 (list  1 2 1 2 1 2 1))
+(define y1 (list  1 2 1 2 1 2 1))
 (define x2 (list -1 0 1 2 3 4 5))
 (define y2 (list  8 7 6 5 4 3 3))
-(graph (merge x1 x2) (merge y1 y2))
+(graph (merge x1 x2) (merge y1 y2) #:output-format "X")
 @end lisp
 
 @node Plotting Tutorial,  , Graphing Tutorial, Tutorial
@@ -550,6 +556,17 @@ how @file{libplot} was compiled in the upstrem GNU Plotutils library.
 receive the output produced by the plotter in the format specified by
 @var{type}. @var{errp} will receive error messages.
 
+Both ports must be backed by file descriptors, such as file ports or
+the standard ports; string ports can't be used.  The Plotter writes to
+duplicates of the ports' file descriptors rather than through the
+ports themselves, so to keep output in order, anything buffered in
+either port is written out by @t{newpl}, and again by each plotting
+procedure before it draws.  You can therefore freely mix your own
+output to @var{outp} with the Plotter's, for instance to write a header
+before the graphics.  Closing the ports does not delete the Plotter,
+which keeps its own descriptors until @t{deletepl!} is called or it is
+garbage collected.
+
 @var{param} is an object of type @code{<plparams>} that has set up the
 ``paper'' upon which we are drawing.
 @end deffn
@@ -729,7 +746,52 @@ in particular.  Plotters that can output only a single page of graphics
 (PNG, PNM, GIF, SVG, Illustrator, and Fig Plotters) do so immediately
 after the first page is plotted, i.e., when @t{closepl} is invoked for
 the first time.  Postscript and CGM Plotters store all pages of graphics
-internally, and do not produce output until they are deleted.
+internally, and do not produce output until they are deleted
+(@pxref{Control Functions, @t{deletepl!}}).
+@end deffn
+
+@deffn Procedure deletepl! plotter
+@t{deletepl!} deletes a Plotter right away: it closes the Plotter if
+it is still open, lets it write any output it is still holding, closes
+the file descriptors it was writing to, and frees its memory.  It
+returns 0 on success, and a negative value if the Plotter could not be
+deleted cleanly.
+
+Without @t{deletepl!}, a Plotter is deleted only when the garbage
+collector reclaims it, which may be much later or, if the program
+exits first, not at all.  Calling @t{deletepl!} is therefore useful
+whenever the timing matters:
+
+@itemize @bullet
+@item
+Postscript and CGM Plotters write nothing until they are deleted, so
+their output file stays empty until @t{deletepl!} is called (or the
+Plotter happens to be garbage collected).
+
+@item
+Each Plotter holds two file descriptors, duplicated from the ports
+given to @t{newpl}.  A program that makes many Plotters can run out of
+file descriptors if it waits for the garbage collector to close them.
+
+@item
+An X Plotter's window stays on the screen until the Plotter is deleted.
+@end itemize
+
+After @t{deletepl!}, the @code{<plotter>} object can no longer be used:
+@t{plotter?} returns @code{#f} for it, and passing it to any other
+plotting procedure is an error.  Calling @t{deletepl!} again on the
+same object does nothing and returns 0.  The ports given to @t{newpl}
+are not closed; close them as usual once the Plotter is deleted.
+
+@lisp
+(define port (open-output-file "figure.ps"))
+(define plotter (newpl "ps" port (current-error-port) (newplparams)))
+(openpl! plotter)
+(line! plotter 0 0 100 100)
+(closepl! plotter)
+(deletepl! plotter)   ; figure.ps is written here
+(close-port port)
+@end lisp
 @end deffn
 
 @node Drawing Functions, Attribute Functions, Control Functions, The Plotting Library
@@ -900,7 +962,7 @@ new path.  In all cases the graphics cursor is moved to (@var{x},
 @end deffn
 
 @deffn Procedure ellarc! plotter xc yc x0 y0 x1 y1
-@deffnx Procedure ellarcrel! plotter xc yc x0 y1 x1 y1
+@deffnx Procedure ellarcrel! plotter xc yc x0 y0 x1 y1
 @t{ellarc!} takes six arguments specifying the three
 points @code{pc}=(@var{xc},@var{yc}), @code{p0}=(@var{x0},@var{y0}), and
 @code{p1}=(@var{x1},@var{y1}) that define a so-called quarter ellipse.
@@ -959,6 +1021,16 @@ graphics.  So it is seldom necessary to call @t{endpath} explicitly.
 However, if a Plotter plots objects in real time, calling @t{endpath}
 will ensure that a completed path is drawn on the graphics display
 without delay.
+@end deffn
+
+@deffn Procedure closepath! plotter
+@t{closepath!} is part of the libplot API: it is meant to close the
+simple path under construction, @w{if any}, by joining its last point
+to its first.  However, in libplot 4.4 it is not implemented: it
+returns 0 if the Plotter is open (and an error otherwise), but has no
+effect on the path.  To draw a closed polyline, end it with a
+@t{cont!} back to its starting point, or use @t{box!}, @t{circle!}, or
+@t{ellipse!}.
 @end deffn
 
 @deffn Procedure endsubpath! plotter
@@ -1215,7 +1287,7 @@ The default font name depends on the type of Plotter.  @w{It is}
 "Helvetica" for all Plotters except for PCL Plotters, for which it is
 "Univers", and PNG, PNM, GIF, HP-GL, ReGIS, Tektronix and Metafile
 Plotters, for which it is "HersheySerif".  @w{If the} argument
-@var{font-name} is NULL or the empty string, or the font is not
+@var{font-name} is the empty string, or the font is not
 available, the default font name will be used.  Which fonts are
 available also depends on the type of Plotter; for a list of all
 available fonts, see @ref{Text Fonts}.
@@ -1258,29 +1330,36 @@ the parameter @code{CGM_MAX_VERSION} is set to a value less @w{than
 "3"}.  @xref{Plotter Parameters}.
 @end deffn
 
-@deffn Procedure linedash! plotter n dashes offset
+@deffn Procedure linedash! plotter dashes [offset]
 @t{linedash!} terminates and draws the path under
-construction (@w{if any}), as if @t{endpath!} had been called, and set
+construction (@w{if any}), as if @t{endpath!} had been called, and sets
 the line style for all paths subsequently drawn on the graphics display.
-They provide much finer control of dash patterns than the @t{linemod!}
-function (see below) provides.  @var{dashes} should be an array of
-@w{length @var{n}}.  Its elements, which should be positive, are
-interpreted as distances in the user coordinate system.  Along any path,
-circle, or ellipse, the elements
-@var{dashes}[0]@dots{}@var{dashes}[@var{n}-1] alternately specify the
-length of a dash and the length of a gap between dashes.  When the end
-of the array is reached, the reading of the array wraps around to the
-beginning.  If the array is empty, i.e., @var{n} equals zero, there is
-no dashing: the drawn line is solid.
+It provides much finer control of dash patterns than the @t{linemod!}
+function (see below) provides.  @var{dashes} should be a list of
+numbers.  Its elements, which should be positive, are interpreted as
+distances in the user coordinate system.  Along any path, circle, or
+ellipse, the elements of @var{dashes} alternately specify the length of
+a dash and the length of a gap between dashes.  When the end of the list
+is reached, the reading of the list wraps around to the beginning.  If
+the list is empty, there is no dashing: the drawn line is solid.
 
-The @var{offset} argument specifies the `phase' of the dash pattern
-relative to the start of the path.  It is interpreted as the distance
-into the dash pattern at which the dashing should begin.  For example,
-if @var{offset} equals zero then the path will begin with a dash, of
-length @var{dashes}[0] in user space.  @w{If @var{offset}} equals
-@var{dashes}[0] then the path will begin with a gap of length
-@var{dashes}[1], and @w{so forth}.  @var{offset} is allowed to be
-negative.
+The optional @var{offset} argument (default 0) specifies the `phase' of
+the dash pattern relative to the start of the path.  It is interpreted
+as the distance into the dash pattern at which the dashing should begin.
+For example, if @var{offset} equals zero then the path will begin with a
+dash, whose length is the first element of @var{dashes}.  @w{If
+@var{offset}} equals the first element, then the path will begin with a
+gap whose length is the second element, and @w{so forth}.  @var{offset}
+is allowed to be negative.
+
+A negative return value indicates that the dash pattern was rejected,
+e.g.@: because one of its elements is negative.
+
+@lisp
+(linedash! plotter '(10 5))        ; dashes of 10, gaps of 5
+(linedash! plotter '(4 1 1 1) 2)   ; dash-dot, starting 2 units in
+(linedash! plotter '())            ; solid again
+@end lisp
 @end deffn
 
 Not all Plotters fully support @t{linedash!}.  PCL and
@@ -1536,7 +1615,7 @@ same as NDC coordinates.  This transformation matrix is also altered by
 functions.
 @end deffn
 
-@deffn Procedure concat m0 m1 m2 m3 tx ty
+@deffn Procedure concat! plotter m0 m1 m2 m3 tx ty
 Modify the transformation matrix from user space to NDC space by
 pre-multiplying it by the matrix [@var{m0} @var{m1} @var{m2} @var{m3}
 @var{tx} @var{ty}].  Equivalently, apply the linear transformation
@@ -2017,7 +2096,53 @@ the abcissa.  When called with @var{xstart} and @var{xend} but not
 procedure: a few hundred points.  When @var{xstep} is included, it will
 be the step size of the samples.
 
+The graph is written to the port given by the @code{#:outp} keyword
+argument, and error messages to the port given by @code{#:errp}; they
+default to the current output and error ports.  As with @code{newpl},
+both must be backed by file descriptors, and anything already buffered
+in them is written out before the graph, so output written to the port
+before calling @code{graph} comes first.
+
+Each point may have an error bar along either axis, or both, given by
+the @samp{#:x-error} and @samp{#:y-error} options (@pxref{Plot
+Options}).
+
 There are a couple dozen optional parameters.
+@end deffn
+
+@deffn Procedure merge list @dots{}
+Append one or more data lists into a single list, separating them with
+@code{#f}, which @code{graph} treats as the end of one dataset and the
+start of the next.
+
+@lisp
+(merge '(1 2) '(3 4))   @result{} (1 2 #f 3 4)
+@end lisp
+
+This @code{merge} replaces Guile's core @code{merge} procedure, which
+merges two sorted lists, in any module that imports
+@code{(plotutils graph)}.  To keep using Guile's @code{merge} as well,
+import this one under another name, for example with
+@code{#:use-module ((plotutils graph) #:renamer (symbol-prefix-proc 'graph:))}
+or by excluding it with @code{#:hide (merge)}.
+@end deffn
+
+@deffn Procedure bounds->errors data lows highs
+Error bars are often known as absolute limits, such as the ends of a
+confidence interval, rather than as distances from each point.
+@code{bounds->errors} converts them: given a list of @var{data} values
+and lists of the @var{lows} and @var{highs} of their error bars, it
+returns a list of @code{(@var{lower} . @var{upper})} pairs, the
+distances from each value down to its low and up to its high, suitable
+for @samp{#:x-error} or @samp{#:y-error}.  @w{If a} value, low, or high
+is @code{#f}, that point gets no bar.  The three lists must have the
+same length, and each low must not exceed its value, nor the value its
+high.
+
+@lisp
+(bounds->errors '(10 20) '(8 15) '(11 26))   @result{} ((2 . 1) (5 . 6))
+(graph xs ys #:y-error (bounds->errors ys lows highs))
+@end lisp
 @end deffn
 
 @menu
@@ -2041,6 +2166,13 @@ the Hewlett--Packard @w{PCL 5} printer language, the Hewlett--Packard
 Graphics Language (@w{by default}, HP-GL/2), the ReGIS (remote
 graphics instruction set) format developed @w{by DEC}, Tektronix
 format, and device-independent GNU graphics metafile format.
+
+@item #:portable-output
+Write GNU graphics metafile output in its portable, human-readable text
+form rather than the default binary form.  This is relevant only with
+@samp{#:output-format "meta"} (the default).  Portable metafiles can be
+read on any machine, and can be inspected and edited as text.  Any true
+value turns this on, e.g.@: @code{#:portable-output #t}.
 
 @item #:toggle-axis-end @var{x|y}
 (String)
@@ -2181,10 +2313,9 @@ Transpose the abscissa and ordinate.  This causes the axes to be
 interchanged, and the options that apply to each axis to be applied to
 the opposite axis.  That is, data points are read in as @math{(y, x)}
 pairs, and such options as @samp{-x} and @samp{-X} apply to the
-@w{@math{y} axis} rather than the @w{@math{x} axis}.  @w{If the}
-@samp{#:input-format e} option is in force, so that the data points are read with
-error bars, the orientation of the error bars will be switched between
-vertical and horizontal.
+@w{@math{y} axis} rather than the @w{@math{x} axis}.  Error bars given with @samp{#:x-error} and
+@samp{#:y-error} are transposed along with the data, so they switch
+between horizontal and vertical.
 
 @item #:upward-shift @var{up}
 (Float, default 0.2.)  Move the plot up by a fractional amount @var{up}
@@ -2206,9 +2337,11 @@ less than 1.0 are normally chosen.
 (Floats.) The arguments @var{lower_limit} and @var{upper_limit} specify
 the limits of the @w{@math{x} axis}, and the optional argument
 @var{spacing} specifies the spacing of labeled ticks along the axis.
-@w{If any} of the three arguments is missing or is supplied @w{as
-@samp{-}} (i.e., as a single hyphen), @w{it is} computed from the data.
-Both arguments @var{lower_limit} and @var{upper_limit} must be present
+Give a single number, or a list of up to three numbers, e.g.
+@code{#:x-limits '(0 10 2)}.  @w{If any} of the three arguments is
+missing or is supplied @w{as @code{#f}}, @w{it is} computed from the
+data; for example, @code{#:x-limits '(#f 10)} fixes only the upper
+limit.  Both arguments @var{lower_limit} and @var{upper_limit} must be present
 if @code{graph} is to act as a real-time filter.
 
 By default, the supplied limit(s) are strictly respected.  However, the
@@ -2243,6 +2376,13 @@ do not properly support rotated labels, so that if you specify
 @samp{#:output-format X}, you may also need @samp{#:toggle-rotate-y-label}.)  The @samp{#:font-size} and
 @samp{#:font-name} options can be used to specify the name of the font and the
 size of the font.
+
+@item #:blankout @var{blankout_fraction}
+(Float, default 1.3.)  When drawing a graph over an earlier one, first
+blank out (fill with the background color) a region around the plotting
+area, whose size is @var{blankout_fraction} times the size of the
+plotting area.  Setting @var{blankout_fraction} to 1.0 blanks out only
+the plotting area itself.
 
 @item #:bg-color @var{name}
 (String, default "white".)  Set the color used for the plot background
@@ -2384,7 +2524,7 @@ unrecognized} name sets the corresponding color to the default.  For
 information on what names are recognized, see @ref{Color Names}.
 
 @item #:rotation @var{angle}
-(Integer, default 0.)  Set the rotation angle of the graphics display
+(Integer or string, default 0.)  Set the rotation angle of the graphics display
 to be @var{angle} degrees.  The rotation is counterclockwise.  The
 environment variable @code{ROTATION} can equally well be used to
 specify the rotation angle.
@@ -2570,6 +2710,63 @@ alternative source of symbols, becomes available.  For a list of all
 fonts, see @ref{Text Fonts}.  The GNU plotutils @code{plotfont} utility will produce a
 character map of any available font..
 
+@end table
+
+The following options draw error bars on the data points.
+
+@table @samp
+@item #:y-error @var{errors}
+Draw a vertical error bar on each data point.  @var{errors} may take
+any of these forms:
+
+@table @asis
+@item a number @var{e}
+Every point gets a bar from @math{y-e} to @math{y+e}.
+
+@item a pair @code{(@var{lower} . @var{upper})}
+Every point gets a bar from @math{y-@var{lower}} to
+@math{y+@var{upper}}.
+
+@item a list
+One element per data point, each either a number, a
+@code{(@var{lower} . @var{upper})} pair, or @code{#f} for no bar on that
+point.  The list must have exactly as many elements as the data list.
+When the data are built with @code{merge}, build the error list with
+@code{merge} too, so that its @code{#f} separators line up with the
+data's.
+
+@item a procedure
+Called as @code{(@var{procedure} @var{x} @var{y})} for each point, it
+returns that point's bar in any of the list-element forms above.  This
+is convenient for function plots, or for errors proportional to the
+value.
+@end table
+
+All amounts must be nonnegative.  To give absolute limits instead of
+amounts, use @code{bounds->errors} (@pxref{The Graphing Library}).
+
+Note the difference between a pair and a list of two numbers:
+@code{'(0.2 . 0.7)} gives every point a bar from @math{y-0.2} to
+@math{y+0.7}, while @code{'(0.2 0.7)} is a list giving the first of two
+points a bar of plus or minus 0.2 and the second plus or minus 0.7.
+
+@lisp
+(graph xs ys #:y-error 0.5)                       ; +/-0.5 everywhere
+(graph xs ys #:y-error '(0.2 . 0.7))              ; -0.2, +0.7 everywhere
+(graph '(1 2 3) '(10 20 30)
+       #:y-error '(1 (2 . 4) #f))                 ; per point
+(graph xs ys #:y-error (lambda (x y) (* 0.05 y))) ; 5% of each value
+@end lisp
+
+Error bars are clipped to the plotting area; an end cap is drawn only
+at an end of a bar that is not clipped.  When the axis limits are
+computed from the data, they are widened to include the error bars.  On
+a logarithmic axis, a point whose error bar reaches zero or below is
+still plotted, with the bar clipped at the bottom of the axis.
+
+@item #:x-error @var{errors}
+Draw a horizontal error bar on each data point.  @var{errors} takes the
+same forms as for @samp{#:y-error}, with @math{x} in place of @math{y}.
 @end table
 @node graph Environment,  , The Graphing Library, Reference Guide
 @section Environment variables

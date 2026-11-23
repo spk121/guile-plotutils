@@ -14,6 +14,7 @@
 	    capmod!
 	    circle!
 	    circlerel!
+	    closepath!
 	    closepl!
 	    color!
 	    colorname!
@@ -24,6 +25,7 @@
 	    ellarcrel!
 	    ellipse!
 	    ellipserel!
+	    deletepl!
 	    endpath!
 	    endsubpath!
 	    erase!
@@ -39,6 +41,8 @@
 	    label!
 	    labelwidth!
 	    line!
+	    linedash!
+	    linemod!
 	    linerel!
 	    linewidth!
 	    marker!

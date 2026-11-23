@@ -17,6 +17,7 @@ GUPL_API SCM gupl_newplparams (void);
 /* plotter type */
 GUPL_API SCM gupl_is_plotter_p (SCM x);
 GUPL_API SCM gupl_newpl (SCM type, SCM outp, SCM errp, SCM plparams);
+GUPL_API SCM gupl_deletepl_x (SCM plotter);
 
 /* initialization */
 GUPL_API void gupl_plot_init (void);
@@ -36,6 +37,7 @@ GUPL_API SCM gupl_boxrel_x (SCM, SCM, SCM, SCM, SCM);
 GUPL_API SCM gupl_capmod_x (SCM, SCM);
 GUPL_API SCM gupl_circle_x (SCM, SCM, SCM, SCM);
 GUPL_API SCM gupl_circlerel_x (SCM, SCM, SCM, SCM);
+GUPL_API SCM gupl_closepath_x (SCM);
 GUPL_API SCM gupl_closepl_x (SCM);
 GUPL_API SCM gupl_color_x (SCM, SCM, SCM, SCM);
 GUPL_API SCM gupl_colorname_x (SCM, SCM);
@@ -61,6 +63,7 @@ GUPL_API SCM gupl_joinmod_x (SCM, SCM);
 GUPL_API SCM gupl_label_x (SCM, SCM);
 GUPL_API SCM gupl_labelwidth_x (SCM, SCM);
 GUPL_API SCM gupl_line_x (SCM, SCM, SCM, SCM, SCM);
+GUPL_API SCM gupl_linedash_x (SCM, SCM, SCM);
 GUPL_API SCM gupl_linemod_x (SCM, SCM);
 GUPL_API SCM gupl_linewidth_x (SCM, SCM);
 GUPL_API SCM gupl_linerel_x (SCM, SCM, SCM, SCM, SCM);
@@ -107,9 +110,9 @@ GUPL_API SCM gupl_setplparam_x (SCM, SCM, SCM);
     SCM_ASSERT (scm_is_integer (s_x2), s_x2, SCM_ARG4, SNAME);                \
                                                                               \
     c_plotter = _scm_to_plotter (s_plotter);                                  \
-    c_x0 = scm_to_int (s_x0);                                                 \
-    c_x1 = scm_to_int (s_x1);                                                 \
-    c_x2 = scm_to_int (s_x2);                                                 \
+    c_x0 = _scm_to_int_arg (s_x0);                                            \
+    c_x1 = _scm_to_int_arg (s_x1);                                            \
+    c_x2 = _scm_to_int_arg (s_x2);                                            \
     return scm_from_int (FUNC (c_plotter, c_x0, c_x1, c_x2));                 \
   }
 
@@ -127,8 +130,8 @@ GUPL_API SCM gupl_setplparam_x (SCM, SCM, SCM);
     SCM_ASSERT (scm_is_string (s_x2), s_x2, SCM_ARG4, SNAME);                 \
                                                                               \
     c_plotter = _scm_to_plotter (s_plotter);                                  \
-    c_x0 = scm_to_int (s_x0);                                                 \
-    c_x1 = scm_to_int (s_x1);                                                 \
+    c_x0 = _scm_to_int_arg (s_x0);                                            \
+    c_x1 = _scm_to_int_arg (s_x1);                                            \
     c_x2 = scm_to_locale_string (s_x2);                                       \
     c_ret = FUNC (c_plotter, c_x0, c_x1, c_x2);                               \
     free (c_x2);                                                              \
@@ -247,7 +250,7 @@ GUPL_API SCM gupl_setplparam_x (SCM, SCM, SCM);
     SCM_ASSERT (scm_is_integer (s_x0), s_x0, SCM_ARG2, SNAME);                \
                                                                               \
     c_plotter = _scm_to_plotter (s_plotter);                                  \
-    c_x0 = scm_to_int (s_x0);                                                 \
+    c_x0 = _scm_to_int_arg (s_x0);                                            \
     return scm_from_int (FUNC (c_plotter, c_x0));                             \
   }
 
@@ -315,27 +318,6 @@ GUPL_API SCM gupl_setplparam_x (SCM, SCM, SCM);
     c_dy0 = scm_to_double (s_y0);                                             \
     c_dv = scm_to_double (s_v);                                               \
     return scm_from_int (FPLOTFUNC (c_plotter, c_dx0, c_dy0, c_dv));          \
-  }
-
-#define INT_FUNC_PL_VAL(CNAME, SNAME, FUNC, FFUNC)                            \
-  SCM CNAME (SCM s_plotter, SCM s_x0)                                         \
-  {                                                                           \
-    plPlotter *c_plotter;                                                     \
-    int c_x0;                                                                 \
-    double c_dx0;                                                             \
-                                                                              \
-    SCM_ASSERT (_scm_is_plotter (s_plotter), s_plotter, SCM_ARG1, SNAME);     \
-    SCM_ASSERT (scm_is_real (s_x0), s_x0, SCM_ARG2, SNAME);                   \
-                                                                              \
-    c_plotter = _scm_to_plotter (s_plotter);                                  \
-    if (_scm_is_exact_integer (s_x0))                                         \
-      {                                                                       \
-        c_x0 = scm_to_int (s_x0);                                             \
-        return scm_from_int (FUNC (c_plotter, c_x0));                         \
-      }                                                                       \
-                                                                              \
-    c_dx0 = scm_to_double (s_x0);                                             \
-    return scm_from_int (FFUNC (c_plotter, c_dx0));                           \
   }
 
 #define INT_FUNC_PL_VAL(CNAME, SNAME, FUNC, FFUNC)                            \
@@ -430,14 +412,14 @@ GUPL_API SCM gupl_setplparam_x (SCM, SCM, SCM);
       {                                                                       \
         c_x0 = scm_to_int (s_x0);                                             \
         c_y0 = scm_to_int (s_y0);                                             \
-        c_x1 = scm_to_int (s_x1);                                             \
+        c_x1 = _scm_to_int_arg (s_x1);                                        \
         c_y1 = scm_to_int (s_y1);                                             \
         return scm_from_int (PLOTFUNC (c_plotter, c_x0, c_y0, c_x1, c_y1));   \
       }                                                                       \
                                                                               \
     c_dx0 = scm_to_double (s_x0);                                             \
     c_dy0 = scm_to_double (s_y0);                                             \
-    c_x1 = scm_to_int (s_x1);                                                 \
+    c_x1 = _scm_to_int_arg (s_x1);                                            \
     c_dy1 = scm_to_double (s_y1);                                             \
     return scm_from_int (FPLOTFUNC (c_plotter, c_dx0, c_dy0, c_x1, c_dy1));   \
   }
@@ -526,20 +508,6 @@ GUPL_API SCM gupl_setplparam_x (SCM, SCM, SCM);
     c_dy3 = scm_to_double (s_y3);                                             \
     return scm_from_int (FPLOTFUNC (c_plotter, c_dx0, c_dy0, c_dx1, c_dy1,    \
                                     c_dx2, c_dy2, c_dx3, c_dy3));             \
-  }
-
-#define DOUBLE_FUNC_ONE_DOUBLE(CNAME, SNAME, FUNC)                            \
-  SCM CNAME (SCM s_plotter, SCM s_x0)                                         \
-  {                                                                           \
-    plPlotter *c_plotter;                                                     \
-    double c_x0;                                                              \
-                                                                              \
-    SCM_ASSERT (_scm_is_plotter (s_plotter), s_plotter, SCM_ARG1, SNAME);     \
-    SCM_ASSERT (scm_is_read (s_x0), s_x0, SCM_ARG2, SNAME);                   \
-                                                                              \
-    c_plotter = _scm_to_plotter (s_plotter);                                  \
-    c_x0 = scm_to_double (s_x0);                                              \
-    return scm_from_double (FUNC (c_plotter, c_x0));                          \
   }
 
 #define DOUBLE_FUNC_PL_STRING(CNAME, SNAME, FUNC)                             \
