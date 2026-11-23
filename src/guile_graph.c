@@ -413,10 +413,14 @@ initialize_struct_graph (graph_t *p)
 static void
 replace_graph_string_from_scm (const char **slot, bool *owned, SCM s_value)
 {
+  /* Convert first: scm_to_locale_string can throw, and the old string
+     must still be valid (and owned) if it does. */
+  char *value = scm_to_locale_string (s_value);
+
   if (*owned && *slot)
     free ((void *)*slot);
 
-  *slot = scm_to_locale_string (s_value);
+  *slot = value;
   *owned = true;
 }
 
