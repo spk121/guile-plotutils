@@ -40,6 +40,7 @@ SCM_SRC = \
 	scripts/graph-logistic-growth.scm \
 	scripts/graph-logistic.scm \
 	scripts/graph-riemann-stairs.scm \
+	scripts/graph-temperature-climatology.scm \
 	scripts/graph-weierstrass.scm \
 	scripts/graph-zeta.scm \
 	scripts/plot-dragon-curve.scm \

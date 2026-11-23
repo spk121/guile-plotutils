@@ -33,71 +33,65 @@
     (setplparam! param "BITMAPSIZE" "800x800")
     (let ((plotter (newpl output-format fp (current-error-port) param)))
       (openpl! plotter)
-      (space! plotter -10.0 -10.0 60.0 60.0)
+      ;; The eleven squares tile an 89 x 144 rectangle spanning x from
+      ;; -24 to 65 and y from -39 to 105.  Use a square user space around
+      ;; it, so that circles stay round and text isn't stretched.
+      (space! plotter -60.0 -46.0 102.0 116.0)
       (erase! plotter)
 
-      (let* ((fibs (fibonacci-list 11))
-             (scale 1.0))
-
-        ;; We'll track the corner of each square and direction of growth.
-        ;; Directions cycle: right, up, left, down (quadrant rotation)
-        ;; Start at origin, first two 1×1 squares.
-        (let loop ((remaining fibs)
-                   (cx 0.0) (cy 0.0)  ; current square corner (lower-left)
-                   (dir 0))            ; 0=right, 1=up, 2=left, 3=down
-          (when (pair? remaining)
-            (let* ((s (* (car remaining) scale)) ; side length
-                   ;; Compute the four corners of this square based on direction
-                   ;; The arc sweeps a quarter circle from one edge to the next
-                   )
-              ;; Draw the square
-              (pencolorname! plotter "tan")
-              (linewidth! plotter 0.1)
-              (box! plotter cx cy (+ cx s) (+ cy s))
-
-              ;; Draw the quarter-circle arc inscribed in this square
-              (pencolorname! plotter "dark red")
-              (linewidth! plotter 0.3)
-              (let* ((qdir (modulo dir 4))
-                     ;; The arc center depends on which corner of the square
-                     ;; dir=0: arc centered at upper-right, from upper-left to lower-right
-                     ;; dir=1: arc centered at upper-left, from lower-left to upper-right
-                     ;; dir=2: arc centered at lower-left, from lower-right to upper-left
-                     ;; dir=3: arc centered at lower-right, from upper-right to lower-left
-                     (acx (cond ((= qdir 0) (+ cx s)) ((= qdir 1) cx)
-                                ((= qdir 2) cx)       ((= qdir 3) (+ cx s))))
-                     (acy (cond ((= qdir 0) (+ cy s)) ((= qdir 1) (+ cy s))
-                                ((= qdir 2) cy)       ((= qdir 3) cy)))
-                     (ax0 (cond ((= qdir 0) cx)       ((= qdir 1) cx)
-                                ((= qdir 2) (+ cx s)) ((= qdir 3) (+ cx s))))
-                     (ay0 (cond ((= qdir 0) (+ cy s)) ((= qdir 1) cy)
-                                ((= qdir 2) cy)       ((= qdir 3) (+ cy s))))
-                     (ax1 (cond ((= qdir 0) (+ cx s)) ((= qdir 1) (+ cx s))
-                                ((= qdir 2) cx)       ((= qdir 3) cx)))
-                     (ay1 (cond ((= qdir 0) cy)       ((= qdir 1) (+ cy s))
-                                ((= qdir 2) (+ cy s)) ((= qdir 3) cy))))
-                (arc! plotter acx acy ax0 ay0 ax1 ay1))
-
-              ;; Compute next square's lower-left corner
-              (let* ((qdir (modulo dir 4))
-                     (ncx (cond ((= qdir 0) (+ cx s)) ((= qdir 1) cx)
-                                ((= qdir 2) (- cx (car (if (pair? (cdr remaining))
-                                                            (cdr remaining) (list s)))))
-                                ((= qdir 3) cx)))
-                     (ncy (cond ((= qdir 0) cy)       ((= qdir 1) (+ cy s))
-                                ((= qdir 2) cy)
-                                ((= qdir 3) (- cy (car (if (pair? (cdr remaining))
-                                                            (cdr remaining) (list s))))))))
-                (loop (cdr remaining) ncx ncy (+ dir 1)))))))
+      ;; Start with a 1x1 square.  Each following square, whose side is
+      ;; the next Fibonacci number, goes on the right, top, left, or
+      ;; bottom of the rectangle tiled so far, in turn; its side equals
+      ;; that edge of the rectangle.  A quarter-circle arc in each square,
+      ;; centred on the corner given below, joins the previous square's
+      ;; arc, so together they trace the spiral.
+      (let loop ((sides (cdr (fibonacci-list 11)))
+                 (side 0)                    ; 0=right 1=top 2=left 3=bottom
+                 (square '(0.0 0.0 1.0 1.0))  ; x0 y0 x1 y1
+                 (rect '(0.0 0.0 1.0 1.0))    ; the rectangle tiled so far
+                 (centre 'upper-right))       ; arc centre in this square
+        (let ((x0 (list-ref square 0)) (y0 (list-ref square 1))
+              (x1 (list-ref square 2)) (y1 (list-ref square 3)))
+          ;; the square
+          (pencolorname! plotter "tan")
+          (linewidth! plotter 0.15)
+          (box! plotter x0 y0 x1 y1)
+          ;; its quarter-circle, counterclockwise from one neighbouring
+          ;; corner of the centre to the other
+          (pencolorname! plotter "dark red")
+          (linewidth! plotter 0.6)
+          (case centre
+            ((upper-left)  (arc! plotter x0 y1 x0 y0 x1 y1))
+            ((lower-left)  (arc! plotter x0 y0 x1 y0 x0 y1))
+            ((lower-right) (arc! plotter x1 y0 x1 y1 x0 y0))
+            ((upper-right) (arc! plotter x1 y1 x0 y1 x1 y0))))
+        (when (pair? sides)
+          (let* ((s (exact->inexact (car sides)))
+                 (rx0 (list-ref rect 0)) (ry0 (list-ref rect 1))
+                 (rx1 (list-ref rect 2)) (ry1 (list-ref rect 3)))
+            (case side
+              ((0) (loop (cdr sides) 1 (list rx1 ry0 (+ rx1 s) (+ ry0 s))
+                         (list rx0 ry0 (+ rx1 s) ry1) 'upper-left))
+              ((1) (loop (cdr sides) 2 (list rx0 ry1 (+ rx0 s) (+ ry1 s))
+                         (list rx0 ry0 rx1 (+ ry1 s)) 'lower-left))
+              ((2) (loop (cdr sides) 3 (list (- rx0 s) (- ry1 s) rx0 ry1)
+                         (list (- rx0 s) ry0 rx1 ry1) 'lower-right))
+              ((3) (loop (cdr sides) 0 (list (- rx1 s) (- ry0 s) rx1 ry0)
+                         (list rx0 (- ry0 s) rx1 ry1) 'upper-right))))))
 
       ;; Title
       (pencolorname! plotter "black")
-      (move! plotter 2.0 56.0)
+      (move! plotter 20.5 110.0)
       (fontname! plotter "HersheySerif")
-      (fontsize! plotter 2.0)
-      (alabel! plotter 'l 'c "Golden Spiral — Fibonacci Rectangles")
+      (fontsize! plotter 7.0)
+      ;; ASCII only: libplot's fonts are Latin-1, and the conversion of
+      ;; other characters depends on the locale the script runs in
+      (alabel! plotter 'c 'c "Golden Spiral -- Fibonacci Rectangles")
 
       (closepl! plotter)
+      ;; Delete the plotter before closing the port: Postscript (.eps)
+      ;; output is written only when the plotter is deleted.
+      (deletepl! plotter)
       (close fp))))
 
 (main (command-line))

@@ -187,4 +187,46 @@
     (closepl! p)
     (deletepl! p)))
 
+(test-group "list-fonts"
+  (let ((png (list-fonts "png"))
+        (svg (list-fonts "svg")))
+    (test-assert "returns a list of strings"
+      (and (pair? png) (every string? png)))
+    (test-equal "starts with the Hershey fonts, as GNU graph does"
+      "HersheySerif" (car png))
+    (test-assert "bitmap formats have only the Hershey fonts"
+      (and (not (member "Times-Roman" png))
+           (every (lambda (name) (string-prefix? "Hershey" name)) png)))
+    (test-assert "SVG also has the Postscript fonts"
+      (member "Times-Roman" svg))
+    (test-assert "PCL has the PCL fonts"
+      (member "Univers" (list-fonts "pcl")))
+    (test-equal "a plotter gives the same list as its output format"
+      svg
+      (let* ((p (newpl "svg" (open-output-file "/dev/null")
+                       (current-error-port) (newplparams)))
+             (fonts (list-fonts p)))
+        (deletepl! p)
+        fonts))
+    (test-equal "an unknown output format is an error"
+      'misc-error
+      (catch #t (lambda () (list-fonts "no-such-format") 'no-error)
+        (lambda (key . args) key)))
+    (test-equal "a deleted plotter is an error"
+      'wrong-type-arg
+      (let ((p (newpl "svg" (open-output-file "/dev/null")
+                      (current-error-port) (newplparams))))
+        (deletepl! p)
+        (catch #t (lambda () (list-fonts p) 'no-error)
+          (lambda (key . args) key))))
+    (test-assert "listing fonts for Postscript writes nothing"
+      ;; a Postscript Plotter writes its document when deleted; the
+      ;; temporary one used by list-fonts has no output stream
+      (let-values (((port name) (temp-output-port)))
+        (with-output-to-port port (lambda () (list-fonts "ps")))
+        (close-port port)
+        (let ((size (stat:size (stat name))))
+          (delete-file name)
+          (zero? size))))))
+
 (test-end "plot.scm")

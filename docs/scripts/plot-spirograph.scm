@@ -87,6 +87,9 @@
       (draw-epitrochoid! plotter 60.0 45.0 30.0 2000 "royal blue")
 
       (closepl! plotter)
+      ;; Delete the plotter before closing the port: Postscript (.eps)
+      ;; output is written only when the plotter is deleted.
+      (deletepl! plotter)
       (close fp))))
 
 (main (command-line))

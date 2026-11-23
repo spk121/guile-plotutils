@@ -18,6 +18,7 @@ GUPL_API SCM gupl_newplparams (void);
 GUPL_API SCM gupl_is_plotter_p (SCM x);
 GUPL_API SCM gupl_newpl (SCM type, SCM outp, SCM errp, SCM plparams);
 GUPL_API SCM gupl_deletepl_x (SCM plotter);
+GUPL_API SCM gupl_list_fonts (SCM output_format_or_plotter);
 
 /* initialization */
 GUPL_API void gupl_plot_init (void);

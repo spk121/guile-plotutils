@@ -48,8 +48,6 @@
 ___BEGIN_DECLS
 
 extern char *xstrdup (const char *s);
-extern int display_fonts (const char *output_format, const char *progname);
-extern int list_fonts (const char *output_format, const char *progname);
 extern void display_usage (const char *progname, const int *omit_vals,
                            const char *appendage, int info);
 extern void display_version (const char *progname, const char *written,
