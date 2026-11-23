@@ -2,8 +2,11 @@
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 optargs)
   #:use-module (srfi srfi-11)
-  #:export (merge
-	        bounds->errors
+  ;; `merge' deliberately replaces Guile's core `merge' (which merges
+  ;; sorted lists) in modules that import this one; #:replace says so,
+  ;; instead of warning about it on every import.
+  #:replace (merge)
+  #:export (bounds->errors
 	        graph))
 
 ;; The C library provides the following, which are not currently exported

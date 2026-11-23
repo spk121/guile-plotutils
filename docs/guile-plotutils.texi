@@ -2110,6 +2110,23 @@ Options}).
 There are a couple dozen optional parameters.
 @end deffn
 
+@deffn Procedure merge list @dots{}
+Append one or more data lists into a single list, separating them with
+@code{#f}, which @code{graph} treats as the end of one dataset and the
+start of the next.
+
+@lisp
+(merge '(1 2) '(3 4))   @result{} (1 2 #f 3 4)
+@end lisp
+
+This @code{merge} replaces Guile's core @code{merge} procedure, which
+merges two sorted lists, in any module that imports
+@code{(plotutils graph)}.  To keep using Guile's @code{merge} as well,
+import this one under another name, for example with
+@code{#:use-module ((plotutils graph) #:renamer (symbol-prefix-proc 'graph:))}
+or by excluding it with @code{#:hide (merge)}.
+@end deffn
+
 @deffn Procedure bounds->errors data lows highs
 Error bars are often known as absolute limits, such as the ends of a
 confidence interval, rather than as distances from each point.
