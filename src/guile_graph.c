@@ -1857,14 +1857,6 @@ read_point_from_list (VecReader *reader, Point *point)
   return IN_PROGRESS;
 }
 
-void
-copy_xy_vectors_to_points_array (SCM xvec, SCM yvec, Reader *reader,
-                                 Point **p_addr, int *length,
-                                 int *no_of_points)
-{
-  // size_t i_vec = 0;
-}
-
 SCM
 gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec, SCM s_xerr, SCM s_yerr)
 {

@@ -21,7 +21,6 @@
 ;; 	    toggle-frame-on-top!
 ;; 	    portable-output!
 ;; 	    emulate-color!
-;; 	    graph-version
 ;; 	    toggle-rotate-y-label!
 
 ;; 	    font-size!
@@ -61,7 +60,6 @@
 ;; 	    x-limits!
 ;; 	    y-limits!
 ;; 	    symbol!
-;; 	    reposition!
 ;; 	    xy-data!
 ;; 	    generate
 ;; 	    ))
@@ -84,22 +82,6 @@ the input lists with #f.  For example,
 	      ;; else
 	      (loop (append merged (list #f) (car rest))
 		        (cdr rest)))))))
-
-(defmacro keys-list ()
-  `output-format toggle-axis-end font-size font-name
-  grid-style height-of-plot toggle-frame-on-top
-  tick-size clip-mode toggle-log-axis top-label
-  toggle-no-ticks toggle-rotate-y-label right-shift
-  toggle-round-to-next-tick save-screen toggle-transpose-axes
-  upward-shift width-of-plot x-limits x-label y-limits
-  y-label bg-color bitmap-size emulate-color frame-color
-  frame-line-width max-line-length page-size pen-colors
-  rotation title-font-name title-font-size auto-abscissa
-  toggle-auto-bump line-mode symbol line-width
-  fill-fraction toggle-use-color symbol-font-name
-  blankout portable-output)
-
-;; reposition
 
 (defmacro unpack-keys ()
   `(begin
