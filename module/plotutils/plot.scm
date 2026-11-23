@@ -42,6 +42,7 @@
 	    labelwidth!
 	    line!
 	    linedash!
+	    list-fonts
 	    linemod!
 	    linerel!
 	    linewidth!

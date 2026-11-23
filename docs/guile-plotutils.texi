@@ -1290,7 +1290,32 @@ Plotters, for which it is "HersheySerif".  @w{If the} argument
 @var{font-name} is the empty string, or the font is not
 available, the default font name will be used.  Which fonts are
 available also depends on the type of Plotter; for a list of all
-available fonts, see @ref{Text Fonts}.
+available fonts, see @ref{Text Fonts}, or call @t{list-fonts}.
+@end deffn
+
+@deffn Procedure list-fonts output-format
+@deffnx Procedure list-fonts plotter
+Return a list of the names of the fonts supported by Plotters of type
+@var{output-format}, a string such as @code{"svg"} or @code{"png"} (the
+same strings @t{newpl} accepts), or by the existing @var{plotter}.  The
+names are listed in the order of GNU @code{graph --list-fonts}: the
+Hershey vector fonts, then the HP vector fonts, the @w{PCL 5} fonts, and
+the Postscript fonts, as far as the Plotter supports each.  Any of them
+may be passed to @t{fontname!}, or to @code{graph}'s
+@samp{#:font-name}.
+
+@lisp
+(list-fonts "png")
+@result{} ("HersheySerif" "HersheySerif-Italic" @dots{} "HersheySansSymbol-Oblique")
+(length (list-fonts "svg"))                     @result{} 102
+(and (member "Times-Roman" (list-fonts "svg")) #t)  @result{} #t
+(member "Times-Roman" (list-fonts "png"))           @result{} #f
+@end lisp
+
+The list is of the built-in fonts only: X Plotters can also use most
+core X Window System fonts, such as @code{"charter-medium-r-normal"}.
+An unknown @var{output-format} is an error.  Asking about an output
+format creates a temporary Plotter, which writes nothing.
 @end deffn
 
 @deffn Procedure fontsize! plotter size
@@ -2200,8 +2225,9 @@ choice of font for the plot title may be overridden with the
 @samp{#:title-font-name} option (see below).  Font names are
 case-insensitive.  @w{If the} specified font is not available, the
 default font will be used.  Which fonts are available depends on which
-@samp{-T} option is used.  For a list of all fonts, see @ref{Text
-Fonts}. 
+@samp{#:output-format} option is used; @code{(list-fonts @var{format})}
+from @code{(plotutils plot)} lists them.  For a description of all fonts,
+see @ref{Text Fonts}.
 
 @item #:grid-style @var{grid_style}
 (Integer in the range 0@dots{}4, default 2.)  Set the grid style for the
