@@ -2220,9 +2220,11 @@ less than 1.0 are normally chosen.
 (Floats.) The arguments @var{lower_limit} and @var{upper_limit} specify
 the limits of the @w{@math{x} axis}, and the optional argument
 @var{spacing} specifies the spacing of labeled ticks along the axis.
-@w{If any} of the three arguments is missing or is supplied @w{as
-@samp{-}} (i.e., as a single hyphen), @w{it is} computed from the data.
-Both arguments @var{lower_limit} and @var{upper_limit} must be present
+Give a single number, or a list of up to three numbers, e.g.
+@code{#:x-limits '(0 10 2)}.  @w{If any} of the three arguments is
+missing or is supplied @w{as @code{#f}}, @w{it is} computed from the
+data; for example, @code{#:x-limits '(#f 10)} fixes only the upper
+limit.  Both arguments @var{lower_limit} and @var{upper_limit} must be present
 if @code{graph} is to act as a real-time filter.
 
 By default, the supplied limit(s) are strictly respected.  However, the

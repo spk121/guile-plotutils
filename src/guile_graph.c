@@ -1191,6 +1191,23 @@ gupl_auto_abscissa_x (SCM s_graph, SCM s_delta_x, SCM s_x_start)
   return SCM_UNSPECIFIED;
 }
 
+/* Set one axis limit from an optional Scheme argument: an unbound or #f
+   argument leaves the limit unspecified (computed from the data).  */
+static void
+set_axis_limit (SCM s_val, int pos, const char *who, bool *spec,
+                double *val, double *local_val)
+{
+  if (SCM_UNBNDP (s_val) || scm_is_false (s_val))
+    {
+      *spec = false;
+      return;
+    }
+  SCM_ASSERT (scm_is_real (s_val), s_val, pos, who);
+  *local_val = scm_to_double (s_val);
+  *val = *local_val;
+  *spec = true;
+}
+
 SCM
 gupl_x_limits_x (SCM s_graph, SCM s_min, SCM s_max, SCM s_spacing)
 {
@@ -1198,40 +1215,14 @@ gupl_x_limits_x (SCM s_graph, SCM s_min, SCM s_max, SCM s_spacing)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "x-limits!");
 
   c_graph = _scm_to_graph (s_graph);
-  c_graph->matched = 0;
-
-  if (SCM_UNBNDP (s_min) || scm_is_false (s_min))
-    {
-      c_graph->spec_min_x = false;
-      c_graph->spec_max_x = false;
-      c_graph->spec_spacing_x = false;
-      return SCM_UNSPECIFIED;
-    }
-  c_graph->local_min_x = scm_to_double (s_min);
-  c_graph->matched = 1;
-  c_graph->spec_min_x = true;
-  c_graph->min_x = c_graph->local_min_x;
-
-  if (SCM_UNBNDP (s_max) || scm_is_false (s_max))
-    {
-      c_graph->spec_max_x = false;
-      c_graph->spec_spacing_x = false;
-      return SCM_UNSPECIFIED;
-    }
-  c_graph->local_max_x = scm_to_double (s_max);
-  c_graph->matched = 2;
-  c_graph->spec_max_x = true;
-  c_graph->max_x = c_graph->local_max_x;
-
-  if (SCM_UNBNDP (s_spacing) || scm_is_false (s_spacing))
-    {
-      c_graph->spec_spacing_x = false;
-      return SCM_UNSPECIFIED;
-    }
-  c_graph->local_spacing_x = scm_to_double (s_spacing);
-  c_graph->matched = 3;
-  c_graph->spec_spacing_x = true;
-  c_graph->spacing_x = c_graph->local_spacing_x;
+  set_axis_limit (s_min, SCM_ARG2, "x-limits!", &c_graph->spec_min_x,
+                  &c_graph->min_x, &c_graph->local_min_x);
+  set_axis_limit (s_max, SCM_ARG3, "x-limits!", &c_graph->spec_max_x,
+                  &c_graph->max_x, &c_graph->local_max_x);
+  set_axis_limit (s_spacing, SCM_ARG4, "x-limits!", &c_graph->spec_spacing_x,
+                  &c_graph->spacing_x, &c_graph->local_spacing_x);
+  c_graph->matched = (c_graph->spec_min_x + c_graph->spec_max_x
+                      + c_graph->spec_spacing_x);
   return SCM_UNSPECIFIED;
 }
 
@@ -1242,40 +1233,14 @@ gupl_y_limits_x (SCM s_graph, SCM s_min, SCM s_max, SCM s_spacing)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "y-limits!");
 
   c_graph = _scm_to_graph (s_graph);
-  c_graph->matched = 0;
-
-  if (SCM_UNBNDP (s_min) || scm_is_false (s_min))
-    {
-      c_graph->spec_min_y = false;
-      c_graph->spec_max_y = false;
-      c_graph->spec_spacing_y = false;
-      return SCM_UNSPECIFIED;
-    }
-  c_graph->local_min_y = scm_to_double (s_min);
-  c_graph->matched = 1;
-  c_graph->spec_min_y = true;
-  c_graph->min_y = c_graph->local_min_y;
-
-  if (SCM_UNBNDP (s_max) || scm_is_false (s_max))
-    {
-      c_graph->spec_max_y = false;
-      c_graph->spec_spacing_y = false;
-      return SCM_UNSPECIFIED;
-    }
-  c_graph->local_max_y = scm_to_double (s_max);
-  c_graph->matched = 2;
-  c_graph->spec_max_y = true;
-  c_graph->max_y = c_graph->local_max_y;
-
-  if (SCM_UNBNDP (s_spacing) || scm_is_false (s_spacing))
-    {
-      c_graph->spec_spacing_y = false;
-      return SCM_UNSPECIFIED;
-    }
-  c_graph->local_spacing_y = scm_to_double (s_spacing);
-  c_graph->matched = 3;
-  c_graph->spec_spacing_y = true;
-  c_graph->spacing_y = c_graph->local_spacing_y;
+  set_axis_limit (s_min, SCM_ARG2, "y-limits!", &c_graph->spec_min_y,
+                  &c_graph->min_y, &c_graph->local_min_y);
+  set_axis_limit (s_max, SCM_ARG3, "y-limits!", &c_graph->spec_max_y,
+                  &c_graph->max_y, &c_graph->local_max_y);
+  set_axis_limit (s_spacing, SCM_ARG4, "y-limits!", &c_graph->spec_spacing_y,
+                  &c_graph->spacing_y, &c_graph->local_spacing_y);
+  c_graph->matched = (c_graph->spec_min_y + c_graph->spec_max_y
+                      + c_graph->spec_spacing_y);
   return SCM_UNSPECIFIED;
 }
 
@@ -2192,6 +2157,30 @@ gupl_graph_test (SCM s_graph, SCM s_name)
     ret = scm_from_bool (c_graph->new_fill_fraction);
   else if (!strcmp (c_name, "new_use_color"))
     ret = scm_from_bool (c_graph->new_use_color);
+  else if (!strcmp (c_name, "min_x"))
+    ret = scm_from_double (c_graph->min_x);
+  else if (!strcmp (c_name, "max_x"))
+    ret = scm_from_double (c_graph->max_x);
+  else if (!strcmp (c_name, "spacing_x"))
+    ret = scm_from_double (c_graph->spacing_x);
+  else if (!strcmp (c_name, "spec_min_x"))
+    ret = scm_from_bool (c_graph->spec_min_x);
+  else if (!strcmp (c_name, "spec_max_x"))
+    ret = scm_from_bool (c_graph->spec_max_x);
+  else if (!strcmp (c_name, "spec_spacing_x"))
+    ret = scm_from_bool (c_graph->spec_spacing_x);
+  else if (!strcmp (c_name, "min_y"))
+    ret = scm_from_double (c_graph->min_y);
+  else if (!strcmp (c_name, "max_y"))
+    ret = scm_from_double (c_graph->max_y);
+  else if (!strcmp (c_name, "spacing_y"))
+    ret = scm_from_double (c_graph->spacing_y);
+  else if (!strcmp (c_name, "spec_min_y"))
+    ret = scm_from_bool (c_graph->spec_min_y);
+  else if (!strcmp (c_name, "spec_max_y"))
+    ret = scm_from_bool (c_graph->spec_max_y);
+  else if (!strcmp (c_name, "spec_spacing_y"))
+    ret = scm_from_bool (c_graph->spec_spacing_y);
   else if (!strcmp (c_name, "no_of_points"))
     ret = scm_from_int (c_graph->no_of_points);
   else if (!strcmp (c_name, "first_file_of_graph"))

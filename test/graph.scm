@@ -113,4 +113,26 @@
          #:blankout 1.0
          #:test "blankout_fraction"))
 
+(test-equal "x-limits with only an upper limit"
+  '(#f #t 10.0)
+  (map (lambda (key)
+         (graph xvalues yvalues
+                #:x-limits '(#f 10)
+                #:test key))
+       '("spec_min_x" "spec_max_x" "max_x")))
+(test-equal "y-limits with only a spacing"
+  '(#f #f #t 2.0)
+  (map (lambda (key)
+         (graph xvalues yvalues
+                #:y-limits '(#f #f 2)
+                #:test key))
+       '("spec_min_y" "spec_max_y" "spec_spacing_y" "spacing_y")))
+(test-equal "x-limits with all three"
+  '(#t 1.0 #t 9.0 #t 0.5)
+  (map (lambda (key)
+         (graph xvalues yvalues
+                #:x-limits '(1 9 0.5)
+                #:test key))
+       '("spec_min_x" "min_x" "spec_max_x" "max_x" "spec_spacing_x" "spacing_x")))
+
 (test-end "graph.scm")
