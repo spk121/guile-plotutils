@@ -238,4 +238,13 @@
       (delete-file name)
       (> size 0))))
 
+(test-assert "log-axis tick spacings that are too fine or not positive are ignored"
+  (let ((null (open-output-file "/dev/null")))
+    (for-each (lambda (limits)
+                (graph '(1 10 100) '(1 10 100)
+                       #:output-format "svg" #:toggle-log-axis "y"
+                       #:y-limits limits #:outp null #:errp null))
+              '((1 1e12 1) (1 1000 0) (1 1000 -5) (1 1000 100)))
+    #t))
+
 (test-end "graph.scm")

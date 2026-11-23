@@ -626,6 +626,27 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
       min = ceil (min - 1.0);
     }
 
+  /* A user-specified spacing on a log axis puts a tick at every multiple
+     of the spacing.  If that would be too many ticks for an int count (or
+     for the plot), or the spacing isn't positive, use the normal log axis
+     ticks instead.  (min and max are logs here.)  */
+  if (user_specified_subsubticks
+      && !tick_counts_fit (pow (10.0, min), pow (10.0, max),
+                           subsubtick_spacing))
+    {
+      if (subsubtick_spacing > 0.0)
+        fprintf (stderr,
+                 "%s: the tick spacing %g on a logarithmic axis gives too "
+                 "many ticks, so it is ignored\n",
+                 progname, subsubtick_spacing);
+      else
+        fprintf (stderr,
+                 "%s: the tick spacing %g on a logarithmic axis is not "
+                 "positive, so it is ignored\n",
+                 progname, subsubtick_spacing);
+      user_specified_subsubticks = false;
+    }
+
   if (log_axis) /* log axis, data are stored in logarithmic form */
     /* compute a tick spacing; user can't specify it */
     {
