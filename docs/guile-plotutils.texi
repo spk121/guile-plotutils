@@ -2116,6 +2116,7 @@ procedure, a single procedure with dozens of options
 @deffnx Procedure graph xlist ylist
 @deffnx Procedure graph yproc xstart xend
 @deffnx Procedure graph yproc xstart xend xstep
+@deffnx Procedure graph datasets
 @t{graph} can take up to four arguments.
 
 To plot sampled data, @code{graph} is called either with one list or two
@@ -2128,6 +2129,9 @@ joined using the @code{merge} procedure.
 @example
 (graph (merge xlist1 xlist2) (merge ylist1 ylist2))
 @end example
+
+To give each set of data its own style, call @code{graph} with a list of
+datasets made by @code{dataset} (see below) instead.
 
 To plot a single-valued function -- a procedure that takes one numeric
 argument and returns one numeric argument -- @code{graph} can be called
@@ -2152,6 +2156,53 @@ the @samp{#:x-error} and @samp{#:y-error} options (@pxref{Plot
 Options}).
 
 There are a couple dozen optional parameters.
+@end deffn
+
+@deffn Procedure dataset ylist [options]
+@deffnx Procedure dataset xlist ylist [options]
+@deffnx Procedure dataset yproc xstart xend [xstep] [options]
+Make a dataset: one set of data, with its own style, for @code{graph}.
+The data take the same forms as @code{graph}'s: a list of y values (the
+x values are generated, as by @samp{#:auto-abscissa}), lists of x and y
+values, or a procedure with a range.  Pass @code{graph} a list of
+datasets to plot them together:
+
+@lisp
+(graph (list (dataset xs ys)
+             (dataset xs zs #:line-mode 0 #:symbol 3)
+             (dataset sin 0 10 #:line-width 0.005 #:use-color #t))
+       #:top-label "Three datasets")
+@end lisp
+
+These keyword options set the dataset's style.  They take the values
+the @code{graph} options of the same names take (@pxref{Plot Options}),
+and each one that is not given takes the value of @code{graph}'s
+option, or its default; so @code{graph}'s options set the style of every
+dataset, and a dataset's options change only that dataset.
+
+@table @code
+@item #:line-mode
+The linemode.  Without it, the dataset takes the linemode that
+auto-bumping (see @samp{#:toggle-auto-bump} in @ref{Plot Options}) would
+give it if no dataset had set one, so setting it for one dataset doesn't
+change the others.
+@item #:symbol
+The marker symbol, and optionally its size.
+@item #:line-width
+@itemx #:fill-fraction
+@itemx #:symbol-font-name
+As for @code{graph}.
+@item #:use-color
+@code{#t} to draw the dataset in color, @code{#f} in monochrome (the
+@code{graph} option is @samp{#:toggle-use-color}).
+@item #:x-error
+@itemx #:y-error
+Error bars for the dataset's points, as for @code{graph}.
+@end table
+@end deffn
+
+@deffn Procedure dataset? object
+Return @code{#t} if @var{object} is a dataset made by @code{dataset}.
 @end deffn
 
 @deffn Procedure merge list @dots{}

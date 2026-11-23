@@ -372,4 +372,88 @@ what was written to its error port."
       (and (string-contains svg "font-family=\"Times-Roman")
            (string-contains svg "font-family=\"Courier")))))
 
+;;; Datasets.  "point-styles" gives each point's style as (linemode symbol
+;;; symbol-size line-width fill-fraction use-color symbol-font-name).
+
+(define (first-style-of-each-dataset styles points-per-dataset)
+  "The style of the first point of each dataset of POINTS-PER-DATASET points."
+  (let loop ((styles styles) (acc '()))
+    (if (null? styles)
+        (reverse acc)
+        (loop (list-tail styles points-per-dataset) (cons (car styles) acc)))))
+
+(define (dataset-styles . args)
+  (first-style-of-each-dataset
+   (apply graph (append args '(#:test "point-styles")))
+   3))
+
+(test-assert "dataset makes a dataset"
+  (dataset? (dataset '(1 2 3) '(4 5 6))))
+(test-equal "dataset checks its data"
+  'misc-error
+  (catch #t (lambda () (dataset "no data") 'no-error)
+    (lambda (key . args) key)))
+(test-equal "dataset checks its options"
+  'misc-error
+  (catch #t (lambda () (dataset '(1 2) #:symbol 300) 'no-error)
+    (lambda (key . args) key)))
+
+(test-equal "each dataset gets its own style; unset options take graph's"
+  '((1 0 0.03 -0.001 -1.0 #f "ZapfDingbats")
+    (0 3 0.05 -0.001 -1.0 #f "ZapfDingbats")
+    (3 0 0.03 0.01 0.5 #t "Courier"))
+  (dataset-styles (list (dataset '(1 2 3) '(1 2 3))
+                        (dataset '(1 2 3) '(2 3 4) #:line-mode 0 #:symbol '(3 0.05))
+                        (dataset '(1 2 3) '(3 4 5) #:line-width 0.01
+                                 #:fill-fraction 0.5 #:use-color #t
+                                 #:symbol-font-name "Courier"))))
+
+(test-equal "graph-level options are the defaults for every dataset"
+  '((2 5 0.02 0.004 -1.0 #t "ZapfDingbats")
+    (3 5 0.02 0.004 -1.0 #f "ZapfDingbats"))
+  (dataset-styles (list (dataset '(1 2 3) '(1 2 3))
+                        (dataset '(1 2 3) '(2 3 4) #:use-color #f))
+                  #:line-mode 2 #:symbol '(5 0.02) #:line-width 0.004
+                  #:toggle-use-color #t))
+
+(test-equal "a dataset's linemode doesn't change the auto-bumping of later ones"
+  '(1 0 3)
+  (map car
+       (dataset-styles (list (dataset '(1 2 3) '(1 2 3))
+                             (dataset '(1 2 3) '(1 2 3) #:line-mode 0)
+                             (dataset '(1 2 3) '(1 2 3))))))
+
+(test-equal "datasets merged into one dataset's lists count for auto-bumping"
+  '(1 2 3)
+  (map car
+       (first-style-of-each-dataset
+        (graph (list (dataset (merge '(1 2 3) '(1 2 3)) (merge '(1 2 3) '(1 2 3)))
+                     (dataset '(1 2 3) '(1 2 3)))
+               #:test "point-styles")
+        3)))
+
+(test-equal "a dataset of y values alone gets an automatic abscissa"
+  '((0.0 5.0) (1.0 6.0) (10.0 1.0) (20.0 2.0))
+  (map (lambda (p) (list (first p) (second p)))
+       (graph (list (dataset '(5 6)) (dataset '(10 20) '(1 2)))
+              #:test "points")))
+
+(test-equal "error bars per dataset, or graph's for datasets without"
+  '((9.0 11.0) (19.0 21.0) (29.5 30.5) (39.5 40.5))
+  (map (lambda (p) (list (fifth p) (sixth p)))
+       (graph (list (dataset '(1 2) '(10 20) #:y-error 1)
+                    (dataset '(3 4) '(30 40)))
+              #:y-error 0.5 #:test "points")))
+
+(test-assert "a graph of datasets can be generated"
+  (let* ((port (mkstemp! (string-copy "/tmp/gupl-test-XXXXXX")))
+         (name (port-filename port)))
+    (graph (list (dataset '(1 2 3) '(1 4 9))
+                 (dataset (lambda (x) (* 2 x)) 0 3 #:symbol 3))
+           #:output-format "svg" #:outp port)
+    (close-port port)
+    (let ((size (stat:size (stat name))))
+      (delete-file name)
+      (> size 0))))
+
 (test-end "graph.scm")

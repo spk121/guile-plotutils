@@ -1011,17 +1011,12 @@ gupl_title_font_name_x (SCM s_graph, SCM s_name)
   return SCM_UNSPECIFIED;
 }
 
-SCM
-gupl_symbol_font_name_x (SCM s_graph, SCM s_name)
+/* Make NAME (malloc'd) the graph's symbol font name, for data read from
+   now on.  Points already read may use the old name, so it is kept until
+   they are freed rather than freed now.  */
+static void
+set_symbol_font_name (graph_t *c_graph, char *name)
 {
-  graph_t *c_graph;
-  char *name;
-  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "symbol-font-name!");
-  SCM_ASSERT (scm_is_string (s_name), s_name, SCM_ARG2, "symbol-font-name!");
-  c_graph = _scm_to_graph (s_graph);
-  name = scm_to_locale_string (s_name);
-  /* Points already read may use the old name, so keep it until they are
-     freed rather than freeing it now.  */
   if (c_graph->owns_symbol_font_name && c_graph->symbol_font_name)
     {
       c_graph->retired_font_names
@@ -1032,8 +1027,63 @@ gupl_symbol_font_name_x (SCM s_graph, SCM s_name)
     }
   c_graph->symbol_font_name = name;
   c_graph->owns_symbol_font_name = true;
-  /* apply it to data read from now on */
   c_graph->new_symbol_font_name = true;
+}
+
+SCM
+gupl_symbol_font_name_x (SCM s_graph, SCM s_name)
+{
+  graph_t *c_graph;
+  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "symbol-font-name!");
+  SCM_ASSERT (scm_is_string (s_name), s_name, SCM_ARG2, "symbol-font-name!");
+  c_graph = _scm_to_graph (s_graph);
+  set_symbol_font_name (c_graph, scm_to_locale_string (s_name));
+  return SCM_UNSPECIFIED;
+}
+
+/* (%dataset-style! graph symbol symbol-size symbol-font-name line-width
+                    fill-fraction use-color)
+   Set the style of the data read next, for graph's per-dataset options.
+   Every value is applied as given (a negative line width means libplot's
+   default, a negative fill fraction no filling), so graph can restore the
+   graph-wide defaults after a dataset that overrode them.  The linemode
+   is left alone, to keep auto-bumping.  */
+SCM
+gupl_dataset_style_x (SCM s_graph, SCM s_symbol, SCM s_symbol_size,
+                      SCM s_font_name, SCM s_line_width, SCM s_fill_fraction,
+                      SCM s_use_color)
+{
+  const char *who = "%dataset-style!";
+  graph_t *c_graph;
+
+  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, who);
+  SCM_ASSERT (scm_is_integer (s_symbol), s_symbol, SCM_ARG2, who);
+  SCM_ASSERT (scm_is_real (s_symbol_size), s_symbol_size, SCM_ARG3, who);
+  SCM_ASSERT (scm_is_string (s_font_name), s_font_name, SCM_ARG4, who);
+  SCM_ASSERT (scm_is_real (s_line_width), s_line_width, SCM_ARG5, who);
+  SCM_ASSERT (scm_is_real (s_fill_fraction), s_fill_fraction, SCM_ARG6, who);
+  SCM_ASSERT (scm_is_bool (s_use_color), s_use_color, SCM_ARG7, who);
+  c_graph = _scm_to_graph (s_graph);
+
+  c_graph->symbol_index = scm_to_int_arg (s_symbol);
+  c_graph->new_symbol = true;
+  c_graph->symbol_size = scm_to_double (s_symbol_size);
+  c_graph->new_symbol_size = true;
+  {
+    char *name = scm_to_locale_string (s_font_name);
+
+    if (c_graph->symbol_font_name
+        && strcmp (name, c_graph->symbol_font_name) == 0)
+      free (name);
+    else
+      set_symbol_font_name (c_graph, name);
+  }
+  c_graph->plot_line_width = scm_to_double (s_line_width);
+  c_graph->new_plot_line_width = true;
+  c_graph->fill_fraction = scm_to_double (s_fill_fraction);
+  c_graph->new_fill_fraction = true;
+  c_graph->use_color = scm_is_true (s_use_color);
+  c_graph->new_use_color = true;
   return SCM_UNSPECIFIED;
 }
 
@@ -2362,6 +2412,30 @@ gupl_graph_test (SCM s_graph, SCM s_name)
               ret);
         }
     }
+  else if (!strcmp (c_name, "point-styles"))
+    {
+      /* each stored point's style, as (linemode symbol symbol-size
+         line-width fill-fraction use-color symbol-font-name) */
+      int i;
+
+      ret = SCM_EOL;
+      for (i = c_graph->no_of_points - 1; i >= 0; i--)
+        {
+          const Point *pt = &c_graph->p[i];
+          ret = scm_cons (
+              scm_list_n (scm_from_int (pt->linemode),
+                          scm_from_int (pt->symbol),
+                          scm_from_double (pt->symbol_size),
+                          scm_from_double (pt->line_width),
+                          scm_from_double (pt->fill_fraction),
+                          scm_from_bool (pt->use_color),
+                          (pt->symbol_font_name
+                               ? scm_from_locale_string (pt->symbol_font_name)
+                               : SCM_BOOL_F),
+                          SCM_UNDEFINED),
+              ret);
+        }
+    }
   else if (!strcmp (c_name, "warnings"))
     ret = (c_graph->warnings.text
                ? scm_from_locale_string (c_graph->warnings.text)
@@ -2743,6 +2817,7 @@ gupl_graph_init (void)
       scm_c_define_gsubr ("symbol!", 1, 2, 0, gupl_symbol_x);
       // scm_c_define_gsubr ("reposition!", 4, 0, 0, gupl_reposition_x);
       scm_c_define_gsubr ("xy-data!", 3, 2, 0, gupl_xy_data_x);
+      scm_c_define_gsubr ("%dataset-style!", 7, 0, 0, gupl_dataset_style_x);
       scm_c_define_gsubr ("generate", 3, 0, 0, gupl_generate);
       scm_c_define_gsubr ("%graph-test", 2, 0, 0, gupl_graph_test);
     }
