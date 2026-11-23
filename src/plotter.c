@@ -110,6 +110,7 @@
    There is also a function end_polyline_and_flush(), which is useful for
    real-time display. */
 
+#include <limits.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
@@ -569,6 +570,22 @@ spacing_type (double incr)
     return S_UNKNOWN;
 }
 
+/* Most ticks we are willing to draw on one axis. */
+#define MAX_NUM_TICKS 1000
+
+/* Can the tick and subtick counts for [min,max] at this spacing be held in
+   an int, and are there few enough of them to draw?  Subticks are spaced up
+   to 10x more finely than ticks, so leave room for that. */
+static bool
+tick_counts_fit (double min, double max, double spacing)
+{
+  double limit = (double)(INT_MAX / 16);
+
+  return (spacing > 0.0 && fabs (min / spacing) < limit
+          && fabs (max / spacing) < limit
+          && (max - min) / spacing <= MAX_NUM_TICKS);
+}
+
 /* prepare_axis() fills in the Axis structure for an axis, and some of
  * the linear transformation variables in the Transform structure also.
  */
@@ -623,16 +640,35 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
     {
       if (spacing == 0.0) /* i.e., not specified by user */
         scale1 (min, max, &tick_spacing, &tick_spacing_type);
-      else /* luser is boss, don't use SCALE1 */
+      else if (tick_counts_fit (min, max, spacing))
+        /* luser is boss, don't use SCALE1 */
         {
           tick_spacing = spacing;
           tick_spacing_type = spacing_type (spacing);
+        }
+      else
+        {
+          fprintf (stderr,
+                   "%s: the tick spacing %g gives too many ticks, so it "
+                   "is ignored\n",
+                   progname, spacing);
+          scale1 (min, max, &tick_spacing, &tick_spacing_type);
         }
     }
 
   range = max - min; /* range is not negative */
 
-  if (round_to_next_tick) /* expand both limits to next tick */
+  /* If the tick counts still can't be represented (e.g. a narrow range far
+     from zero), draw no ticks rather than overflow an int below. */
+  bool no_ticks = !user_specified_subsubticks
+                  && !tick_counts_fit (min, max, tick_spacing);
+
+  if (no_ticks)
+    {
+      min_tick_count = 1; /* empty range */
+      max_tick_count = 0;
+    }
+  else if (round_to_next_tick) /* expand both limits to next tick */
     {
       if (user_specified_subsubticks)
         /* Special Case.  If user specified the `spacing' argument to -x or
@@ -680,7 +716,7 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
 
   /* Allow 5 subticks per tick if S_FIVE or S_TWO_FIVE, 2 if S_TWO.  Case
      S_ONE is special; we try 10, 5, and 2 in succession */
-  switch (tick_spacing_type)
+  switch (no_ticks ? S_UNKNOWN : tick_spacing_type)
     {
     case S_FIVE:
     case S_TWO_FIVE:
@@ -717,12 +753,20 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
   if (log_axis && lin_subtick_spacing <= 1.0)
     lin_subtick_spacing = 1.0;
 
-  min_lin_subtick_count
-      = (int)(ceil ((min - FUZZ * range) / lin_subtick_spacing));
-  max_lin_subtick_count
-      = (int)(floor ((max + FUZZ * range) / lin_subtick_spacing));
+  if (no_ticks)
+    {
+      min_lin_subtick_count = 1;
+      max_lin_subtick_count = 0;
+    }
+  else
+    {
+      min_lin_subtick_count
+          = (int)(ceil ((min - FUZZ * range) / lin_subtick_spacing));
+      max_lin_subtick_count
+          = (int)(floor ((max + FUZZ * range) / lin_subtick_spacing));
+    }
   have_lin_subticks
-      = ((tick_spacing_type != S_UNKNOWN /* S_UNKNOWN -> no subticks */
+      = ((!no_ticks && tick_spacing_type != S_UNKNOWN /* -> no subticks */
           && (max_lin_subtick_count - min_lin_subtick_count)
                  <= MAX_NUM_SUBTICKS)
              ? true
