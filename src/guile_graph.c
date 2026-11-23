@@ -1973,6 +1973,28 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
   return SCM_UNSPECIFIED;
 }
 
+/* Return an unbuffered stdio stream on a duplicate of file descriptor FD,
+   or NULL on failure.  The caller owns the stream and must fclose it.  */
+static FILE *
+dup_fd_to_unbuffered_file (int fd)
+{
+  int new_fd = dup (fd);
+  FILE *fp;
+
+  if (new_fd < 0)
+    return NULL;
+  fp = fdopen (new_fd, "w");
+  if (fp == NULL)
+    {
+      close (new_fd);
+      return NULL;
+    }
+  /* Don't buffer here, since the underlying Guile port also has
+     port buffering.  Double buffering causes problems.  */
+  setvbuf (fp, NULL, _IONBF, 0);
+  return fp;
+}
+
 SCM
 gupl_generate (SCM s_graph, SCM outp, SCM errp)
 {
@@ -1984,23 +2006,21 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
   SCM_ASSERT (scm_is_true (scm_output_port_p (errp)), errp, SCM_ARG3,
               "generate");
 
-  SCM outp_fileno = scm_fileno (outp);
-  int c_outp_fileno_orig = scm_to_int (outp_fileno);
-  int c_outp_fileno = dup (c_outp_fileno_orig);
-  FILE *c_outp = fdopen (c_outp_fileno, "w");
+  /* Look up both descriptors before opening anything, since scm_fileno
+     throws for ports that have no file descriptor.  */
+  int c_outp_fileno_orig = scm_to_int (scm_fileno (outp));
+  int c_errp_fileno_orig = scm_to_int (scm_fileno (errp));
+  FILE *c_outp, *c_errp;
 
-  SCM errp_fileno = scm_fileno (errp);
-  int c_errp_fileno_orig = scm_to_int (errp_fileno);
-  int c_errp_fileno = dup (c_errp_fileno_orig);
-  FILE *c_errp = fdopen (c_errp_fileno, "w");
-
-  /* Don't buffer port here, since the underlying Guile port also has
-     port buffering.  Double buffering causes problems.  */
-
-  if (c_outp)
-    setvbuf (c_outp, NULL, _IONBF, 0);
-  if (c_errp)
-    setvbuf (c_errp, NULL, _IONBF, 0);
+  c_outp = dup_fd_to_unbuffered_file (c_outp_fileno_orig);
+  if (c_outp == NULL)
+    scm_misc_error ("generate", "failed to duplicate output port", SCM_EOL);
+  c_errp = dup_fd_to_unbuffered_file (c_errp_fileno_orig);
+  if (c_errp == NULL)
+    {
+      fclose (c_outp);
+      scm_misc_error ("generate", "failed to duplicate error port", SCM_EOL);
+    }
 
   c_graph = _scm_to_graph (s_graph);
   if (c_graph->first_file_of_graph == false)
@@ -2046,6 +2066,8 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
                    &init))
               == NULL)
             {
+              fclose (c_outp);
+              fclose (c_errp);
               scm_misc_error ("generate",
                               "the graphing device could not be opened: ~S",
                               scm_list_1 (s_graph));
@@ -2144,6 +2166,10 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
                  progname);
       c_graph->multigrapher = NULL;
     }
+
+  /* the Plotter has been deleted, so nothing else writes to these */
+  fclose (c_outp);
+  fclose (c_errp);
   return SCM_UNSPECIFIED;
 }
 

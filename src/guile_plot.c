@@ -17,6 +17,15 @@
 static scm_t_bits plotter_tag;
 static scm_t_bits plparams_tag;
 
+/* A plotter smob owns its libplot Plotter and the two stdio streams the
+   Plotter writes to, so that all three can be released together.  */
+typedef struct
+{
+  plPlotter *plotter;
+  FILE *outp;
+  FILE *errp;
+} gupl_plotter_t;
+
 static int _scm_is_plparams (SCM x);
 static plPlotterParams *_scm_to_plparams (SCM x);
 static SCM _scm_from_plparams (plPlotterParams *x);
@@ -27,7 +36,7 @@ static int print_plparams (SCM x, SCM port, scm_print_state *pstate);
 
 static int _scm_is_plotter (SCM x);
 static plPlotter *_scm_to_plotter (SCM x);
-static SCM _scm_from_plotter (plPlotter *x);
+static SCM _scm_from_plotter (gupl_plotter_t *x);
 static SCM equalp_plotter (SCM x1, SCM x2);
 static SCM mark_plotter (SCM x);
 static size_t free_plotter (SCM x);
@@ -172,11 +181,11 @@ _scm_to_plotter (SCM x)
 {
   assert (_scm_is_plotter (x));
 
-  return (plPlotter *)SCM_SMOB_DATA (x);
+  return ((gupl_plotter_t *)SCM_SMOB_DATA (x))->plotter;
 }
 
 SCM
-_scm_from_plotter (plPlotter *x)
+_scm_from_plotter (gupl_plotter_t *x)
 {
   SCM s_plotter;
 
@@ -184,7 +193,7 @@ _scm_from_plotter (plPlotter *x)
 
   SCM_NEWSMOB (s_plotter, plotter_tag, x);
 
-  assert (x == (plPlotter *)SCM_SMOB_DATA (s_plotter));
+  assert (x == (gupl_plotter_t *)SCM_SMOB_DATA (s_plotter));
 
   return (s_plotter);
 }
@@ -193,10 +202,10 @@ _scm_from_plotter (plPlotter *x)
 SCM
 equalp_plotter (SCM x1, SCM x2)
 {
-  plPlotter *plotter1, *plotter2;
+  gupl_plotter_t *plotter1, *plotter2;
 
-  plotter1 = (plPlotter *)SCM_SMOB_DATA (x1);
-  plotter2 = (plPlotter *)SCM_SMOB_DATA (x2);
+  plotter1 = (gupl_plotter_t *)SCM_SMOB_DATA (x1);
+  plotter2 = (gupl_plotter_t *)SCM_SMOB_DATA (x2);
 
   if ((plotter1 == NULL) || (plotter2 == NULL))
     return SCM_BOOL_F;
@@ -216,15 +225,18 @@ mark_plotter (SCM x)
 size_t
 free_plotter (SCM x)
 {
-  plPlotter *plotter;
+  gupl_plotter_t *plotter;
 
   // assert (SCM_SMOB_PREDICATE (plotter_tag, x));
 
-  plotter = (plPlotter *)SCM_SMOB_DATA (x);
-  /* Plotters should already be null if delwin has been called on them */
+  plotter = (gupl_plotter_t *)SCM_SMOB_DATA (x);
   if (plotter != NULL)
     {
-      pl_deletepl_r (plotter);
+      /* delete the Plotter first: it may flush output to the streams */
+      pl_deletepl_r (plotter->plotter);
+      fclose (plotter->outp);
+      fclose (plotter->errp);
+      free (plotter);
       SCM_SET_SMOB_DATA (x, 0);
     }
 
@@ -234,7 +246,8 @@ free_plotter (SCM x)
 int
 print_plotter (SCM x, SCM port, scm_print_state *pstate)
 {
-  plPlotter *plotter = (plPlotter *)SCM_SMOB_DATA (x);
+  gupl_plotter_t *data = (gupl_plotter_t *)SCM_SMOB_DATA (x);
+  plPlotter *plotter = data ? data->plotter : NULL;
   char *str;
 
   assert (SCM_SMOB_PREDICATE (plotter_tag, x));
@@ -272,6 +285,7 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
   char *c_type;
   plPlotter *ret;
   plPlotterParams *c_param;
+  gupl_plotter_t *data;
   bool outp_opened = false;
   bool errp_opened = false;
 
@@ -280,31 +294,37 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
   SCM_ASSERT (scm_is_true (scm_output_port_p (errp)), errp, SCM_ARG3, "newpl");
   SCM_ASSERT (_scm_is_plparams (param), param, SCM_ARG4, "newpl");
 
-  SCM outp_fileno = scm_fileno (outp);
-  int c_outp_fileno_orig = scm_to_int (outp_fileno);
+  /* Do everything that can throw before opening any streams.  */
+  int c_outp_fileno_orig = scm_to_int (scm_fileno (outp));
+  int c_errp_fileno_orig = scm_to_int (scm_fileno (errp));
+  c_type = scm_to_locale_string (type);
+
   int c_outp_fileno = dup (c_outp_fileno_orig);
   FILE *c_outp;
 
   if (c_outp_fileno < 0)
-    scm_misc_error ("newpl", "failed to duplicate output port", SCM_EOL);
+    {
+      free (c_type);
+      scm_misc_error ("newpl", "failed to duplicate output port", SCM_EOL);
+    }
 
   c_outp = fdopen (c_outp_fileno, "w");
   if (c_outp == NULL)
     {
       close (c_outp_fileno);
+      free (c_type);
       scm_misc_error ("newpl", "failed to open duplicated output port",
                       SCM_EOL);
     }
   outp_opened = true;
 
-  SCM errp_fileno = scm_fileno (errp);
-  int c_errp_fileno_orig = scm_to_int (errp_fileno);
   int c_errp_fileno = dup (c_errp_fileno_orig);
   FILE *c_errp;
 
   if (c_errp_fileno < 0)
     {
       fclose (c_outp);
+      free (c_type);
       scm_misc_error ("newpl", "failed to duplicate error port", SCM_EOL);
     }
 
@@ -313,6 +333,7 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
     {
       close (c_errp_fileno);
       fclose (c_outp);
+      free (c_type);
       scm_misc_error ("newpl", "failed to open duplicated error port",
                       SCM_EOL);
     }
@@ -326,7 +347,6 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
   if (c_errp)
     setvbuf (c_errp, NULL, _IONBF, 0);
 
-  c_type = scm_to_locale_string (type);
   c_param = _scm_to_plparams (param);
 
   ret = pl_newpl_r (c_type, NULL, c_outp, c_errp, c_param);
@@ -342,7 +362,11 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
       return SCM_BOOL_F;
     }
 
-  return _scm_from_plotter (ret);
+  data = scm_malloc (sizeof (gupl_plotter_t));
+  data->plotter = ret;
+  data->outp = c_outp;
+  data->errp = c_errp;
+  return _scm_from_plotter (data);
 }
 
 static int
@@ -485,7 +509,7 @@ gupl_plot_init (void)
       scm_c_define_gsubr ("plparams?", 1, 0, 0, gupl_is_plparams_p);
       scm_c_define_gsubr ("newplparams", 0, 0, 0, gupl_newplparams);
 
-      plotter_tag = scm_make_smob_type ("plotter", sizeof (plPlotter *));
+      plotter_tag = scm_make_smob_type ("plotter", sizeof (gupl_plotter_t *));
       scm_set_smob_mark (plotter_tag, mark_plotter);
       scm_set_smob_free (plotter_tag, free_plotter);
       scm_set_smob_print (plotter_tag, print_plotter);
