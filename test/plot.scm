@@ -159,4 +159,20 @@
                (string-contains text "stroke-dashoffset=\"3.25\""))))
       (delete-file name))))
 
+(test-group "integer arguments"
+  (let ((p (newpl "svg" (open-output-file "/dev/null")
+                  (current-error-port) (newplparams))))
+    (openpl! p)
+    (test-equal "an integer-valued real is accepted" 0 (filltype! p 1.0))
+    (test-equal "as are integer-valued colors" 0 (pencolor! p 0.0 65535.0 0))
+    (test-equal "and marker types" 0 (marker! p 1 1 3.0 5))
+    (test-equal "a non-integer is still an error"
+      'wrong-type-arg
+      (catch #t (lambda () (filltype! p 1.5) 'no-error)
+        (lambda (key . args) key)))
+    (test-equal "coordinates too big for a C int use the float functions"
+      0 (line! p 0 0 10000000000 0))
+    (closepl! p)
+    (deletepl! p)))
+
 (test-end "plot.scm")

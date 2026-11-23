@@ -276,6 +276,14 @@ static void free_graph_allocations (graph_t *graph);
 void gupl_graph_init (void);
 static void reset_vec_reader (VecReader *reader);
 
+/* Convert an argument that must be an integer (checked with
+   scm_is_integer), accepting integer-valued reals such as 2.0.  */
+static int
+scm_to_int_arg (SCM x)
+{
+  return scm_to_int (scm_is_exact (x) ? x : scm_inexact_to_exact (x));
+}
+
 #define NEW_POINT_ARRAY_LENGTH(old_len)                                       \
   ((old_len) <= 0                                                             \
        ? 1024 /* an empty array must still grow */                            \
@@ -736,7 +744,7 @@ gupl_grid_style_x (SCM s_graph, SCM s_grid_style)
   SCM_ASSERT (scm_is_integer (s_grid_style), s_grid_style, SCM_ARG2,
               "grid-style!");
   c_graph = _scm_to_graph (s_graph);
-  c_graph->local_grid_style = scm_to_int (s_grid_style);
+  c_graph->local_grid_style = scm_to_int_arg (s_grid_style);
   if (c_graph->local_grid_style > 4 || c_graph->local_grid_style < 0)
     scm_out_of_range ("grid-style!", s_grid_style);
   switch (c_graph->local_grid_style)
@@ -783,7 +791,7 @@ gupl_clip_mode_x (SCM s_graph, SCM s_mode)
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "clip-mode!");
   SCM_ASSERT (scm_is_integer (s_mode), s_mode, SCM_ARG2, "clip-mode!");
   c_graph = _scm_to_graph (s_graph);
-  c_mode = scm_to_int (s_mode);
+  c_mode = scm_to_int_arg (s_mode);
   c_graph->local_clip_mode = c_mode;
   if (c_mode < 0 || c_mode > 2)
     scm_out_of_range ("clip-mode!", s_mode);
@@ -838,7 +846,7 @@ gupl_line_mode_x (SCM s_graph, SCM s_index)
   SCM_ASSERT (scm_is_integer (s_index), s_index, SCM_ARG2, "line-mode!");
   c_graph = _scm_to_graph (s_graph);
   c_graph->new_linemode = true;
-  c_index = scm_to_int (s_index);
+  c_index = scm_to_int_arg (s_index);
   c_graph->linemode_index = c_index;
   return SCM_UNSPECIFIED;
 }
@@ -1265,7 +1273,8 @@ gupl_symbol_x (SCM s_graph, SCM s_index, SCM s_size)
   if (SCM_UNBNDP (s_index))
     return SCM_UNSPECIFIED;
 
-  c_graph->local_symbol_index = scm_to_int (s_index);
+  SCM_ASSERT (scm_is_integer (s_index), s_index, SCM_ARG2, "symbol!");
+  c_graph->local_symbol_index = scm_to_int_arg (s_index);
   if (c_graph->local_symbol_index < 0 || c_graph->local_symbol_index > 255)
     scm_out_of_range ("symbol!", s_index);
   c_graph->symbol_index = c_graph->local_symbol_index;

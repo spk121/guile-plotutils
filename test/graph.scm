@@ -247,4 +247,9 @@
               '((1 1e12 1) (1 1000 0) (1 1000 -5) (1 1000 100)))
     #t))
 
+(test-equal "integer-valued reals are accepted as integers"
+  '(3 AXES_AND_BOX_AND_GRID)
+  (list (graph xvalues yvalues #:symbol 3.0 #:test "symbol_index")
+        (graph xvalues yvalues #:grid-style 3.0 #:test "grid_spec")))
+
 (test-end "graph.scm")

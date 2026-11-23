@@ -66,6 +66,7 @@ static size_t free_plotter (SCM x);
 static int print_plotter (SCM x, SCM port, scm_print_state *pstate);
 
 static int _scm_is_exact_integer (SCM x);
+static int _scm_to_int_arg (SCM x);
 
 int
 _scm_is_plparams (SCM x)
@@ -437,7 +438,17 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
 static int
 _scm_is_exact_integer (SCM x)
 {
-  return (scm_is_integer (x) && scm_is_false (scm_inexact_p (x)));
+  /* Coordinates that are exact integers go to libplot's int functions,
+     but only if they fit in an int; larger ones use the float functions. */
+  return scm_is_signed_integer (x, INT_MIN, INT_MAX);
+}
+
+/* Convert an argument that must be an integer (checked with
+   scm_is_integer), accepting integer-valued reals such as 2.0.  */
+static int
+_scm_to_int_arg (SCM x)
+{
+  return scm_to_int (scm_is_exact (x) ? x : scm_inexact_to_exact (x));
 }
 
 INT_FUNC_PL_INT_INT_STRING (gupl_alabel_x, "%alabel!", pl_alabel_r);
