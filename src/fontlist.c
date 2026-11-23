@@ -43,6 +43,16 @@
 static char spaces[MAX_FONTNAME_LEN + 1]
     = "                                   ";
 
+/* libplot's own `bool' type (from its sys-defines.h), which is an enum,
+   i.e. the size of an int, not the one-byte C99 bool.  The structures
+   below must use it, or they won't match libplot's layout and indexing
+   its font arrays reads garbage.  */
+typedef enum
+{
+  pl_false = 0,
+  pl_true = 1
+} pl_bool;
+
 /* The definitions of these structures are taken from ../libplot/extern.h.
    IF THOSE STRUCTURES CHANGE, THESE SHOULD TOO.
 
@@ -57,9 +67,9 @@ struct plHersheyFontInfoStruct
   short chars[256];      /* array of vector glyphs */
   int typeface_index;    /* default typeface for the font */
   int font_index;        /* which font within typeface this is */
-  bool obliquing;        /* whether to apply obliquing */
-  bool iso8859_1;        /* whether font encoding is iso8859-1 */
-  bool visible;          /* whether font is visible, i.e. not internal */
+  pl_bool obliquing;        /* whether to apply obliquing */
+  pl_bool iso8859_1;        /* whether font encoding is iso8859-1 */
+  pl_bool visible;          /* whether font is visible, i.e. not internal */
 };
 
 struct plPSFontInfoStruct
@@ -91,7 +101,7 @@ struct plPSFontInfoStruct
   int typeface_index;             /* default typeface for the font */
   int font_index;                 /* which font within typeface this is */
   int fig_id;                     /* Fig's font id */
-  bool iso8859_1;                 /* whether font encoding is iso8859-1 */
+  pl_bool iso8859_1;                 /* whether font encoding is iso8859-1 */
 };
 
 struct plPCLFontInfoStruct
@@ -119,13 +129,13 @@ struct plPCLFontInfoStruct
   short offset[256];              /* per-character left edge information */
   int typeface_index;             /* default typeface for the font */
   int font_index;                 /* which font within typeface this is */
-  bool iso8859_1;                 /* whether font encoding is iso8859-1 */
+  pl_bool iso8859_1;                 /* whether font encoding is iso8859-1 */
 };
 
 struct plStickFontInfoStruct
 {
   const char *ps_name;     /* the postscript font name */
-  bool basic;              /* basic stick font (supp. on all devices)? */
+  pl_bool basic;              /* basic stick font (supp. on all devices)? */
   int pcl_typeface;        /* the PCL typeface number */
   int hpgl_spacing;        /* 0=fixed width, 1=variable */
   int hpgl_posture;        /* 0=upright, 1=italic, etc. */
@@ -145,8 +155,8 @@ struct plStickFontInfoStruct
   int offset;              /* left edge (applies to all chars) */
   int typeface_index;      /* default typeface for the font */
   int font_index;          /* which font within typeface this is */
-  bool obliquing;          /* whether to apply obliquing */
-  bool iso8859_1;          /* encoding is iso8859-1? (after reencoding) */
+  pl_bool obliquing;          /* whether to apply obliquing */
+  pl_bool iso8859_1;          /* encoding is iso8859-1? (after reencoding) */
 };
 
 /* List of Plotter types we support getting font information from,
