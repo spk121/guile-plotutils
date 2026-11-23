@@ -219,13 +219,17 @@ In this section we'll be calling @code{graph} using lists of data. When
 using data, you either call @code{graph} with a single list of data, or
 create an xy plot using two lists of data.
 
+The default output format is GNU Plotutils metafile format, written to
+the current output port.  To see the plot in a window instead, ask for
+the X output format.
+
 @lisp
 (define x (list -1 0 1 2 3 4 5))
 (define y (list 1 2 1 2 1 2 1))
 ;; Plot the y data with an automatic abscissa
-(graph y)
+(graph y #:output-format "X")
 ;; Plot the x,y pairs
-(graph x y)
+(graph x y #:output-format "X")
 @end lisp
 
 You can also plot multiple graphs on the same axes using the @code{merge}
@@ -236,7 +240,7 @@ helper procedure.
 (define y2 (list  1 2 1 2 1 2 1))
 (define x2 (list -1 0 1 2 3 4 5))
 (define y2 (list  8 7 6 5 4 3 3))
-(graph (merge x1 x2) (merge y1 y2))
+(graph (merge x1 x2) (merge y1 y2) #:output-format "X")
 @end lisp
 
 @node Plotting Tutorial,  , Graphing Tutorial, Tutorial

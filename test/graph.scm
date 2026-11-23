@@ -6,6 +6,10 @@
 
 (define xvalues (iota 101 0 0.1))
 (define yvalues (map (lambda (x) (* x x)) xvalues))
+(test-equal "output-format defaults to meta"
+  "meta"
+  (graph xvalues yvalues
+         #:test "output_format"))
 (test-equal "output-format"
   "png"
   (graph xvalues yvalues

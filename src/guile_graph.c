@@ -320,7 +320,7 @@ initialize_struct_graph (graph_t *p)
 
   p->multigrapher = NULL;
 
-  p->output_format = "X"; /* by default, pop up X window */
+  p->output_format = "meta"; /* the documented default, as in GNU graph */
   p->bg_color = NULL;
   p->bitmap_size = NULL;
   p->emulate_color = NULL;
