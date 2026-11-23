@@ -63,6 +63,7 @@ GUPL_API SCM gupl_joinmod_x (SCM, SCM);
 GUPL_API SCM gupl_label_x (SCM, SCM);
 GUPL_API SCM gupl_labelwidth_x (SCM, SCM);
 GUPL_API SCM gupl_line_x (SCM, SCM, SCM, SCM, SCM);
+GUPL_API SCM gupl_linedash_x (SCM, SCM, SCM);
 GUPL_API SCM gupl_linemod_x (SCM, SCM);
 GUPL_API SCM gupl_linewidth_x (SCM, SCM);
 GUPL_API SCM gupl_linerel_x (SCM, SCM, SCM, SCM, SCM);

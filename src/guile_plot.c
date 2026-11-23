@@ -2,6 +2,7 @@
 #define _LARGEFILE64_SOURCE
 
 #include <assert.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -494,6 +495,58 @@ INT_FUNC_PL_STRING (gupl_label_x, "label!", pl_label_r);
 DOUBLE_FUNC_PL_STRING (gupl_labelwidth_x, "labelwidth!", pl_flabelwidth_r);
 INT_FUNC_PL_VAL_VAL_VAL_VAL (gupl_line_x, "line!", pl_line_r, pl_fline_r);
 INT_FUNC_PL_STRING (gupl_linemod_x, "linemod!", pl_linemod_r);
+
+/* (linedash! plotter dashes [offset]): DASHES is a list of real numbers
+   and OFFSET (default 0) a real number.  As with the other procedures,
+   libplot's integer version is used when every value is an exact integer
+   that fits in an int, and the floating-point version otherwise.  */
+SCM
+gupl_linedash_x (SCM s_plotter, SCM s_dashes, SCM s_offset)
+{
+  plPlotter *c_plotter;
+  long n, i;
+  bool all_int;
+  SCM rest;
+  int c_ret;
+
+  SCM_ASSERT (_scm_is_plotter (s_plotter), s_plotter, SCM_ARG1, "linedash!");
+  n = scm_ilength (s_dashes);
+  SCM_ASSERT (n >= 0, s_dashes, SCM_ARG2, "linedash!");
+  if (SCM_UNBNDP (s_offset))
+    s_offset = scm_from_int (0);
+  SCM_ASSERT (scm_is_real (s_offset), s_offset, SCM_ARG3, "linedash!");
+
+  /* Check every element before allocating, so nothing below can throw. */
+  all_int = scm_is_signed_integer (s_offset, INT_MIN, INT_MAX);
+  for (rest = s_dashes; !scm_is_null (rest); rest = scm_cdr (rest))
+    {
+      SCM x = scm_car (rest);
+      SCM_ASSERT (scm_is_real (x), s_dashes, SCM_ARG2, "linedash!");
+      if (!scm_is_signed_integer (x, INT_MIN, INT_MAX))
+        all_int = false;
+    }
+
+  c_plotter = _scm_to_plotter (s_plotter);
+  if (all_int)
+    {
+      int *dashes = scm_malloc ((n > 0 ? n : 1) * sizeof (int));
+      for (i = 0, rest = s_dashes; i < n; i++, rest = scm_cdr (rest))
+        dashes[i] = scm_to_int (scm_car (rest));
+      c_ret = pl_linedash_r (c_plotter, (int)n, dashes,
+                             scm_to_int (s_offset));
+      free (dashes);
+    }
+  else
+    {
+      double *dashes = scm_malloc ((n > 0 ? n : 1) * sizeof (double));
+      for (i = 0, rest = s_dashes; i < n; i++, rest = scm_cdr (rest))
+        dashes[i] = scm_to_double (scm_car (rest));
+      c_ret = pl_flinedash_r (c_plotter, (int)n, dashes,
+                              scm_to_double (s_offset));
+      free (dashes);
+    }
+  return scm_from_int (c_ret);
+}
 INT_FUNC_PL_VAL (gupl_linewidth_x, "linewidth!", pl_linewidth_r,
                  pl_flinewidth_r);
 INT_FUNC_PL_VAL_VAL_VAL_VAL (gupl_linerel_x, "linerel!", pl_linerel_r,
@@ -623,6 +676,7 @@ gupl_plot_init (void)
       scm_c_define_gsubr ("label!", 2, 0, 0, gupl_label_x);
       scm_c_define_gsubr ("labelwidth!", 2, 0, 0, gupl_labelwidth_x);
       scm_c_define_gsubr ("line!", 5, 0, 0, gupl_line_x);
+      scm_c_define_gsubr ("linedash!", 2, 1, 0, gupl_linedash_x);
       scm_c_define_gsubr ("linemod!", 2, 0, 0, gupl_linemod_x);
       scm_c_define_gsubr ("linerel!", 5, 0, 0, gupl_linerel_x);
       scm_c_define_gsubr ("linewidth!", 2, 0, 0, gupl_linewidth_x);

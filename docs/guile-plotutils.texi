@@ -1330,29 +1330,36 @@ the parameter @code{CGM_MAX_VERSION} is set to a value less @w{than
 "3"}.  @xref{Plotter Parameters}.
 @end deffn
 
-@deffn Procedure linedash! plotter n dashes offset
+@deffn Procedure linedash! plotter dashes [offset]
 @t{linedash!} terminates and draws the path under
-construction (@w{if any}), as if @t{endpath!} had been called, and set
+construction (@w{if any}), as if @t{endpath!} had been called, and sets
 the line style for all paths subsequently drawn on the graphics display.
-They provide much finer control of dash patterns than the @t{linemod!}
-function (see below) provides.  @var{dashes} should be an array of
-@w{length @var{n}}.  Its elements, which should be positive, are
-interpreted as distances in the user coordinate system.  Along any path,
-circle, or ellipse, the elements
-@var{dashes}[0]@dots{}@var{dashes}[@var{n}-1] alternately specify the
-length of a dash and the length of a gap between dashes.  When the end
-of the array is reached, the reading of the array wraps around to the
-beginning.  If the array is empty, i.e., @var{n} equals zero, there is
-no dashing: the drawn line is solid.
+It provides much finer control of dash patterns than the @t{linemod!}
+function (see below) provides.  @var{dashes} should be a list of
+numbers.  Its elements, which should be positive, are interpreted as
+distances in the user coordinate system.  Along any path, circle, or
+ellipse, the elements of @var{dashes} alternately specify the length of
+a dash and the length of a gap between dashes.  When the end of the list
+is reached, the reading of the list wraps around to the beginning.  If
+the list is empty, there is no dashing: the drawn line is solid.
 
-The @var{offset} argument specifies the `phase' of the dash pattern
-relative to the start of the path.  It is interpreted as the distance
-into the dash pattern at which the dashing should begin.  For example,
-if @var{offset} equals zero then the path will begin with a dash, of
-length @var{dashes}[0] in user space.  @w{If @var{offset}} equals
-@var{dashes}[0] then the path will begin with a gap of length
-@var{dashes}[1], and @w{so forth}.  @var{offset} is allowed to be
-negative.
+The optional @var{offset} argument (default 0) specifies the `phase' of
+the dash pattern relative to the start of the path.  It is interpreted
+as the distance into the dash pattern at which the dashing should begin.
+For example, if @var{offset} equals zero then the path will begin with a
+dash, whose length is the first element of @var{dashes}.  @w{If
+@var{offset}} equals the first element, then the path will begin with a
+gap whose length is the second element, and @w{so forth}.  @var{offset}
+is allowed to be negative.
+
+A negative return value indicates that the dash pattern was rejected,
+e.g.@: because one of its elements is negative.
+
+@lisp
+(linedash! plotter '(10 5))        ; dashes of 10, gaps of 5
+(linedash! plotter '(4 1 1 1) 2)   ; dash-dot, starting 2 units in
+(linedash! plotter '())            ; solid again
+@end lisp
 @end deffn
 
 Not all Plotters fully support @t{linedash!}.  PCL and

@@ -130,4 +130,33 @@
         (string-contains (file->string name) "%%EOF"))
       (delete-file name))))
 
+(test-group "linedash! takes a list of dash lengths"
+  (let-values (((port name) (temp-output-port)))
+    (let ((p (newpl "svg" port (current-error-port) (newplparams))))
+      (openpl! p)
+      (space! p 0 0 100 100)
+      (test-equal "integer dashes" 0 (linedash! p '(10 5)))
+      (line! p 0 0 100 100)
+      (test-equal "real dashes with an offset" 0 (linedash! p '(10.5 2.5) 3.25))
+      (line! p 0 100 100 0)
+      (test-equal "an empty list means solid" 0 (linedash! p '()))
+      (test-equal "a negative dash is rejected" -1 (linedash! p '(4 -1)))
+      (test-equal "a non-list is an error"
+        'wrong-type-arg
+        (catch #t (lambda () (linedash! p 5) 'no-error) (lambda (key . args) key)))
+      (test-equal "a non-number element is an error"
+        'wrong-type-arg
+        (catch #t (lambda () (linedash! p '(1 x)) 'no-error)
+          (lambda (key . args) key)))
+      (closepl! p)
+      (deletepl! p)
+      (close-port port)
+      (let ((text (file->string name)))
+        (test-assert "integer dash pattern reaches the output"
+          (string-contains text "stroke-dasharray=\"10, 5\""))
+        (test-assert "real dash pattern and offset reach the output"
+          (and (string-contains text "stroke-dasharray=\"10.5, 2.5\"")
+               (string-contains text "stroke-dashoffset=\"3.25\""))))
+      (delete-file name))))
+
 (test-end "plot.scm")

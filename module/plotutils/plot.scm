@@ -41,6 +41,7 @@
 	    label!
 	    labelwidth!
 	    line!
+	    linedash!
 	    linemod!
 	    linerel!
 	    linewidth!
