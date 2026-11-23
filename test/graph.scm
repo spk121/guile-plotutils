@@ -67,4 +67,10 @@
       'no-error)
     (lambda (key . args) key)))
 
+(test-equal "symbol given as a bare number"
+  5
+  (graph xvalues yvalues
+         #:symbol 5
+         #:test "symbol_index"))
+
 (test-end "graph.scm")

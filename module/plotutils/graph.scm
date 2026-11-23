@@ -207,7 +207,7 @@ the input lists with #f.  For example,
 	     (cond
 	      ((and (not (list? symbol)) (eq? symbol #t))
 	       (symbol! gr))
-	      ((and (not (real? symbol)) (real? symbol))
+	      ((and (not (list? symbol)) (real? symbol))
 	       (symbol! gr symbol))
 	      ((and (list? symbol) (= 1 (length symbol)))
 	       (symbol! gr (first symbol)))
