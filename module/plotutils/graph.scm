@@ -183,7 +183,8 @@ the input lists with #f.  For example,
      (if page-size
 	     (page-size! gr page-size))
      (if pen-colors
-	     (pen-colors! gr pen-colors))
+	     (unless (%set-pen-colors pen-colors)
+	       (error "graph: invalid #:pen-colors string" pen-colors)))
      (if title-font-name
 	     (title-font-name! gr title-font-name))
      (if auto-abscissa
@@ -288,3 +289,7 @@ the input lists with #f.  For example,
 
 
 (load-extension "libguile-plotutils" "gupl_graph_init")
+
+;; The #:pen-colors keyword argument of `graph' shadows the C procedure
+;; `pen-colors', so give the procedure another name.
+(define %set-pen-colors pen-colors)

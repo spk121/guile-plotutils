@@ -53,4 +53,18 @@
          #:symbol '(2 0.25)
          #:test "symbol_size"))
 
+(test-assert "pen-colors accepted"
+  (graph xvalues yvalues
+         #:pen-colors "1=red:2=green"
+         #:test "output_format"))
+(test-equal "pen-colors rejects a bad string"
+  'misc-error
+  (catch #t
+    (lambda ()
+      (graph xvalues yvalues
+             #:pen-colors "9=red"
+             #:test "output_format")
+      'no-error)
+    (lambda (key . args) key)))
+
 (test-end "graph.scm")
