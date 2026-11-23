@@ -1675,6 +1675,9 @@ head:
     /* got a point; if not, we just pass back the return code */
     {
       bool bad_point = false;
+      /* the point as given, for the warning (x and y may be replaced by
+         their logs below) */
+      double given_x = point->x, given_y = point->y;
 
       /* If we have log axes, the values we work with ALL refer to the log10
          values of the data.  A nonpositive value generates a warning, and a
@@ -1705,7 +1708,7 @@ head:
                        "%s: the inappropriate point (%g,%g) is dropped, as "
                        "this is a "
                        "log plot\n",
-                       progname, point->x, point->y);
+                       progname, given_x, given_y);
               reader->need_break = true;
               goto head; /* on to next point */
             }
@@ -1737,7 +1740,7 @@ head:
                        "%s: the inappropriate point (%g,%g) is dropped, as "
                        "this is a "
                        "log plot\n",
-                       progname, point->x, point->y);
+                       progname, given_x, given_y);
               reader->need_break = true;
               goto head; /* on to next point */
             }
