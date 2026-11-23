@@ -1670,6 +1670,9 @@ read_vector_dataset (VecReader *reader, Point **p_addr, int *length,
           old_length = *length;
           new_length = NEW_POINT_ARRAY_LENGTH (old_length);
           p = (Point *)xrealloc (p, new_length * sizeof (Point));
+          /* publish the new buffer immediately: reading a point can throw
+             a Scheme error, which would otherwise leave *p_addr dangling */
+          *p_addr = p;
           *length = new_length;
         }
 
