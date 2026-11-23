@@ -2192,6 +2192,8 @@ gupl_graph_test (SCM s_graph, SCM s_name)
     ret = scm_from_bool (c_graph->new_fill_fraction);
   else if (!strcmp (c_name, "new_use_color"))
     ret = scm_from_bool (c_graph->new_use_color);
+  else if (!strcmp (c_name, "no_of_points"))
+    ret = scm_from_int (c_graph->no_of_points);
   else if (!strcmp (c_name, "first_file_of_graph"))
     ret = scm_from_bool (c_graph->first_file_of_graph);
   else if (!strcmp (c_name, "first_graph_of_multigraph"))

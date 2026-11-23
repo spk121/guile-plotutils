@@ -73,4 +73,17 @@
          #:symbol 5
          #:test "symbol_index"))
 
+(test-equal "function plot includes both endpoints (default step)"
+  401
+  (graph (lambda (x) (* x x)) 0 1
+         #:test "no_of_points"))
+(test-equal "function plot includes both endpoints (explicit step)"
+  5
+  (graph (lambda (x) (* x x)) 0 1 1/4
+         #:test "no_of_points"))
+(test-equal "function plot endpoint survives float roundoff"
+  4
+  (graph (lambda (x) (* x x)) 0 0.3 0.1
+         #:test "no_of_points"))
+
 (test-end "graph.scm")

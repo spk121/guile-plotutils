@@ -261,11 +261,12 @@ the input lists with #f.  For example,
 
      ;; arg1 is a function. arg2 is x-min arg3 is x-max
      ((and (procedure? arg1) (real? arg2) (real? arg3) (not arg4))
+      ;; 400 intervals, i.e. 401 points including both endpoints
       (let* ((n 400)
 	         (xmin arg2)
 	         (xmax arg3)
 	         (step (/ (- xmax xmin) n))
-	         (xdata (iota n xmin step))
+	         (xdata (iota (+ n 1) xmin step))
 	         (ydata (map arg1 xdata)))
 	    (xy-data! gr xdata ydata)))
 
@@ -274,7 +275,11 @@ the input lists with #f.  For example,
       (let* ((xmin arg2)
 	         (xmax arg3)
 	         (step arg4)
-	         (n (inexact->exact (floor (/ (- xmax xmin) step))))
+	         ;; number of points from xmin up to and including xmax; the
+	         ;; small fuzz keeps e.g. (0 0.3 0.1) from losing 0.3 to
+	         ;; floating-point roundoff
+	         (n (+ 1 (inexact->exact
+		              (floor (+ (/ (- xmax xmin) step) 1e-9)))))
 	         (xdata (iota n xmin step))
 	         (ydata (map arg1 xdata)))
 	    (xy-data! gr xdata ydata)))
