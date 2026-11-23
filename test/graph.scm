@@ -154,4 +154,17 @@
       (delete-file name)
       (equal? text "HEADER"))))
 
+(test-equal "a large dataset is read completely"
+  20000
+  (graph (iota 20000) (iota 20000) #:test "no_of_points"))
+(test-equal "xy-data! checks that the data are lists"
+  'wrong-type-arg
+  (catch #t
+    (lambda ()
+      ((@@ (plotutils graph) xy-data!)
+       ((@@ (plotutils graph) new-graph))
+       (iota 3) (list->vector (iota 3)))
+      'no-error)
+    (lambda (key . args) key)))
+
 (test-end "graph.scm")

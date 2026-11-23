@@ -54,10 +54,12 @@ struct VecReaderStruct /* point reader datatype */
      affect the computation of the returned point structures */
   bool transpose_axes; /* x <-> y ? */
   int log_axis;        /* x,y axes are logarithmic? (portmanteau) */
-  SCM xvec;
+  SCM xvec;               /* the data lists given to xy-data! */
   SCM yvec;
   SCM yerrvec;
-  size_t i_vec;            /* index of current vector element */
+  SCM xcur;               /* the unread remainder of each list */
+  SCM ycur;
+  SCM yerrcur;
   data_type format_type;   /* stream format (T_ASCII, T_DOUBLE, etc.) */
   bool auto_abscissa;      /* auto-generate x values?  */
   double delta_x;          /* increment for x value, if auto-generated */
@@ -531,6 +533,9 @@ mark_graph (SCM x)
       scm_gc_mark (graph->reader->xvec);
       scm_gc_mark (graph->reader->yvec);
       scm_gc_mark (graph->reader->yerrvec);
+      scm_gc_mark (graph->reader->xcur);
+      scm_gc_mark (graph->reader->ycur);
+      scm_gc_mark (graph->reader->yerrcur);
     }
   return (SCM_BOOL_F);
 }
@@ -1485,10 +1490,9 @@ new_vec_reader (SCM s_xvec, SCM s_yvec, SCM s_yerrvec, data_type format_type,
   reader = (VecReader *)xmalloc (sizeof (VecReader));
 
   reader->need_break = true; /* next point will have pen up */
-  reader->xvec = s_xvec;
-  reader->yvec = s_yvec;
-  reader->yerrvec = s_yerrvec;
-  reader->i_vec = 0;
+  reader->xvec = reader->xcur = s_xvec;
+  reader->yvec = reader->ycur = s_yvec;
+  reader->yerrvec = reader->yerrcur = s_yerrvec;
   reader->format_type = format_type;
   reader->auto_abscissa = auto_abscissa;
   reader->delta_x = delta_x;
@@ -1518,10 +1522,10 @@ alter_vec_reader_parameters (
     bool new_line_width, bool new_fill_fraction, bool new_use_color)
 {
   reader->need_break = true; /* force break in polyline */
-  reader->xvec = s_xvec;
-  reader->yvec = s_yvec;
-  reader->yerrvec = s_yerrvec;
-  reader->i_vec = 0; /* start at the beginning of the new lists */
+  /* start at the beginning of the new lists */
+  reader->xvec = reader->xcur = s_xvec;
+  reader->yvec = reader->ycur = s_yvec;
+  reader->yerrvec = reader->yerrcur = s_yerrvec;
   reader->format_type = format_type;
   reader->auto_abscissa = auto_abscissa;
   reader->delta_x = delta_x;
@@ -1648,12 +1652,8 @@ read_vector_point (VecReader *reader, Point *point)
 
 head:
 
-  if (scm_is_true (scm_list_p (reader->yvec)))
-    status = read_point_from_list (reader, point);
-  // else if (scm_is_true (scm_f64vector_p (reader->yvec)))
-  // status = read_point_from_f64vector (reader, point);
-  else
-    scm_misc_error (NULL, "bad format", SCM_BOOL_F);
+  /* xy-data! has checked that the data are lists */
+  status = read_point_from_list (reader, point);
 
   if (status == IN_PROGRESS)
     /* got a point; if not, we just pass back the return code */
@@ -1755,12 +1755,28 @@ head:
   return status;
 }
 
+/* Return the next element of the list *CURSOR and advance the cursor, or
+   return SCM_UNDEFINED if the list is used up.  */
+static SCM
+take_list_element (SCM *cursor)
+{
+  SCM elt;
+
+  if (!scm_is_pair (*cursor))
+    return SCM_UNDEFINED;
+  elt = scm_car (*cursor);
+  *cursor = scm_cdr (*cursor);
+  return elt;
+}
+
+/* Read the next point from the data lists.  The lists are walked with
+   cursors, all advanced together, so reading n points takes O(n) time.  */
 static dataset_status_t
 read_point_from_list (VecReader *reader, Point *point)
 {
-  size_t i = reader->i_vec;
-
-  reader->i_vec++;
+  SCM sx = take_list_element (&reader->xcur);
+  SCM sy = take_list_element (&reader->ycur);
+  SCM syerr = take_list_element (&reader->yerrcur);
 
   /* read coordinate(s) */
   if (reader->auto_abscissa)
@@ -1770,58 +1786,30 @@ read_point_from_list (VecReader *reader, Point *point)
     }
   else
     {
-      size_t x_len = scm_to_size_t (scm_length (reader->xvec));
-      SCM sx;
-
-      if (i >= x_len)
+      if (SCM_UNBNDP (sx))
         return ENDED_BY_EOF;
-      sx = scm_list_ref (reader->xvec, scm_from_size_t (i));
-      if (sx == SCM_BOOL_F)
+      if (scm_is_false (sx))
         return ENDED_BY_DATASET_TERMINATOR;
       point->x = scm_to_double (sx);
     }
 
-  {
-    size_t y_len = scm_to_size_t (scm_length (reader->yvec));
-    SCM sy;
+  if (SCM_UNBNDP (sy))
+    return ENDED_BY_EOF;
+  if (scm_is_false (sy))
+    return ENDED_BY_DATASET_TERMINATOR;
+  point->y = scm_to_double (sy);
 
-    if (i >= y_len)
-      return ENDED_BY_EOF;
-    sy = scm_list_ref (reader->yvec, scm_from_size_t (i));
-    if (sy == SCM_BOOL_F)
-      return ENDED_BY_DATASET_TERMINATOR;
-    point->y = scm_to_double (sy);
-  }
-
-  /* Check for the optional y error bar data */
-  if (scm_is_true (scm_list_p (reader->yerrvec)))
-    {
-      size_t yerr_len = scm_to_size_t (scm_length (reader->yerrvec));
-      SCM syerr;
-      double error_size;
-
-      if (i >= yerr_len)
-        {
-          point->have_y_errorbar = false;
-        }
-      else
-        {
-          syerr = scm_list_ref (reader->yerrvec, scm_from_size_t (i));
-          if (syerr == SCM_BOOL_F)
-            {
-              point->have_y_errorbar = false;
-            }
-          else
-            {
-              point->have_y_errorbar = true;
-              error_size = scm_to_double (syerr);
-              point->ymin = point->y - error_size;
-              point->ymax = point->y + error_size;
-            }
-        }
-    }
-  else
+  /* the optional y error bar data */
+  if (SCM_UNBNDP (syerr) || scm_is_false (syerr))
     point->have_y_errorbar = false;
+  else
+    {
+      double error_size = scm_to_double (syerr);
+
+      point->have_y_errorbar = true;
+      point->ymin = point->y - error_size;
+      point->ymax = point->y + error_size;
+    }
 
   return IN_PROGRESS;
 }
@@ -1839,11 +1827,13 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
 {
   graph_t *c_graph;
 
-  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "xy-graph!");
-  // SCM_ASSERT (scm_is_true (scm_f64vector_p (s_xvec)), s_xvec, SCM_ARG2,
-  //"xy-graph!");
-  // SCM_ASSERT (scm_is_true (scm_f64vector_p (s_yvec)), s_yvec, SCM_ARG3,
-  // "xy-graph!");
+  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "xy-data!");
+  /* The x data may be #f when the abscissa is generated automatically.
+     Check the lists once here: the reader walks them without checks.  */
+  SCM_ASSERT (scm_is_false (s_xvec) || scm_is_true (scm_list_p (s_xvec)),
+              s_xvec, SCM_ARG2, "xy-data!");
+  SCM_ASSERT (scm_is_true (scm_list_p (s_yvec)), s_yvec, SCM_ARG3,
+              "xy-data!");
 
   c_graph = _scm_to_graph (s_graph);
 
