@@ -97,4 +97,10 @@
          #:rotation "180"
          #:test "rotation_angle"))
 
+(test-equal "title-font-size"
+  0.12
+  (graph xvalues yvalues
+         #:title-font-size 0.12
+         #:test "title_font_size"))
+
 (test-end "graph.scm")
