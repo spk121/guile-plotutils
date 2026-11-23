@@ -273,9 +273,11 @@ void gupl_graph_init (void);
 static void reset_vec_reader (VecReader *reader);
 
 #define NEW_POINT_ARRAY_LENGTH(old_len)                                       \
-  ((old_len) * sizeof (Point) < 10000000                                      \
-       ? 2 * (old_len)                                                        \
-       : (old_len) + 10000000 / sizeof (Point))
+  ((old_len) <= 0                                                             \
+       ? 1024 /* an empty array must still grow */                            \
+       : (old_len) * sizeof (Point) < 10000000                                \
+             ? 2 * (old_len)                                                  \
+             : (old_len) + (int)(10000000 / sizeof (Point)))
 
 void
 initialize_struct_graph (graph_t *p)

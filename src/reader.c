@@ -104,9 +104,11 @@
 /* New (larger) length of a Point array, as function of the old; used when
    reallocating due to exhaustion of storage. */
 #define NEW_POINT_ARRAY_LENGTH(old_len)                                       \
-  ((old_len) * sizeof (Point) < 10000000                                      \
-       ? 2 * (old_len)                                                        \
-       : (old_len) + 10000000 / sizeof (Point))
+  ((old_len) <= 0                                                             \
+       ? 1024 /* an empty array must still grow */                            \
+       : (old_len) * sizeof (Point) < 10000000                                \
+             ? 2 * (old_len)                                                  \
+             : (old_len) + (int)(10000000 / sizeof (Point)))
 
 struct ReaderStruct /* point reader datatype */
 {
