@@ -961,6 +961,16 @@ will ensure that a completed path is drawn on the graphics display
 without delay.
 @end deffn
 
+@deffn Procedure closepath! plotter
+@t{closepath!} is part of the libplot API: it is meant to close the
+simple path under construction, @w{if any}, by joining its last point
+to its first.  However, in libplot 4.4 it is not implemented: it
+returns 0 if the Plotter is open (and an error otherwise), but has no
+effect on the path.  To draw a closed polyline, end it with a
+@t{cont!} back to its starting point, or use @t{box!}, @t{circle!}, or
+@t{ellipse!}.
+@end deffn
+
 @deffn Procedure endsubpath! plotter
 @t{endsubpath!} terminates the simple path under construction, @w{if
 any}, and signals that the construction of the next simple path in a

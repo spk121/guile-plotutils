@@ -14,6 +14,7 @@
 	    capmod!
 	    circle!
 	    circlerel!
+	    closepath!
 	    closepl!
 	    color!
 	    colorname!

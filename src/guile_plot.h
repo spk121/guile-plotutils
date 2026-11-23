@@ -36,6 +36,7 @@ GUPL_API SCM gupl_boxrel_x (SCM, SCM, SCM, SCM, SCM);
 GUPL_API SCM gupl_capmod_x (SCM, SCM);
 GUPL_API SCM gupl_circle_x (SCM, SCM, SCM, SCM);
 GUPL_API SCM gupl_circlerel_x (SCM, SCM, SCM, SCM);
+GUPL_API SCM gupl_closepath_x (SCM);
 GUPL_API SCM gupl_closepl_x (SCM);
 GUPL_API SCM gupl_color_x (SCM, SCM, SCM, SCM);
 GUPL_API SCM gupl_colorname_x (SCM, SCM);

@@ -396,6 +396,7 @@ INT_FUNC_PL_STRING (gupl_capmod_x, "capmod!", pl_capmod_r);
 INT_FUNC_PL_VAL_VAL_VAL (gupl_circle_x, "circle!", pl_circle_r, pl_fcircle_r);
 INT_FUNC_PL_VAL_VAL_VAL (gupl_circlerel_x, "circlerel!", pl_circlerel_r,
                          pl_fcirclerel_r);
+INT_FUNC_PL (gupl_closepath_x, "closepath!", pl_closepath_r);
 INT_FUNC_PL (gupl_closepl_x, "closepl!", pl_closepl_r);
 INT_FUNC_PL_INT_INT_INT (gupl_color_x, "color!", pl_color_r);
 INT_FUNC_PL_STRING (gupl_colorname_x, "colorname!", pl_colorname_r);
@@ -531,6 +532,7 @@ gupl_plot_init (void)
       scm_c_define_gsubr ("capmod!", 2, 0, 0, gupl_capmod_x);
       scm_c_define_gsubr ("circle!", 4, 0, 0, gupl_circle_x);
       scm_c_define_gsubr ("circlerel!", 4, 0, 0, gupl_circlerel_x);
+      scm_c_define_gsubr ("closepath!", 1, 0, 0, gupl_closepath_x);
       scm_c_define_gsubr ("closepl!", 1, 0, 0, gupl_closepl_x);
       scm_c_define_gsubr ("color!", 4, 0, 0, gupl_color_x);
       scm_c_define_gsubr ("colorname!", 2, 0, 0, gupl_colorname_x);

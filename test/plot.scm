@@ -18,4 +18,16 @@
 (test-assert "linemod! is exported"
   (procedure? linemod!))
 
+(test-equal "closepath! returns 0 on an open plotter"
+  0
+  (let ((p (newpl "svg" (open-output-file "/dev/null")
+                  (current-error-port) (newplparams))))
+    (openpl! p)
+    (move! p 0 0)
+    (cont! p 1 0)
+    (cont! p 1 1)
+    (let ((ret (closepath! p)))
+      (closepl! p)
+      ret)))
+
 (test-end "plot.scm")
