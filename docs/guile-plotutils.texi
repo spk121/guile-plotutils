@@ -439,6 +439,22 @@ This plot shows numerical behavior of @math{zeta(s)} for real
 @verbatiminclude scripts/graph-zeta.scm
 @end example
 
+@subsection Daily Temperature Climatology
+
+This plot shows the mean temperature for each day of the year in a
+temperate European city, with error bars running from the day's mean
+minimum temperature to its mean maximum.  The data are synthetic.  The
+minima and maxima are absolute limits, so @code{bounds->errors} turns
+them into @code{(@var{lower} . @var{upper})} amounts for
+@samp{#:y-error}; a bar on every one of 365 days would be too dense, so
+@code{#f} leaves out all but one bar a week.
+
+@image{images/graph-temperature-climatology,,,,.png}
+
+@example
+@verbatiminclude scripts/graph-temperature-climatology.scm
+@end example
+
 @subsection Dragon Curve
 
 This plot draws the Heighway dragon, a recursive fractal related to the
