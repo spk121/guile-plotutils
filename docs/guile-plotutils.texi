@@ -2116,6 +2116,7 @@ procedure, a single procedure with dozens of options
 @deffnx Procedure graph xlist ylist
 @deffnx Procedure graph yproc xstart xend
 @deffnx Procedure graph yproc xstart xend xstep
+@deffnx Procedure graph datasets
 @t{graph} can take up to four arguments.
 
 To plot sampled data, @code{graph} is called either with one list or two
@@ -2129,6 +2130,9 @@ joined using the @code{merge} procedure.
 (graph (merge xlist1 xlist2) (merge ylist1 ylist2))
 @end example
 
+To give each set of data its own style, call @code{graph} with a list of
+datasets made by @code{dataset} (see below) instead.
+
 To plot a single-valued function -- a procedure that takes one numeric
 argument and returns one numeric argument -- @code{graph} can be called
 with a procedure and two or three arguments that define the x-range of
@@ -2138,8 +2142,11 @@ procedure: a few hundred points.  When @var{xstep} is included, it will
 be the step size of the samples.
 
 The graph is written to the port given by the @code{#:outp} keyword
-argument, and error messages to the port given by @code{#:errp}; they
-default to the current output and error ports.  As with @code{newpl},
+argument, and error messages and warnings (such as a note that a point
+was dropped from a logarithmic plot) to the port given by
+@code{#:errp}; they default to the current output and error ports.
+Invalid settings, such as a zero tick spacing or an infinite axis
+limit, raise a Scheme error instead.  As with @code{newpl},
 both must be backed by file descriptors, and anything already buffered
 in them is written out before the graph, so output written to the port
 before calling @code{graph} comes first.
@@ -2149,6 +2156,83 @@ the @samp{#:x-error} and @samp{#:y-error} options (@pxref{Plot
 Options}).
 
 There are a couple dozen optional parameters.
+@end deffn
+
+@deffn Procedure subgraph arguments @dots{}
+Configure a graph without drawing it.  @code{subgraph} takes the
+arguments @code{graph} takes (data and options), and returns the graph,
+to be drawn by @code{multigraph}.
+@end deffn
+
+@deffn Procedure multigraph graphs [options]
+Draw @var{graphs}, a list of graphs made by @code{subgraph}, on one page,
+like GNU @code{graph}'s @option{--reposition} option.  Each graph is
+drawn at the position and scale given by its @samp{#:reposition}
+option, in order; each after the first is drawn over a blanked-out
+background (see @samp{#:blankout}), so it can be an inset.
+
+@lisp
+(multigraph
+ (list (subgraph xs ys #:top-label "Whole range")
+       (subgraph xs2 ys2 #:reposition '(0.55 0.55 0.35)
+                 #:top-label "Detail"))
+ #:output-format "png" #:outp port)
+@end lisp
+
+The options of @code{multigraph} apply to the whole page:
+@samp{#:output-format}, @samp{#:bg-color}, @samp{#:bitmap-size},
+@samp{#:emulate-color}, @samp{#:max-line-length}, @samp{#:page-size},
+@samp{#:rotation}, @samp{#:portable-output}, @samp{#:save-screen},
+@samp{#:outp}, and @samp{#:errp}.  Any not given are taken from the
+first graph.  All other options, such as axis limits and labels, belong
+to each graph.
+@end deffn
+
+@deffn Procedure dataset ylist [options]
+@deffnx Procedure dataset xlist ylist [options]
+@deffnx Procedure dataset yproc xstart xend [xstep] [options]
+Make a dataset: one set of data, with its own style, for @code{graph}.
+The data take the same forms as @code{graph}'s: a list of y values (the
+x values are generated, as by @samp{#:auto-abscissa}), lists of x and y
+values, or a procedure with a range.  Pass @code{graph} a list of
+datasets to plot them together:
+
+@lisp
+(graph (list (dataset xs ys)
+             (dataset xs zs #:line-mode 0 #:symbol 3)
+             (dataset sin 0 10 #:line-width 0.005 #:use-color #t))
+       #:top-label "Three datasets")
+@end lisp
+
+These keyword options set the dataset's style.  They take the values
+the @code{graph} options of the same names take (@pxref{Plot Options}),
+and each one that is not given takes the value of @code{graph}'s
+option, or its default; so @code{graph}'s options set the style of every
+dataset, and a dataset's options change only that dataset.
+
+@table @code
+@item #:line-mode
+The linemode.  Without it, the dataset takes the linemode that
+auto-bumping (see @samp{#:toggle-auto-bump} in @ref{Plot Options}) would
+give it if no dataset had set one, so setting it for one dataset doesn't
+change the others.
+@item #:symbol
+The marker symbol, and optionally its size.
+@item #:line-width
+@itemx #:fill-fraction
+@itemx #:symbol-font-name
+As for @code{graph}.
+@item #:use-color
+@code{#t} to draw the dataset in color, @code{#f} in monochrome (the
+@code{graph} option is @samp{#:toggle-use-color}).
+@item #:x-error
+@itemx #:y-error
+Error bars for the dataset's points, as for @code{graph}.
+@end table
+@end deffn
+
+@deffn Procedure dataset? object
+Return @code{#t} if @var{object} is a dataset made by @code{dataset}.
 @end deffn
 
 @deffn Procedure merge list @dots{}
@@ -2321,6 +2405,13 @@ By default, the label is rotated, so that it is parallel to the
 @w{@math{y} axis}.  But some output devices (e.g., old @w{X Window}
 System displays, and buggy new ones) cannot handle rotated fonts.  So
 if you specify @samp{-T X}, you may also @w{need @samp{-Q}}.
+
+@item #:reposition (@var{x} @var{y} @var{scale})
+(Numbers, default @code{(0 0 1)}.)  Scale the whole graph, including its
+labels, by @var{scale}, and move its lower left corner to (@var{x},
+@var{y}), as fractions of the width and height of the page.  This is
+mostly for placing graphs drawn together by @code{multigraph}, such as
+an inset over a larger graph.  @var{scale} must be positive.
 
 @item #:right-shift @var{right}
 (Float, default 0.2.)  Move the plot to the right by a fractional amount
@@ -2561,8 +2652,10 @@ and Viewport Sizes}.
 @item #:pen-colors @var{colors}
 (String, default "1=red:2=green:3=blue:4=magenta:5=cyan".)  Set the
 colors of the pens used for drawing plots, as numbered, to be
-@var{colors}.  The format should be self-explanatory.  @w{An
-unrecognized} name sets the corresponding color to the default.  For
+@var{colors}.  The format should be self-explanatory.  The colors
+apply to this graph only.  A malformed string is an error, and changes
+no colors.  @w{An unrecognized} name sets the corresponding color to the
+default.  For
 information on what names are recognized, see @ref{Color Names}.
 
 @item #:rotation @var{angle}

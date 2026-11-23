@@ -48,7 +48,11 @@ GUPL_API SCM gupl_title_font_size_x (SCM s_graph, SCM s_font);
 GUPL_API SCM gupl_frame_line_width_x (SCM s_graph, SCM s_val);
 GUPL_API SCM gupl_max_line_length_x (SCM s_graph, SCM s_val);
 GUPL_API SCM gupl_page_size_x (SCM s_graph, SCM s_size);
-GUPL_API SCM gupl_pen_colors (SCM s_colors);
+GUPL_API SCM gupl_pen_colors_x (SCM s_graph, SCM s_colors);
+GUPL_API SCM gupl_dataset_style_x (SCM s_graph, SCM s_symbol,
+                                   SCM s_symbol_size, SCM s_font_name,
+                                   SCM s_line_width, SCM s_fill_fraction,
+                                   SCM s_use_color);
 GUPL_API SCM gupl_bg_color_x (SCM s_graph, SCM s_color);
 GUPL_API SCM gupl_frame_color_x (SCM s_graph, SCM s_color);
 GUPL_API SCM gupl_auto_abscissa_x (SCM s_graph, SCM s_delta_x, SCM s_x_start);
@@ -62,5 +66,6 @@ GUPL_API SCM gupl_reposition_x (SCM s_graph, SCM s_trans_x, SCM s_trans_y,
 GUPL_API SCM gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec, SCM s_xerr,
                               SCM s_yerr);
 GUPL_API SCM gupl_generate (SCM s_graph, SCM s_outp, SCM s_errp);
+GUPL_API SCM gupl_generate_multigraph (SCM s_graphs, SCM s_outp, SCM s_errp);
 GUPL_API SCM gupl_graph_test (SCM s_graph, SCM s_name);
 #endif

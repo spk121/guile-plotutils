@@ -262,4 +262,266 @@
       ;; binary metafiles start with "#PLOT 1", portable ones "#PLOT 2"
       (equal? header "#PLOT 2"))))
 
+;; Invalid axis settings raise Scheme errors.  (A zero tick spacing used
+;; to call exit(), ending the whole Guile process.)
+(define (generate-error-message . options)
+  (let ((null (open-output-file "/dev/null")))
+    (catch 'misc-error
+      (lambda ()
+        (apply graph '(1 2 3) '(1 4 9) #:output-format "svg" #:outp null
+               options)
+        #f)
+      (lambda (key subr message args . rest)
+        (apply format #f message args)))))
+
+(test-assert "a zero tick spacing is an error, not an exit"
+  (string-contains (generate-error-message #:x-limits '(0 10 0))
+                   "spacing between ticks"))
+(test-assert "an infinite axis limit is an error"
+  (string-contains (generate-error-message #:x-limits (list 0 +inf.0))
+                   "not finite"))
+(test-assert "a NaN axis limit is an error"
+  (string-contains (generate-error-message #:y-limits (list +nan.0 1))
+                   "not finite"))
+(test-assert "infinite data are an error"
+  (let ((null (open-output-file "/dev/null")))
+    (catch 'misc-error
+      (lambda ()
+        (graph '(1 2 3) (list 1 +inf.0 3) #:output-format "svg" #:outp null)
+        #f)
+      (lambda (key subr message args . rest)
+        (string-contains (apply format #f message args) "not finite")))))
+(test-assert "a nonpositive limit on a log axis is an error"
+  (string-contains (generate-error-message #:y-limits '(-1 10)
+                                           #:toggle-log-axis "y")
+                   "logarithmic axis"))
+(test-equal "valid limits still work"
+  #f
+  (generate-error-message #:x-limits '(0 10 2)))
+
+(define (errp-output . options)
+  "Generate a graph of points including a negative y value, returning
+what was written to its error port."
+  (let* ((null (open-output-file "/dev/null"))
+         (port (mkstemp! (string-copy "/tmp/gupl-test-XXXXXX")))
+         (name (port-filename port)))
+    (apply graph '(1 2 3) '(-1 10 100) #:output-format "svg"
+           #:outp null #:errp port options)
+    (close-port port)
+    (let ((text (call-with-input-file name
+                  (lambda (in) (read-delimited "" in)))))
+      (delete-file name)
+      (if (eof-object? text) "" text))))
+
+(test-assert "a point dropped from a log plot is reported on #:errp"
+  (string-contains (errp-output #:toggle-log-axis "y")
+                   "inappropriate point (1,-1)"))
+(test-assert "plotter warnings are written to #:errp"
+  (string-contains (errp-output #:x-limits '(1 3 1e-9))
+                   "gives too many ticks"))
+(test-assert "the too-few-ticks warning is given for each graph"
+  (and (string-contains (errp-output #:toggle-log-axis "y") "too few")
+       (string-contains (errp-output #:toggle-log-axis "y") "too few")))
+(test-assert "reading warnings wait for generate"
+  (string-contains (graph '(1 2 3) '(-1 10 100)
+                          #:toggle-log-axis "y" #:test "warnings")
+                   "inappropriate point"))
+
+(define (first-line-color . options)
+  "The stroke color of the first polyline in an SVG graph."
+  (let* ((port (mkstemp! (string-copy "/tmp/gupl-test-XXXXXX")))
+         (name (port-filename port)))
+    (apply graph '(1 2 3) '(1 4 9) #:output-format "svg"
+           #:toggle-use-color #t #:outp port options)
+    (close-port port)
+    (let* ((svg (call-with-input-file name (lambda (in) (read-delimited "" in))))
+           (line (string-contains svg "<polyline"))
+           (start (+ 8 (string-contains svg "stroke=\"" line))))
+      (delete-file name)
+      (substring svg start (string-index svg #\" start)))))
+
+(test-equal "pen-colors sets the line color" "blue"
+  (first-line-color #:pen-colors "1=blue"))
+(test-equal "pen-colors doesn't carry over to the next graph" "red"
+  (first-line-color))
+(test-equal "a rejected pen-colors string changes nothing" "red"
+  (begin
+    (catch 'misc-error
+      (lambda () (first-line-color #:pen-colors "1=green:9=x"))
+      (lambda args #f))
+    (first-line-color)))
+
+;; Changing the symbol font between datasets: points already read keep
+;; their font (its name used to be freed under them), and the new font
+;; applies to later data (it used to be ignored).
+(test-assert "each dataset keeps its own symbol font"
+  (let* ((internal (lambda (name) (module-ref (resolve-module '(plotutils graph)) name)))
+         (g ((internal 'new-graph)))
+         (port (mkstemp! (string-copy "/tmp/gupl-test-XXXXXX")))
+         (name (port-filename port)))
+    ((internal 'output-format!) g "svg")
+    ((internal 'symbol!) g 65 0.05)
+    ((internal 'symbol-font-name!) g "Times-Roman")
+    ((internal 'xy-data!) g '(1 2 3) '(1 2 3))
+    ((internal 'symbol-font-name!) g "Courier")
+    ((internal 'xy-data!) g '(1 2 3) '(3 2 1))
+    ((internal 'generate) g port port)
+    (close-port port)
+    (let ((svg (call-with-input-file name (lambda (in) (read-delimited "" in)))))
+      (delete-file name)
+      (and (string-contains svg "font-family=\"Times-Roman")
+           (string-contains svg "font-family=\"Courier")))))
+
+;;; Datasets.  "point-styles" gives each point's style as (linemode symbol
+;;; symbol-size line-width fill-fraction use-color symbol-font-name).
+
+(define (first-style-of-each-dataset styles points-per-dataset)
+  "The style of the first point of each dataset of POINTS-PER-DATASET points."
+  (let loop ((styles styles) (acc '()))
+    (if (null? styles)
+        (reverse acc)
+        (loop (list-tail styles points-per-dataset) (cons (car styles) acc)))))
+
+(define (dataset-styles . args)
+  (first-style-of-each-dataset
+   (apply graph (append args '(#:test "point-styles")))
+   3))
+
+(test-assert "dataset makes a dataset"
+  (dataset? (dataset '(1 2 3) '(4 5 6))))
+(test-equal "dataset checks its data"
+  'misc-error
+  (catch #t (lambda () (dataset "no data") 'no-error)
+    (lambda (key . args) key)))
+(test-equal "dataset checks its options"
+  'misc-error
+  (catch #t (lambda () (dataset '(1 2) #:symbol 300) 'no-error)
+    (lambda (key . args) key)))
+
+(test-equal "each dataset gets its own style; unset options take graph's"
+  '((1 0 0.03 -0.001 -1.0 #f "ZapfDingbats")
+    (0 3 0.05 -0.001 -1.0 #f "ZapfDingbats")
+    (3 0 0.03 0.01 0.5 #t "Courier"))
+  (dataset-styles (list (dataset '(1 2 3) '(1 2 3))
+                        (dataset '(1 2 3) '(2 3 4) #:line-mode 0 #:symbol '(3 0.05))
+                        (dataset '(1 2 3) '(3 4 5) #:line-width 0.01
+                                 #:fill-fraction 0.5 #:use-color #t
+                                 #:symbol-font-name "Courier"))))
+
+(test-equal "graph-level options are the defaults for every dataset"
+  '((2 5 0.02 0.004 -1.0 #t "ZapfDingbats")
+    (3 5 0.02 0.004 -1.0 #f "ZapfDingbats"))
+  (dataset-styles (list (dataset '(1 2 3) '(1 2 3))
+                        (dataset '(1 2 3) '(2 3 4) #:use-color #f))
+                  #:line-mode 2 #:symbol '(5 0.02) #:line-width 0.004
+                  #:toggle-use-color #t))
+
+(test-equal "a dataset's linemode doesn't change the auto-bumping of later ones"
+  '(1 0 3)
+  (map car
+       (dataset-styles (list (dataset '(1 2 3) '(1 2 3))
+                             (dataset '(1 2 3) '(1 2 3) #:line-mode 0)
+                             (dataset '(1 2 3) '(1 2 3))))))
+
+(test-equal "datasets merged into one dataset's lists count for auto-bumping"
+  '(1 2 3)
+  (map car
+       (first-style-of-each-dataset
+        (graph (list (dataset (merge '(1 2 3) '(1 2 3)) (merge '(1 2 3) '(1 2 3)))
+                     (dataset '(1 2 3) '(1 2 3)))
+               #:test "point-styles")
+        3)))
+
+(test-equal "a dataset of y values alone gets an automatic abscissa"
+  '((0.0 5.0) (1.0 6.0) (10.0 1.0) (20.0 2.0))
+  (map (lambda (p) (list (first p) (second p)))
+       (graph (list (dataset '(5 6)) (dataset '(10 20) '(1 2)))
+              #:test "points")))
+
+(test-equal "error bars per dataset, or graph's for datasets without"
+  '((9.0 11.0) (19.0 21.0) (29.5 30.5) (39.5 40.5))
+  (map (lambda (p) (list (fifth p) (sixth p)))
+       (graph (list (dataset '(1 2) '(10 20) #:y-error 1)
+                    (dataset '(3 4) '(30 40)))
+              #:y-error 0.5 #:test "points")))
+
+(test-assert "a graph of datasets can be generated"
+  (let* ((port (mkstemp! (string-copy "/tmp/gupl-test-XXXXXX")))
+         (name (port-filename port)))
+    (graph (list (dataset '(1 2 3) '(1 4 9))
+                 (dataset (lambda (x) (* 2 x)) 0 3 #:symbol 3))
+           #:output-format "svg" #:outp port)
+    (close-port port)
+    (let ((size (stat:size (stat name))))
+      (delete-file name)
+      (> size 0))))
+
+;;; Multigraphs
+
+(define (svg-of thunk)
+  "The SVG that THUNK, given an output port, writes."
+  (let* ((port (mkstemp! (string-copy "/tmp/gupl-test-XXXXXX")))
+         (name (port-filename port)))
+    (thunk port)
+    (close-port port)
+    (let ((svg (call-with-input-file name (lambda (in) (read-delimited "" in)))))
+      (delete-file name)
+      svg)))
+
+(define (count-occurrences pattern text)
+  (let loop ((start 0) (n 0))
+    (let ((k (string-contains text pattern start)))
+      (if k (loop (+ k 1) (+ n 1)) n))))
+
+(test-equal "multigraph draws every subgraph on one page"
+  2
+  (count-occurrences
+   "<polyline"
+   (svg-of (lambda (port)
+             (multigraph (list (subgraph '(1 2 3) '(1 4 9))
+                               (subgraph '(1 2 3) '(9 4 1)
+                                         #:reposition '(0.5 0.5 0.4)))
+                         #:output-format "svg" #:outp port)))))
+
+(test-assert "each subgraph keeps its own pen colors"
+  (let ((svg (svg-of (lambda (port)
+                       (multigraph
+                        (list (subgraph '(1 2 3) '(1 4 9) #:toggle-use-color #t
+                                        #:pen-colors "1=blue")
+                              (subgraph '(1 2 3) '(9 4 1) #:toggle-use-color #t
+                                        #:reposition '(0.5 0.5 0.4)))
+                        #:output-format "svg" #:outp port)))))
+    (and (string-contains svg "stroke=\"blue\"")
+         (string-contains svg "stroke=\"red\""))))
+
+(test-assert "graph accepts #:reposition"
+  (string-contains (svg-of (lambda (port)
+                             (graph '(1 2 3) '(1 4 9) #:reposition '(0.25 0.25 0.5)
+                                    #:output-format "svg" #:outp port)))
+                   "<polyline"))
+
+(test-equal "#:reposition must be a list of three numbers"
+  'misc-error
+  (catch #t (lambda () (subgraph '(1 2) '(1 2) #:reposition '(0.5 0.5)) 'no-error)
+    (lambda (key . args) key)))
+(test-equal "the #:reposition scale must be positive"
+  'out-of-range
+  (catch #t (lambda () (subgraph '(1 2) '(1 2) #:reposition '(0 0 0)) 'no-error)
+    (lambda (key . args) key)))
+(test-equal "multigraph needs a list of subgraphs"
+  'misc-error
+  (catch #t (lambda () (multigraph (list "not a graph")) 'no-error)
+    (lambda (key . args) key)))
+(test-assert "an invalid axis in a later subgraph is a Scheme error"
+  (let ((null (open-output-file "/dev/null")))
+    (catch 'misc-error
+      (lambda ()
+        (multigraph (list (subgraph '(1 2 3) '(1 4 9))
+                          (subgraph '(1 2 3) '(1 4 9) #:x-limits '(0 10 0)
+                                    #:reposition '(0.5 0.5 0.4)))
+                    #:output-format "svg" #:outp null)
+        #f)
+      (lambda (key subr message args . rest)
+        (string-contains (apply format #f message args) "spacing")))))
+
 (test-end "graph.scm")

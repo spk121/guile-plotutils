@@ -23,8 +23,8 @@
 
 extern const char *progname; /* program name */
 
-/* Definition of the Point structure.  The point-reader (in reader.c)
-   returns a list of these from a specified input stream, and the
+/* Definition of the Point structure.  The point-reader (in guile_graph.c)
+   returns a list of these from the data lists given to xy-data!, and the
    multigrapher (in plotter.c) interprets them as polyline vertices, and
    plots the resulting polyline(s).  Each polyline comprises a run of
    points, each (except the first) connected to the previous point,
@@ -89,7 +89,7 @@ enum
 
 /* types of line */
 extern const char *linemodes[NO_OF_LINEMODES];
-extern const char *colorstyle[NO_OF_LINEMODES];
+extern const char *const colorstyle[NO_OF_LINEMODES]; /* the defaults */
 
 /*----------------- prototypes for functions in plotter.h -------------------*/
 
@@ -108,6 +108,10 @@ typedef struct
   const char *page_size;
   const char *rotation_angle;
   bool save_screen;
+  /* pen colors for linemodes 1..NO_OF_LINEMODES, a NULL entry (or a NULL
+     array) meaning the default; the strings must outlive the
+     Multigrapher */
+  const char *const *pen_colors;
 } multigrapher_create_init;
 
 typedef struct
@@ -161,7 +165,10 @@ extern void begin_graph (Multigrapher *multigrapher, double scale,
 
 extern void end_graph (Multigrapher *multigrapher);
 
-extern void set_graph_parameters (const set_graph_parameters_init *init);
+extern bool set_graph_parameters (const set_graph_parameters_init *init);
+extern const char *multigrapher_error (const Multigrapher *multigrapher);
+extern void set_pen_colors (Multigrapher *multigrapher,
+                            const char *const *pen_colors);
 
 extern void draw_frame_of_graph (Multigrapher *multigrapher, bool draw_canvas);
 
@@ -171,64 +178,6 @@ extern void plot_point_array (Multigrapher *multigrapher, const Point *p,
                               int length);
 
 extern void end_polyline_and_flush (Multigrapher *multigrapher);
-
-/*----------------- prototypes for functions in reader.h -------------------*/
-
-typedef struct ReaderStruct Reader;
-
-typedef struct
-{
-  FILE *input;
-  data_type input_type;
-  bool auto_abscissa;
-  double delta_x;
-  double abscissa;
-  bool transpose_axes;
-  int log_axis;
-  bool auto_bump;
-  int symbol;
-  double symbol_size;
-  const char *symbol_font_name;
-  int linemode;
-  double line_width;
-  double fill_fraction;
-  bool use_color;
-} reader_init;
-
-typedef struct
-{
-  FILE *input;
-  data_type input_type;
-  bool auto_abscissa;
-  double delta_x;
-  double abscissa;
-  int symbol;
-  double symbol_size;
-  const char *symbol_font_name;
-  int linemode;
-  double line_width;
-  double fill_fraction;
-  bool use_color;
-  bool new_symbol;
-  bool new_symbol_size;
-  bool new_symbol_font_name;
-  bool new_linemode;
-  bool new_line_width;
-  bool new_fill_fraction;
-  bool new_use_color;
-} reader_update;
-
-extern Reader *new_reader (const reader_init *init);
-
-extern void delete_reader (Reader *reader);
-
-extern void read_file (Reader *reader, Point **p, int *length,
-                       int *no_of_points);
-
-extern void read_and_plot_file (Reader *reader, Multigrapher *multigrapher);
-
-extern void alter_reader_parameters (Reader *reader,
-                   const reader_update *update);
 
 /*----------------- prototypes for functions in misc.h -------------------*/
 
