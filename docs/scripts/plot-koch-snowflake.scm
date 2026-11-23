@@ -71,10 +71,13 @@
       (bgcolorname! plotter "white")
       (pencolorname! plotter "navy")
 
-      ;; Position at top-left of the snowflake
+      ;; Start at the left end of the triangle's top edge, heading right.
+      ;; Traversed clockwise, a triangle of side L with this top edge
+      ;; gives a snowflake spanning that edge's width and centred
+      ;; L*sqrt(3)/6 below it, so this centres the snowflake on (400, 400).
       (set! *x* 100.0)
-      (set! *y* 650.0)
-      (set! *angle* -60.0)
+      (set! *y* (+ 400.0 (* 600.0 (/ (sqrt 3.0) 6.0))))
+      (set! *angle* 0.0)
       (move! plotter *x* *y*)
 
       (koch-snowflake 600.0 5)
