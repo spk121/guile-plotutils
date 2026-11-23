@@ -2315,7 +2315,12 @@ gupl_graph_test (SCM s_graph, SCM s_name)
 #endif
 
   else if (!strcmp (c_name, "font_name"))
-    ret = scm_from_latin1_string (c_graph->font_name);
+    {
+      if (c_graph->font_name)
+        ret = scm_from_latin1_string (c_graph->font_name);
+      else
+        ret = SCM_BOOL_F;
+    }
 
 #if 0
   const char *title_font_name; /* title font name, NULL -> default */
