@@ -134,11 +134,12 @@ which can plot data or functions on a set of xy axes.
 @lisp
 (use-modules (plotutils graph))
 (define xvalues (iota 101 0 0.1))
-(with-output-to-port ``tmp.png''
+(define yvalues (map (lambda (x) (* x x)) xvalues))
+(with-output-to-file "tmp.png"
   (lambda ()
     (graph xvalues yvalues
-           #:output-format ``png''
-           #:top-label ``Title''))
+           #:output-format "png"
+           #:top-label "Title"))
   #:binary #t)
 @end lisp 
 
@@ -237,7 +238,7 @@ helper procedure.
 
 @lisp
 (define x1 (list -1 0 1 2 3 4 5))
-(define y2 (list  1 2 1 2 1 2 1))
+(define y1 (list  1 2 1 2 1 2 1))
 (define x2 (list -1 0 1 2 3 4 5))
 (define y2 (list  8 7 6 5 4 3 3))
 (graph (merge x1 x2) (merge y1 y2) #:output-format "X")
@@ -904,7 +905,7 @@ new path.  In all cases the graphics cursor is moved to (@var{x},
 @end deffn
 
 @deffn Procedure ellarc! plotter xc yc x0 y0 x1 y1
-@deffnx Procedure ellarcrel! plotter xc yc x0 y1 x1 y1
+@deffnx Procedure ellarcrel! plotter xc yc x0 y0 x1 y1
 @t{ellarc!} takes six arguments specifying the three
 points @code{pc}=(@var{xc},@var{yc}), @code{p0}=(@var{x0},@var{y0}), and
 @code{p1}=(@var{x1},@var{y1}) that define a so-called quarter ellipse.
@@ -1229,7 +1230,7 @@ The default font name depends on the type of Plotter.  @w{It is}
 "Helvetica" for all Plotters except for PCL Plotters, for which it is
 "Univers", and PNG, PNM, GIF, HP-GL, ReGIS, Tektronix and Metafile
 Plotters, for which it is "HersheySerif".  @w{If the} argument
-@var{font-name} is NULL or the empty string, or the font is not
+@var{font-name} is the empty string, or the font is not
 available, the default font name will be used.  Which fonts are
 available also depends on the type of Plotter; for a list of all
 available fonts, see @ref{Text Fonts}.
@@ -1550,7 +1551,7 @@ same as NDC coordinates.  This transformation matrix is also altered by
 functions.
 @end deffn
 
-@deffn Procedure concat m0 m1 m2 m3 tx ty
+@deffn Procedure concat! plotter m0 m1 m2 m3 tx ty
 Modify the transformation matrix from user space to NDC space by
 pre-multiplying it by the matrix [@var{m0} @var{m1} @var{m2} @var{m3}
 @var{tx} @var{ty}].  Equivalently, apply the linear transformation
