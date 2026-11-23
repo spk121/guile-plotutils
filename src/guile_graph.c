@@ -1438,71 +1438,7 @@ gupl_reposition_x (SCM s_graph, SCM s_trans_x, SCM s_trans_y, SCM s_scale)
 void
 pre_finalize_axes_parameters (graph_t *c_graph)
 {
-  /* Set up the axes parameters, just in case the user has provided
-     enough information about the plot so that the axes don't have to
-     be computed automatically */
-
-  if (c_graph->log_axis & X_AXIS)
-    {
-      if (c_graph->spec_min_x)
-        {
-          if (c_graph->min_x > 0.0)
-            c_graph->min_x = log10 (c_graph->min_x);
-          else
-            {
-              fprintf (stderr,
-                       "%s: error: the limit %g on a logarithmic axis is "
-                       "nonpositive\n",
-                       progname, c_graph->min_x);
-              // return EXIT_FAILURE;
-            }
-        }
-      if (c_graph->spec_max_x)
-        {
-          if (c_graph->max_x > 0.0)
-            c_graph->max_x = log10 (c_graph->max_x);
-          else
-            {
-              fprintf (stderr,
-                       "%s: error: the limit %g on a logarithmic axis is "
-                       "nonpositive\n",
-                       progname, c_graph->max_x);
-              // return EXIT_FAILURE;
-            }
-        }
-    }
-
-  if (c_graph->log_axis & Y_AXIS)
-    {
-      if (c_graph->spec_min_y)
-        {
-          if (c_graph->min_y > 0.0)
-            c_graph->min_y = log10 (c_graph->min_y);
-          else
-            {
-              fprintf (stderr,
-                       "%s: error: the limit %g on a logarithmic axis is "
-                       "nonpositive\n",
-                       progname, c_graph->min_y);
-              // return EXIT_FAILURE;
-            }
-        }
-      if (c_graph->spec_max_y)
-        {
-          if (c_graph->max_y > 0.0)
-            c_graph->max_y = log10 (c_graph->max_y);
-          else
-            {
-              fprintf (stderr,
-                       "%s: error: the limit %g on a logarithmic axis is "
-                       "nonpositive\n",
-                       progname, c_graph->max_y);
-              // return EXIT_FAILURE;
-            }
-        }
-    }
-
-  /* We now finalize the following parameters (arguments to
+  /* Finalize the following parameters (arguments to
      set_graph_parameters()), even though we won't call
      set_graph_parameters() for a while yet, if it turns out we
      need to act as a real-time filter. */
@@ -1529,6 +1465,26 @@ pre_finalize_axes_parameters (graph_t *c_graph)
   c_graph->final_spec_max_y = c_graph->spec_max_y;
   c_graph->final_spacing_y = c_graph->spacing_y;
   c_graph->final_spec_spacing_y = c_graph->spec_spacing_y;
+
+  /* On log axes the plotter works with log10 of the user's limits.
+     Convert only the final_ copies: the user's values must survive
+     unchanged so that the next graph doesn't take the log twice. */
+#define LOG_LIMIT(AXIS, SPEC, VAL)                                            \
+  if ((c_graph->log_axis & (AXIS)) && c_graph->SPEC)                          \
+    {                                                                         \
+      if (c_graph->VAL > 0.0)                                                 \
+        c_graph->VAL = log10 (c_graph->VAL);                                  \
+      else                                                                    \
+        fprintf (stderr,                                                      \
+                 "%s: error: the limit %g on a logarithmic axis is "          \
+                 "nonpositive\n",                                             \
+                 progname, c_graph->VAL);                                     \
+    }
+  LOG_LIMIT (X_AXIS, final_spec_min_x, final_min_x);
+  LOG_LIMIT (X_AXIS, final_spec_max_x, final_max_x);
+  LOG_LIMIT (Y_AXIS, final_spec_min_y, final_min_y);
+  LOG_LIMIT (Y_AXIS, final_spec_max_y, final_max_y);
+#undef LOG_LIMIT
 
   /* If user didn't specify either the lower limit or the upper
      limit for an axis, by default we'll round the axis limits
