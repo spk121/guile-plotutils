@@ -56,9 +56,11 @@ struct VecReaderStruct /* point reader datatype */
   int log_axis;        /* x,y axes are logarithmic? (portmanteau) */
   SCM xvec;               /* the data lists given to xy-data! */
   SCM yvec;
+  SCM xerrvec;            /* error bars: lists of #f or (lower . upper) */
   SCM yerrvec;
   SCM xcur;               /* the unread remainder of each list */
   SCM ycur;
+  SCM xerrcur;
   SCM yerrcur;
   data_type format_type;   /* stream format (T_ASCII, T_DOUBLE, etc.) */
   bool auto_abscissa;      /* auto-generate x values?  */
@@ -532,9 +534,11 @@ mark_graph (SCM x)
     {
       scm_gc_mark (graph->reader->xvec);
       scm_gc_mark (graph->reader->yvec);
+      scm_gc_mark (graph->reader->xerrvec);
       scm_gc_mark (graph->reader->yerrvec);
       scm_gc_mark (graph->reader->xcur);
       scm_gc_mark (graph->reader->ycur);
+      scm_gc_mark (graph->reader->xerrcur);
       scm_gc_mark (graph->reader->yerrcur);
     }
   return (SCM_BOOL_F);
@@ -1478,7 +1482,8 @@ pre_finalize_axes_parameters (graph_t *c_graph)
 }
 
 VecReader *
-new_vec_reader (SCM s_xvec, SCM s_yvec, SCM s_yerrvec, data_type format_type,
+new_vec_reader (SCM s_xvec, SCM s_yvec, SCM s_xerrvec, SCM s_yerrvec,
+                data_type format_type,
                 bool auto_abscissa, double delta_x, double abscissa,
                 bool transpose_axes, int log_axis, bool auto_bump, int symbol,
                 double symbol_size, const char *symbol_font_name, int linemode,
@@ -1492,6 +1497,7 @@ new_vec_reader (SCM s_xvec, SCM s_yvec, SCM s_yerrvec, data_type format_type,
   reader->need_break = true; /* next point will have pen up */
   reader->xvec = reader->xcur = s_xvec;
   reader->yvec = reader->ycur = s_yvec;
+  reader->xerrvec = reader->xerrcur = s_xerrvec;
   reader->yerrvec = reader->yerrcur = s_yerrvec;
   reader->format_type = format_type;
   reader->auto_abscissa = auto_abscissa;
@@ -1514,7 +1520,7 @@ new_vec_reader (SCM s_xvec, SCM s_yvec, SCM s_yerrvec, data_type format_type,
 
 void
 alter_vec_reader_parameters (
-    VecReader *reader, SCM s_xvec, SCM s_yvec, SCM s_yerrvec,
+    VecReader *reader, SCM s_xvec, SCM s_yvec, SCM s_xerrvec, SCM s_yerrvec,
     data_type format_type, bool auto_abscissa, double delta_x, double abscissa,
     int symbol, double symbol_size, const char *symbol_font_name, int linemode,
     double line_width, double fill_fraction, bool use_color, bool new_symbol,
@@ -1525,6 +1531,7 @@ alter_vec_reader_parameters (
   /* start at the beginning of the new lists */
   reader->xvec = reader->xcur = s_xvec;
   reader->yvec = reader->ycur = s_yvec;
+  reader->xerrvec = reader->xerrcur = s_xerrvec;
   reader->yerrvec = reader->yerrcur = s_yerrvec;
   reader->format_type = format_type;
   reader->auto_abscissa = auto_abscissa;
@@ -1646,9 +1653,9 @@ read_vector_point (VecReader *reader, Point *point)
   point->line_width = reader->line_width;
   point->fill_fraction = reader->fill_fraction;
   point->use_color = reader->use_color;
-  point->have_x_errorbar = false; /* not supported yet */
-  point->have_y_errorbar
-      = (reader->format_type == T_ASCII_ERRORBAR ? true : false);
+  /* read_point_from_list sets the error bar flags */
+  point->have_x_errorbar = false;
+  point->have_y_errorbar = false;
 
 head:
 
@@ -1671,10 +1678,12 @@ head:
             bad_point = true;
           if (point->have_x_errorbar)
             {
+              /* A bar reaching zero or below keeps its point: its lower
+                 end is clipped at the bottom of the axis when drawn. */
               if (point->xmin > 0.0)
                 point->xmin = log10 (point->xmin);
               else
-                bad_point = true;
+                point->xmin = -INFINITY;
               if (point->xmax > 0.0)
                 point->xmax = log10 (point->xmax);
               else
@@ -1701,10 +1710,12 @@ head:
 
           if (point->have_y_errorbar)
             {
+              /* A bar reaching zero or below keeps its point: its lower
+                 end is clipped at the bottom of the axis when drawn. */
               if (point->ymin > 0.0)
                 point->ymin = log10 (point->ymin);
               else
-                bad_point = true;
+                point->ymin = -INFINITY;
               if (point->ymax > 0.0)
                 point->ymax = log10 (point->ymax);
               else
@@ -1769,6 +1780,31 @@ take_list_element (SCM *cursor)
   return elt;
 }
 
+/* Decode the error bar ELT for a point at VALUE: #f (or a used-up list)
+   means no bar; a real number E means VALUE-E to VALUE+E; a pair
+   (LOWER . UPPER) means VALUE-LOWER to VALUE+UPPER.  The amounts must not
+   be negative.  Returns whether there is a bar.  */
+static bool
+read_error_bar (SCM elt, double value, double *min, double *max)
+{
+  double lower, upper;
+
+  if (SCM_UNBNDP (elt) || scm_is_false (elt))
+    return false;
+  if (scm_is_pair (elt))
+    {
+      lower = scm_to_double (scm_car (elt));
+      upper = scm_to_double (scm_cdr (elt));
+    }
+  else
+    lower = upper = scm_to_double (elt);
+  if (!(lower >= 0.0 && upper >= 0.0)) /* also rejects NaN */
+    scm_out_of_range ("xy-data!", elt);
+  *min = value - lower;
+  *max = value + upper;
+  return true;
+}
+
 /* Read the next point from the data lists.  The lists are walked with
    cursors, all advanced together, so reading n points takes O(n) time.  */
 static dataset_status_t
@@ -1776,6 +1812,7 @@ read_point_from_list (VecReader *reader, Point *point)
 {
   SCM sx = take_list_element (&reader->xcur);
   SCM sy = take_list_element (&reader->ycur);
+  SCM sxerr = take_list_element (&reader->xerrcur);
   SCM syerr = take_list_element (&reader->yerrcur);
 
   /* read coordinate(s) */
@@ -1799,17 +1836,11 @@ read_point_from_list (VecReader *reader, Point *point)
     return ENDED_BY_DATASET_TERMINATOR;
   point->y = scm_to_double (sy);
 
-  /* the optional y error bar data */
-  if (SCM_UNBNDP (syerr) || scm_is_false (syerr))
-    point->have_y_errorbar = false;
-  else
-    {
-      double error_size = scm_to_double (syerr);
-
-      point->have_y_errorbar = true;
-      point->ymin = point->y - error_size;
-      point->ymax = point->y + error_size;
-    }
+  /* the optional error bars */
+  point->have_x_errorbar
+      = read_error_bar (sxerr, point->x, &point->xmin, &point->xmax);
+  point->have_y_errorbar
+      = read_error_bar (syerr, point->y, &point->ymin, &point->ymax);
 
   return IN_PROGRESS;
 }
@@ -1823,9 +1854,17 @@ copy_xy_vectors_to_points_array (SCM xvec, SCM yvec, Reader *reader,
 }
 
 SCM
-gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
+gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec, SCM s_xerr, SCM s_yerr)
 {
   graph_t *c_graph;
+
+  /* The optional error bar lists are #f (no error bars) or lists whose
+     elements are #f, a nonnegative real, or a pair (lower . upper) of
+     nonnegative reals, one element per element of the data lists.  */
+  if (SCM_UNBNDP (s_xerr))
+    s_xerr = SCM_BOOL_F;
+  if (SCM_UNBNDP (s_yerr))
+    s_yerr = SCM_BOOL_F;
 
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "xy-data!");
   /* The x data may be #f when the abscissa is generated automatically.
@@ -1834,6 +1873,10 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
               s_xvec, SCM_ARG2, "xy-data!");
   SCM_ASSERT (scm_is_true (scm_list_p (s_yvec)), s_yvec, SCM_ARG3,
               "xy-data!");
+  SCM_ASSERT (scm_is_false (s_xerr) || scm_is_true (scm_list_p (s_xerr)),
+              s_xerr, SCM_ARG4, "xy-data!");
+  SCM_ASSERT (scm_is_false (s_yerr) || scm_is_true (scm_list_p (s_yerr)),
+              s_yerr, SCM_ARG5, "xy-data!");
 
   c_graph = _scm_to_graph (s_graph);
 
@@ -1857,7 +1900,7 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
       c_graph->p = scm_malloc (c_graph->points_length * sizeof (Point));
 
       c_graph->reader = new_vec_reader (
-          s_xvec, s_yvec, SCM_BOOL_F, /* y error bars */
+          s_xvec, s_yvec, s_xerr, s_yerr,
           c_graph->input_type, c_graph->auto_abscissa, c_graph->delta_x,
           c_graph->x_start, c_graph->final_transpose_axes,
           c_graph->final_log_axis, c_graph->auto_bump, c_graph->symbol_index,
@@ -1876,7 +1919,7 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
   else
     {
       alter_vec_reader_parameters (
-          c_graph->reader, s_xvec, s_yvec, SCM_BOOL_F, c_graph->input_type,
+          c_graph->reader, s_xvec, s_yvec, s_xerr, s_yerr, c_graph->input_type,
           c_graph->auto_abscissa, c_graph->delta_x, c_graph->x_start,
           c_graph->symbol_index, c_graph->symbol_size,
           c_graph->symbol_font_name, c_graph->linemode_index,
@@ -2177,6 +2220,30 @@ gupl_graph_test (SCM s_graph, SCM s_name)
     ret = scm_from_bool (c_graph->spec_max_y);
   else if (!strcmp (c_name, "spec_spacing_y"))
     ret = scm_from_bool (c_graph->spec_spacing_y);
+  else if (!strcmp (c_name, "points"))
+    {
+      /* each stored point as (x y xmin xmax ymin ymax), with #f for the
+         limits of a missing error bar */
+      int i;
+
+      ret = SCM_EOL;
+      for (i = c_graph->no_of_points - 1; i >= 0; i--)
+        {
+          const Point *pt = &c_graph->p[i];
+          ret = scm_cons (
+              scm_list_n (scm_from_double (pt->x), scm_from_double (pt->y),
+                          pt->have_x_errorbar ? scm_from_double (pt->xmin)
+                                              : SCM_BOOL_F,
+                          pt->have_x_errorbar ? scm_from_double (pt->xmax)
+                                              : SCM_BOOL_F,
+                          pt->have_y_errorbar ? scm_from_double (pt->ymin)
+                                              : SCM_BOOL_F,
+                          pt->have_y_errorbar ? scm_from_double (pt->ymax)
+                                              : SCM_BOOL_F,
+                          SCM_UNDEFINED),
+              ret);
+        }
+    }
   else if (!strcmp (c_name, "no_of_points"))
     ret = scm_from_int (c_graph->no_of_points);
   else if (!strcmp (c_name, "first_file_of_graph"))
@@ -2545,7 +2612,7 @@ gupl_graph_init (void)
       scm_c_define_gsubr ("y-limits!", 1, 3, 0, gupl_y_limits_x);
       scm_c_define_gsubr ("symbol!", 1, 2, 0, gupl_symbol_x);
       // scm_c_define_gsubr ("reposition!", 4, 0, 0, gupl_reposition_x);
-      scm_c_define_gsubr ("xy-data!", 3, 0, 0, gupl_xy_data_x);
+      scm_c_define_gsubr ("xy-data!", 3, 2, 0, gupl_xy_data_x);
       scm_c_define_gsubr ("generate", 3, 0, 0, gupl_generate);
       scm_c_define_gsubr ("%graph-test", 2, 0, 0, gupl_graph_test);
     }

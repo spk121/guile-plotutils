@@ -2916,36 +2916,70 @@ transpose_portmanteau (int *val)
   *val = newval;
 }
 
+/* Clip the interval [*LO,*HI] to [MIN,MAX], recording which ends were
+   cut.  Returns false if nothing of it is left.  */
+static bool
+clip_interval (double *lo, double *hi, double min, double max,
+               bool *lo_clipped, bool *hi_clipped)
+{
+  *lo_clipped = *lo < min;
+  *hi_clipped = *hi > max;
+  if (*lo_clipped)
+    *lo = min;
+  if (*hi_clipped)
+    *hi = max;
+  return *lo <= *hi;
+}
+
+/* Draw the error bar(s) of point P, clipped to the plotting area.  An end
+   cap is drawn only at an end of a bar that was not clipped.  (On a log
+   axis, a bar that reaches zero or below has a lower end of -infinity,
+   so it is clipped at the bottom of the axis.)  */
 static void
 plot_errorbar (Multigrapher *multigrapher, const Point *p)
 {
   if (p->have_x_errorbar || p->have_y_errorbar)
     /* save & restore state, since we invoke pl_linemod_r() */
     {
+      double half_cap = 0.5 * SS (p->symbol_size);
+      double lo, hi;
+      bool lo_clipped, hi_clipped;
+
       pl_savestate_r (multigrapher->plotter);
       pl_linemod_r (multigrapher->plotter, "solid");
 
-      if (p->have_x_errorbar)
+      lo = p->xmin;
+      hi = p->xmax;
+      if (p->have_x_errorbar
+          && clip_interval (&lo, &hi, multigrapher->x_trans.input_min,
+                            multigrapher->x_trans.input_max, &lo_clipped,
+                            &hi_clipped))
         {
-          pl_fline_r (multigrapher->plotter, XV (p->xmin),
-                      YV (p->y) - 0.5 * SS (p->symbol_size), XV (p->xmin),
-                      YV (p->y) + 0.5 * SS (p->symbol_size));
-          pl_fline_r (multigrapher->plotter, XV (p->xmin), YV (p->y),
-                      XV (p->xmax), YV (p->y));
-          pl_fline_r (multigrapher->plotter, XV (p->xmax),
-                      YV (p->y) - 0.5 * SS (p->symbol_size), XV (p->xmax),
-                      YV (p->y) + 0.5 * SS (p->symbol_size));
+          if (!lo_clipped)
+            pl_fline_r (multigrapher->plotter, XV (lo), YV (p->y) - half_cap,
+                        XV (lo), YV (p->y) + half_cap);
+          pl_fline_r (multigrapher->plotter, XV (lo), YV (p->y), XV (hi),
+                      YV (p->y));
+          if (!hi_clipped)
+            pl_fline_r (multigrapher->plotter, XV (hi), YV (p->y) - half_cap,
+                        XV (hi), YV (p->y) + half_cap);
         }
-      if (p->have_y_errorbar)
+
+      lo = p->ymin;
+      hi = p->ymax;
+      if (p->have_y_errorbar
+          && clip_interval (&lo, &hi, multigrapher->y_trans.input_min,
+                            multigrapher->y_trans.input_max, &lo_clipped,
+                            &hi_clipped))
         {
-          pl_fline_r (multigrapher->plotter,
-                      XV (p->x) - 0.5 * SS (p->symbol_size), YV (p->ymin),
-                      XV (p->x) + 0.5 * SS (p->symbol_size), YV (p->ymin));
-          pl_fline_r (multigrapher->plotter, XV (p->x), YV (p->ymin),
-                      XV (p->x), YV (p->ymax));
-          pl_fline_r (multigrapher->plotter,
-                      XV (p->x) - 0.5 * SS (p->symbol_size), YV (p->ymax),
-                      XV (p->x) + 0.5 * SS (p->symbol_size), YV (p->ymax));
+          if (!lo_clipped)
+            pl_fline_r (multigrapher->plotter, XV (p->x) - half_cap, YV (lo),
+                        XV (p->x) + half_cap, YV (lo));
+          pl_fline_r (multigrapher->plotter, XV (p->x), YV (lo), XV (p->x),
+                      YV (hi));
+          if (!hi_clipped)
+            pl_fline_r (multigrapher->plotter, XV (p->x) - half_cap, YV (hi),
+                        XV (p->x) + half_cap, YV (hi));
         }
 
       pl_restorestate_r (multigrapher->plotter);
