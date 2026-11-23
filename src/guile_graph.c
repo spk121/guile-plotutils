@@ -1915,6 +1915,9 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
 
   if (c_graph->first_file_of_graph)
     {
+      free (c_graph->p);
+      free (c_graph->reader);
+      c_graph->no_of_points = 0;
       c_graph->p = scm_malloc (c_graph->points_length * sizeof (Point));
 
       c_graph->reader = new_vec_reader (
@@ -2116,6 +2119,9 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
 
       /* end graph: pop drawing state off the stack of drawing states */
       end_graph (c_graph->multigrapher);
+
+      /* the points array is gone; the next xy-data! starts a new graph */
+      c_graph->first_file_of_graph = true;
 
     } /* end of nonempty-graph case */
 
