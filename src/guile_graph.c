@@ -2229,6 +2229,8 @@ gupl_graph_test (SCM s_graph, SCM s_name)
   else if (!strcmp (c_name, "new_linemode"))
     ret = scm_from_bool (c_graph->new_linemode);
   else if (!strcmp (c_name, "new_plot_line_width"))
+    ret = scm_from_bool (c_graph->new_plot_line_width);
+  else if (!strcmp (c_name, "new_fill_fraction"))
     ret = scm_from_bool (c_graph->new_fill_fraction);
   else if (!strcmp (c_name, "new_use_color"))
     ret = scm_from_bool (c_graph->new_use_color);
@@ -2254,6 +2256,8 @@ gupl_graph_test (SCM s_graph, SCM s_name)
   else if (!strcmp (c_name, "auto_abscissa"))
     ret = scm_from_bool (c_graph->auto_abscissa);
   else if (!strcmp (c_name, "x_start"))
+    ret = scm_from_double (c_graph->x_start);
+  else if (!strcmp (c_name, "delta_x"))
     ret = scm_from_double (c_graph->delta_x);
   else if (!strcmp (c_name, "linemode_index"))
     ret = scm_from_int (c_graph->linemode_index);
