@@ -555,7 +555,10 @@ print_graph (SCM x, SCM port, scm_print_state *pstate)
       if (asprintf (&str, "%p", (void *)graph) < 0)
         scm_puts ("???", port);
       else
-        scm_puts (str, port);
+        {
+          scm_puts (str, port);
+          free (str);
+        }
     }
   scm_puts (">", port);
 
@@ -2223,15 +2226,15 @@ gupl_graph_test (SCM s_graph, SCM s_name)
   else if (!strcmp (c_name, "data_type"))
     {
       if (c_graph->input_type == T_ASCII)
-        return scm_from_latin1_symbol ("T_ASCII");
+        ret = scm_from_latin1_symbol ("T_ASCII");
       else if (c_graph->input_type == T_DOUBLE)
-        return scm_from_latin1_symbol ("T_DOUBLE");
+        ret = scm_from_latin1_symbol ("T_DOUBLE");
       else if (c_graph->input_type == T_INTEGER)
-        return scm_from_latin1_symbol ("T_INTEGER");
+        ret = scm_from_latin1_symbol ("T_INTEGER");
       else if (c_graph->input_type == T_GNUPLOT)
-        return scm_from_latin1_symbol ("T_GNUPLOT");
+        ret = scm_from_latin1_symbol ("T_GNUPLOT");
       else if (c_graph->input_type == T_ASCII_ERRORBAR)
-        return scm_from_latin1_symbol ("T_ASCII_ERRORBAR");
+        ret = scm_from_latin1_symbol ("T_ASCII_ERRORBAR");
     }
   else if (!strcmp (c_name, "auto_bump"))
     ret = scm_from_bool (c_graph->auto_bump);
@@ -2420,6 +2423,9 @@ gupl_graph_test (SCM s_graph, SCM s_name)
 static bool
 parse_pen_string (const char *pen_s)
 {
+  /* which colorstyle[] entries were allocated here (the initial ones are
+     string literals and must not be freed) */
+  static bool owned[NO_OF_LINEMODES];
   const char *charp;
   char name[MAX_COLOR_NAME_LEN];
   int i;
@@ -2484,7 +2490,10 @@ parse_pen_string (const char *pen_s)
         }
 
       /* replace pen color name by user-specified color name */
+      if (owned[pen_num - 1])
+        free ((char *)colorstyle[pen_num - 1]);
       colorstyle[pen_num - 1] = xstrdup (name);
+      owned[pen_num - 1] = true;
     }
   return true;
 }

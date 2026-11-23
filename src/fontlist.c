@@ -236,8 +236,10 @@ svg, ps, ai, cgm, fig, pcl, hpgl, regis, tek (vector formats).\n",
           stderr,
           "%s: no font information on display device \"%s\" is available\n",
           progname, output_format);
+      pl_deleteplparams (plotter_params);
       return 0;
     }
+  pl_deleteplparams (plotter_params);
 
   if (pl_havecap_r (plotter, "HERSHEY_FONTS"))
     {
@@ -402,6 +404,7 @@ svg, ps, ai, cgm, fig, pcl, hpgl, regis, tek (vector formats).\n",
       fprintf (stdout, "can also be used.\n");
     }
 
+  pl_deletepl_r (plotter);
   return 1;
 }
 
@@ -442,8 +445,10 @@ list_fonts (const char *output_format, const char *progname)
           stderr,
           "%s: no font information on display device \"%s\" is available\n",
           progname, output_format);
+      pl_deleteplparams (plotter_params);
       return 0;
     }
+  pl_deleteplparams (plotter_params);
 
   if (pl_havecap_r (plotter, "HERSHEY_FONTS"))
     {
@@ -489,5 +494,6 @@ list_fonts (const char *output_format, const char *progname)
         fprintf (stdout, "%s\n", ps_font_info[i].ps_name);
     }
 
+  pl_deletepl_r (plotter);
   return 1;
 }

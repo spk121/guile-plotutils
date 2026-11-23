@@ -804,6 +804,8 @@ new_multigrapher_with_ports (const multigrapher_create_init *init)
     return (Multigrapher *)NULL;
 
   multigrapher = (Multigrapher *)xmalloc (sizeof (Multigrapher));
+  multigrapher->title = NULL;
+  multigrapher->title_font_name = NULL;
 
   /* set Plotter parameters */
   plotter_params = pl_newplparams ();
@@ -819,12 +821,19 @@ new_multigrapher_with_ports (const multigrapher_create_init *init)
   /* create Plotter and open it */
   plotter = pl_newpl_r (init->output_format, NULL, init->_stdout, init->_stderr,
                         plotter_params);
-  if (plotter == (plPlotter *)NULL)
-    return (Multigrapher *)NULL;
   pl_deleteplparams (plotter_params);
+  if (plotter == (plPlotter *)NULL)
+    {
+      free (multigrapher);
+      return (Multigrapher *)NULL;
+    }
   multigrapher->plotter = plotter;
   if (pl_openpl_r (plotter) < 0)
-    return (Multigrapher *)NULL;
+    {
+      pl_deletepl_r (plotter);
+      free (multigrapher);
+      return (Multigrapher *)NULL;
+    }
   multigrapher->bg_color = init->bg_color;
 
   /* if called for, erase it; set up the user->device coor map */
@@ -844,6 +853,8 @@ delete_multigrapher (Multigrapher *multigrapher)
   if (retval >= 0)
     retval = pl_deletepl_r (multigrapher->plotter);
 
+  free ((char *)multigrapher->title);
+  free ((char *)multigrapher->title_font_name);
   free (multigrapher);
   return retval;
 }
@@ -1111,6 +1122,9 @@ set_graph_parameters (const set_graph_parameters_init *init)
   multigrapher->no_rotate_y_label = no_rotate_y_label;
   multigrapher->blankout_fraction = blankout_fraction;
 
+  /* replace any strings left over from a previous graph */
+  free ((char *)multigrapher->title);
+  free ((char *)multigrapher->title_font_name);
   if (title != NULL)
     multigrapher->title = xstrdup (title);
   else
