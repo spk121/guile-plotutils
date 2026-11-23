@@ -2055,16 +2055,18 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
       begin_graph (c_graph->multigrapher, c_graph->reposition_scale,
                    c_graph->reposition_trans_x, c_graph->reposition_trans_y);
 
-      /* font selection, saves typing */
-      if ((c_graph->title_font_name == NULL) && (c_graph->font_name != NULL))
-        c_graph->title_font_name = c_graph->font_name;
+      /* font selection, saves typing.  Don't store the fallback in the
+         graph: font_name may be freed and replaced later. */
+      const char *title_font_name = (c_graph->title_font_name != NULL
+                                         ? c_graph->title_font_name
+                                         : c_graph->font_name);
 
       set_graph_parameters_init graph_params = {
         .multigrapher = c_graph->multigrapher,
         .frame_line_width = c_graph->frame_line_width,
         .frame_color = c_graph->frame_color,
         .title = c_graph->top_label,
-        .title_font_name = c_graph->title_font_name,
+        .title_font_name = title_font_name,
         .title_font_size = c_graph->title_font_size,
         .tick_size = c_graph->tick_size,
         .grid_spec = c_graph->grid_spec,
