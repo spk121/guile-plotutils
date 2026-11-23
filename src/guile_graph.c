@@ -276,7 +276,25 @@ struct graph
 
   /* pen colors set with pen-colors!, malloc'd; NULL means the default */
   char *pen_colors[NO_OF_LINEMODES];
+
+  /* Symbol font names replaced by symbol-font-name!.  Points already read
+     still point at them, so they are freed only with the points.  */
+  char **retired_font_names;
+  size_t n_retired_font_names;
 };
+
+/* Free the symbol font names kept for points that have now been freed. */
+static void
+free_retired_font_names (struct graph *graph)
+{
+  size_t i;
+
+  for (i = 0; i < graph->n_retired_font_names; i++)
+    free (graph->retired_font_names[i]);
+  free (graph->retired_font_names);
+  graph->retired_font_names = NULL;
+  graph->n_retired_font_names = 0;
+}
 
 #define PORT_ERR (-1)
 #define PORT_OK (0)
@@ -498,6 +516,7 @@ free_graph_allocations (graph_t *graph)
       free (graph->p);
       graph->p = NULL;
     }
+  free_retired_font_names (graph);
 
   if (graph->reader)
     {
@@ -996,11 +1015,25 @@ SCM
 gupl_symbol_font_name_x (SCM s_graph, SCM s_name)
 {
   graph_t *c_graph;
+  char *name;
   SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "symbol-font-name!");
   SCM_ASSERT (scm_is_string (s_name), s_name, SCM_ARG2, "symbol-font-name!");
   c_graph = _scm_to_graph (s_graph);
-  replace_graph_string_from_scm (&c_graph->symbol_font_name,
-                                 &c_graph->owns_symbol_font_name, s_name);
+  name = scm_to_locale_string (s_name);
+  /* Points already read may use the old name, so keep it until they are
+     freed rather than freeing it now.  */
+  if (c_graph->owns_symbol_font_name && c_graph->symbol_font_name)
+    {
+      c_graph->retired_font_names
+          = xrealloc (c_graph->retired_font_names,
+                      (c_graph->n_retired_font_names + 1) * sizeof (char *));
+      c_graph->retired_font_names[c_graph->n_retired_font_names++]
+          = (char *)c_graph->symbol_font_name;
+    }
+  c_graph->symbol_font_name = name;
+  c_graph->owns_symbol_font_name = true;
+  /* apply it to data read from now on */
+  c_graph->new_symbol_font_name = true;
   return SCM_UNSPECIFIED;
 }
 
@@ -1945,6 +1978,7 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec, SCM s_xerr, SCM s_yerr)
     {
       free (c_graph->p);
       c_graph->p = NULL;
+      free_retired_font_names (c_graph);
       /* clear before allocating: a GC here runs mark_graph on the reader */
       free (c_graph->reader);
       c_graph->reader = NULL;
@@ -2179,6 +2213,7 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
           c_graph->multigrapher = NULL;
           free (c_graph->p);
           c_graph->p = NULL;
+          free_retired_font_names (c_graph);
           c_graph->no_of_points = 0;
           c_graph->first_file_of_graph = true;
           fclose (c_outp);
@@ -2196,9 +2231,10 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
       plot_point_array (c_graph->multigrapher, c_graph->p,
                         c_graph->no_of_points);
 
-      /* free points array */
+      /* free points array, and the symbol font names only it used */
       free (c_graph->p);
       c_graph->p = NULL;
+      free_retired_font_names (c_graph);
       c_graph->no_of_points = 0;
 
       /* draw graph frame on top of graph, if user requested it */

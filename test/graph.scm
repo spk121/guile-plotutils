@@ -351,4 +351,25 @@ what was written to its error port."
       (lambda args #f))
     (first-line-color)))
 
+;; Changing the symbol font between datasets: points already read keep
+;; their font (its name used to be freed under them), and the new font
+;; applies to later data (it used to be ignored).
+(test-assert "each dataset keeps its own symbol font"
+  (let* ((internal (lambda (name) (module-ref (resolve-module '(plotutils graph)) name)))
+         (g ((internal 'new-graph)))
+         (port (mkstemp! (string-copy "/tmp/gupl-test-XXXXXX")))
+         (name (port-filename port)))
+    ((internal 'output-format!) g "svg")
+    ((internal 'symbol!) g 65 0.05)
+    ((internal 'symbol-font-name!) g "Times-Roman")
+    ((internal 'xy-data!) g '(1 2 3) '(1 2 3))
+    ((internal 'symbol-font-name!) g "Courier")
+    ((internal 'xy-data!) g '(1 2 3) '(3 2 1))
+    ((internal 'generate) g port port)
+    (close-port port)
+    (let ((svg (call-with-input-file name (lambda (in) (read-delimited "" in)))))
+      (delete-file name)
+      (and (string-contains svg "font-family=\"Times-Roman")
+           (string-contains svg "font-family=\"Courier")))))
+
 (test-end "graph.scm")
