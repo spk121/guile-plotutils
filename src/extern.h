@@ -161,7 +161,8 @@ extern void begin_graph (Multigrapher *multigrapher, double scale,
 
 extern void end_graph (Multigrapher *multigrapher);
 
-extern void set_graph_parameters (const set_graph_parameters_init *init);
+extern bool set_graph_parameters (const set_graph_parameters_init *init);
+extern const char *multigrapher_error (const Multigrapher *multigrapher);
 
 extern void draw_frame_of_graph (Multigrapher *multigrapher, bool draw_canvas);
 

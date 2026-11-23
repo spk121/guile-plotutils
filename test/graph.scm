@@ -262,4 +262,41 @@
       ;; binary metafiles start with "#PLOT 1", portable ones "#PLOT 2"
       (equal? header "#PLOT 2"))))
 
+;; Invalid axis settings raise Scheme errors.  (A zero tick spacing used
+;; to call exit(), ending the whole Guile process.)
+(define (generate-error-message . options)
+  (let ((null (open-output-file "/dev/null")))
+    (catch 'misc-error
+      (lambda ()
+        (apply graph '(1 2 3) '(1 4 9) #:output-format "svg" #:outp null
+               options)
+        #f)
+      (lambda (key subr message args . rest)
+        (apply format #f message args)))))
+
+(test-assert "a zero tick spacing is an error, not an exit"
+  (string-contains (generate-error-message #:x-limits '(0 10 0))
+                   "spacing between ticks"))
+(test-assert "an infinite axis limit is an error"
+  (string-contains (generate-error-message #:x-limits (list 0 +inf.0))
+                   "not finite"))
+(test-assert "a NaN axis limit is an error"
+  (string-contains (generate-error-message #:y-limits (list +nan.0 1))
+                   "not finite"))
+(test-assert "infinite data are an error"
+  (let ((null (open-output-file "/dev/null")))
+    (catch 'misc-error
+      (lambda ()
+        (graph '(1 2 3) (list 1 +inf.0 3) #:output-format "svg" #:outp null)
+        #f)
+      (lambda (key subr message args . rest)
+        (string-contains (apply format #f message args) "not finite")))))
+(test-assert "a nonpositive limit on a log axis is an error"
+  (string-contains (generate-error-message #:y-limits '(-1 10)
+                                           #:toggle-log-axis "y")
+                   "logarithmic axis"))
+(test-equal "valid limits still work"
+  #f
+  (generate-error-message #:x-limits '(0 10 2)))
+
 (test-end "graph.scm")

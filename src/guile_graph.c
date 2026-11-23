@@ -1457,10 +1457,9 @@ pre_finalize_axes_parameters (graph_t *c_graph)
       if (c_graph->VAL > 0.0)                                                 \
         c_graph->VAL = log10 (c_graph->VAL);                                  \
       else                                                                    \
-        fprintf (stderr,                                                      \
-                 "%s: error: the limit %g on a logarithmic axis is "          \
-                 "nonpositive\n",                                             \
-                 progname, c_graph->VAL);                                     \
+        scm_misc_error ("xy-data!",                                           \
+                        "the limit ~A on a logarithmic axis is not positive", \
+                        scm_list_1 (scm_from_double (c_graph->VAL)));         \
     }
   LOG_LIMIT (X_AXIS, final_spec_min_x, final_min_x);
   LOG_LIMIT (X_AXIS, final_spec_max_x, final_max_x);
@@ -2105,7 +2104,24 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
         .transpose_axes = c_graph->final_transpose_axes
       };
 
-      set_graph_parameters (&graph_params);
+      if (!set_graph_parameters (&graph_params))
+        {
+          /* Undo the graph begun above, and raise the reason as a Scheme
+             error.  Copy the message: it lives in the multigrapher.  */
+          SCM message = scm_from_locale_string (
+              multigrapher_error (c_graph->multigrapher));
+
+          end_graph (c_graph->multigrapher);
+          delete_multigrapher (c_graph->multigrapher);
+          c_graph->multigrapher = NULL;
+          free (c_graph->p);
+          c_graph->p = NULL;
+          c_graph->no_of_points = 0;
+          c_graph->first_file_of_graph = true;
+          fclose (c_outp);
+          fclose (c_errp);
+          scm_misc_error ("generate", "~A", scm_list_1 (message));
+        }
 
       /* draw the graph frame (grid, ticks, etc.); draw a `canvas' (a
          background opaque white rectangle) only if this isn't the

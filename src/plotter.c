@@ -112,6 +112,7 @@
 
 #include <limits.h>
 #include <math.h>
+#include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
 #include "extern.h"
@@ -320,6 +321,8 @@ struct MultigrapherStruct
   double oldpoint_x, oldpoint_y; /* last-plotted point */
   int symbol;                    /* symbol being plotted at each point */
   int linemode;                  /* linemode used for polyline */
+  /* why set_graph_parameters() failed, if it did */
+  char error_message[256];
 };
 
 /* forward references */
@@ -333,7 +336,7 @@ static void plot_abscissa_log_subsubtick (Multigrapher *multigrapher,
 static void plot_errorbar (Multigrapher *multigrapher, const Point *p);
 static void plot_ordinate_log_subsubtick (Multigrapher *multigrapher,
                                           double xval);
-static void prepare_axis (Axis *axisp, Transform *trans, double min,
+static bool prepare_axis (Axis *axisp, Transform *trans, double min,
                           double max, double spacing, const char *font_name,
                           double font_size, const char *label,
                           double subsubtick_spacing,
@@ -343,7 +346,7 @@ static void prepare_axis (Axis *axisp, Transform *trans, double min,
                           bool omit_ticks);
 static void print_tick_label (char *labelbuf, const Axis *axis,
                               const Transform *transform, double val);
-static void scale1 (double min, double max, double *tick_spacing,
+static bool scale1 (double min, double max, double *tick_spacing,
                     int *tick_spacing_type);
 static void set_line_style (Multigrapher *multigrapher, int style,
                             bool use_color);
@@ -490,7 +493,7 @@ print_tick_label (char *labelbuf, const Axis *axis, const Transform *transform,
 /* ARGS: min,max = data min, max
    tick_spacing = inter-tick spacing
    tick_spacing_type = 0,1,2 i.e. S_ONE,S_TWO,S_FIVE */
-static void
+static bool
 scale1 (double min, double max, double *tick_spacing, int *tick_spacing_type)
 {
   int k;
@@ -512,12 +515,8 @@ scale1 (double min, double max, double *tick_spacing, int *tick_spacing_type)
   /* compute trial inter-tick interval length */
   a = (max - min) / TRIAL_NUMBER_OF_TICK_INTERVALS;
   a *= (max > min) ? 1.0 : -1.0; /* paranoia, max>min always */
-  if (a <= 0.0)
-    {
-      fprintf (stderr, "%s: error: the trial inter-tick spacing '%g' is bad\n",
-               progname, a);
-      exit (EXIT_FAILURE);
-    }
+  if (!(a > 0.0 && isfinite (a))) /* paranoia: limits are checked earlier */
+    return false;
   nal = floor (log10 (a));
   b = a * pow (10.0, -nal); /* 1.0 <= b < 10.0 */
 
@@ -534,7 +533,7 @@ scale1 (double min, double max, double *tick_spacing, int *tick_spacing_type)
   *tick_spacing = (max > min ? 1.0 : -1.0) * vint[k] * pow (10.0, nal);
   /* for increment type, 0,1,2 means 1,2,5 times a power of 10 */
   *tick_spacing_type = (k == 3 ? 0 : k);
-  return;
+  return true;
 }
 
 /* Determine whether an inter-tick spacing (in practice, one specified by
@@ -596,7 +595,7 @@ tick_counts_fit (double min, double max, double spacing)
    reverse_axis = reverse min, max?
    switch_axis_end = intersection w/ other axis in alt. pos.?
    omit_ticks = suppress all ticks and tick labels? */
-static void
+static bool
 prepare_axis (Axis *axisp, Transform *trans, double min, double max,
               double spacing, const char *font_name, double font_size,
               const char *label, double subsubtick_spacing,
@@ -611,14 +610,8 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
   int min_lin_subtick_count, max_lin_subtick_count;
   bool have_lin_subticks;
 
-  if (min > max)
-    /* paranoia, max < min is swapped at top level */
-    {
-      fprintf (stderr,
-               "%s: error: min > max for an axis, which is not allowed\n",
-               progname);
-      exit (EXIT_FAILURE);
-    }
+  if (!(min <= max)) /* paranoia: max < min is swapped at top level */
+    return false;
 
   if (min == max) /* expand in a clever way */
     {
@@ -650,7 +643,8 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
   if (log_axis) /* log axis, data are stored in logarithmic form */
     /* compute a tick spacing; user can't specify it */
     {
-      scale1 (min, max, &tick_spacing, &tick_spacing_type);
+      if (!scale1 (min, max, &tick_spacing, &tick_spacing_type))
+        return false;
       if (tick_spacing <= 1.0)
         {
           tick_spacing = 1.0;
@@ -660,7 +654,10 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
   else /* linear axis */
     {
       if (spacing == 0.0) /* i.e., not specified by user */
-        scale1 (min, max, &tick_spacing, &tick_spacing_type);
+        {
+          if (!scale1 (min, max, &tick_spacing, &tick_spacing_type))
+            return false;
+        }
       else if (tick_counts_fit (min, max, spacing))
         /* luser is boss, don't use SCALE1 */
         {
@@ -673,7 +670,8 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
                    "%s: the tick spacing %g gives too many ticks, so it "
                    "is ignored\n",
                    progname, spacing);
-          scale1 (min, max, &tick_spacing, &tick_spacing_type);
+          if (!scale1 (min, max, &tick_spacing, &tick_spacing_type))
+            return false;
         }
     }
 
@@ -830,6 +828,8 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
     }
   else /* linear axes don't have log subsubticks */
     axisp->have_normal_subsubticks = false;
+
+  return true;
 }
 
 /* The following routines [new_multigrapher(), begin_graph(),
@@ -970,7 +970,27 @@ end_graph (Multigrapher *multigrapher)
    int clip_mode		= 0, 1, or 2
    double blankout_fraction	= 1.0 means blank out whole box before plot
    bool transpose_axes */
-void
+/* Record why set_graph_parameters() failed, for multigrapher_error(). */
+static void
+set_error (Multigrapher *multigrapher, const char *format, ...)
+{
+  va_list args;
+
+  va_start (args, format);
+  vsnprintf (multigrapher->error_message,
+             sizeof multigrapher->error_message, format, args);
+  va_end (args);
+}
+
+const char *
+multigrapher_error (const Multigrapher *multigrapher)
+{
+  return multigrapher->error_message;
+}
+
+/* Returns false, with a message for multigrapher_error(), if the axis
+   limits or tick spacings can't be used.  */
+bool
 set_graph_parameters (const set_graph_parameters_init *init)
 {
   Multigrapher *multigrapher;
@@ -1009,7 +1029,7 @@ set_graph_parameters (const set_graph_parameters_init *init)
   bool transpose_axes;
 
   if (init == NULL)
-    return;
+    return false;
 
   multigrapher = init->multigrapher;
   frame_line_width = init->frame_line_width;
@@ -1047,6 +1067,33 @@ set_graph_parameters (const set_graph_parameters_init *init)
   transpose_axes = init->transpose_axes;
 
   double x_subsubtick_spacing = 0.0, y_subsubtick_spacing = 0.0;
+
+  multigrapher->error_message[0] = '\0';
+
+  /* The limits may come from the user or from the data; either way they
+     must be finite.  (Infinite or NaN data points make the computed
+     limits so.)  On log axes these are logs, so a nonpositive limit
+     has already been reported.  */
+  if (!(isfinite (x_min) && isfinite (x_max)))
+    {
+      set_error (multigrapher,
+                 "the x axis range [%g, %g] is not finite; check the data "
+                 "and the x limits", x_min, x_max);
+      return false;
+    }
+  if (!(isfinite (y_min) && isfinite (y_max)))
+    {
+      set_error (multigrapher,
+                 "the y axis range [%g, %g] is not finite; check the data "
+                 "and the y limits", y_min, y_max);
+      return false;
+    }
+  if ((spec_x_spacing && !isfinite (x_spacing))
+      || (spec_y_spacing && !isfinite (y_spacing)))
+    {
+      set_error (multigrapher, "the spacing between ticks must be finite");
+      return false;
+    }
   /* local portmanteau variables */
   int reverse_axis = 0;               /* min > max on an axis? */
   int user_specified_subsubticks = 0; /* i.e. linear ticks on a log axis? */
@@ -1125,10 +1172,9 @@ set_graph_parameters (const set_graph_parameters_init *init)
     {
       if (x_spacing == 0.0)
         {
-          fprintf (stderr,
-                   "%s: error: the spacing between ticks on an axis is zero\n",
-                   progname);
-          exit (EXIT_FAILURE);
+          set_error (multigrapher,
+                     "the spacing between ticks on the x axis is zero");
+          return false;
         }
       x_spacing = fabs (x_spacing);
     }
@@ -1136,10 +1182,9 @@ set_graph_parameters (const set_graph_parameters_init *init)
     {
       if (y_spacing == 0.0)
         {
-          fprintf (stderr,
-                   "%s: error: the spacing between ticks on an axis is zero\n",
-                   progname);
-          exit (EXIT_FAILURE);
+          set_error (multigrapher,
+                     "the spacing between ticks on the y axis is zero");
+          return false;
         }
       y_spacing = fabs (y_spacing);
     }
@@ -1205,20 +1250,32 @@ set_graph_parameters (const set_graph_parameters_init *init)
   multigrapher->clip_mode = clip_mode;
 
   /* fill in the Transform and Axis elements for each coordinate */
-  prepare_axis (&multigrapher->x_axis, &multigrapher->x_trans, x_min, x_max,
+  if (!prepare_axis (&multigrapher->x_axis, &multigrapher->x_trans, x_min, x_max,
                 x_spacing, x_font_name, x_font_size, x_label,
                 x_subsubtick_spacing,
                 (bool)(user_specified_subsubticks & X_AXIS),
                 (bool)(round_to_next_tick & X_AXIS), (bool)(log_axis & X_AXIS),
                 (bool)(reverse_axis & X_AXIS),
-                (bool)(switch_axis_end & X_AXIS), (bool)(omit_ticks & X_AXIS));
-  prepare_axis (&multigrapher->y_axis, &multigrapher->y_trans, y_min, y_max,
+                (bool)(switch_axis_end & X_AXIS), (bool)(omit_ticks & X_AXIS)))
+    {
+      /* not expected: the limits were checked above */
+      set_error (multigrapher, "cannot lay out the x axis for [%g, %g]",
+                 x_min, x_max);
+      return false;
+    }
+  if (!prepare_axis (&multigrapher->y_axis, &multigrapher->y_trans, y_min, y_max,
                 y_spacing, y_font_name, y_font_size, y_label,
                 y_subsubtick_spacing,
                 (bool)(user_specified_subsubticks & Y_AXIS),
                 (bool)(round_to_next_tick & Y_AXIS), (bool)(log_axis & Y_AXIS),
                 (bool)(reverse_axis & Y_AXIS),
-                (bool)(switch_axis_end & Y_AXIS), (bool)(omit_ticks & Y_AXIS));
+                (bool)(switch_axis_end & Y_AXIS), (bool)(omit_ticks & Y_AXIS)))
+    {
+      /* not expected: the limits were checked above */
+      set_error (multigrapher, "cannot lay out the y axis for [%g, %g]",
+                 y_min, y_max);
+      return false;
+    }
 
   /* fill in additional parameters in the two Transform structures */
   multigrapher->x_trans.squeezed_min = right;
@@ -1309,6 +1366,8 @@ set_graph_parameters (const set_graph_parameters_init *init)
   multigrapher->first_point_of_polyline = true;
   multigrapher->oldpoint_x = 0.0;
   multigrapher->oldpoint_y = 0.0;
+
+  return true;
 }
 
 /* draw_frame_of_graph() plots the graph frame (grid plus axis labels and
