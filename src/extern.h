@@ -89,7 +89,7 @@ enum
 
 /* types of line */
 extern const char *linemodes[NO_OF_LINEMODES];
-extern const char *colorstyle[NO_OF_LINEMODES];
+extern const char *const colorstyle[NO_OF_LINEMODES]; /* the defaults */
 
 /*----------------- prototypes for functions in plotter.h -------------------*/
 
@@ -108,6 +108,10 @@ typedef struct
   const char *page_size;
   const char *rotation_angle;
   bool save_screen;
+  /* pen colors for linemodes 1..NO_OF_LINEMODES, a NULL entry (or a NULL
+     array) meaning the default; the strings must outlive the
+     Multigrapher */
+  const char *const *pen_colors;
 } multigrapher_create_init;
 
 typedef struct

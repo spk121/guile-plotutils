@@ -2564,8 +2564,10 @@ and Viewport Sizes}.
 @item #:pen-colors @var{colors}
 (String, default "1=red:2=green:3=blue:4=magenta:5=cyan".)  Set the
 colors of the pens used for drawing plots, as numbered, to be
-@var{colors}.  The format should be self-explanatory.  @w{An
-unrecognized} name sets the corresponding color to the default.  For
+@var{colors}.  The format should be self-explanatory.  The colors
+apply to this graph only.  A malformed string is an error, and changes
+no colors.  @w{An unrecognized} name sets the corresponding color to the
+default.  For
 information on what names are recognized, see @ref{Color Names}.
 
 @item #:rotation @var{angle}

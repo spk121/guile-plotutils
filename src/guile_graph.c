@@ -273,6 +273,9 @@ struct graph
 
   /* warnings from reading data, written out by generate */
   warning_log warnings;
+
+  /* pen colors set with pen-colors!, malloc'd; NULL means the default */
+  char *pen_colors[NO_OF_LINEMODES];
 };
 
 #define PORT_ERR (-1)
@@ -288,7 +291,8 @@ static SCM equalp_graph (SCM x1, SCM x2);
 static SCM mark_graph (SCM x);
 static size_t free_graph (SCM x);
 static int print_graph (SCM x, SCM port, scm_print_state *pstate);
-static bool parse_pen_string (const char *pen_s);
+static bool parse_pen_string (const char *pen_s,
+                              char *pen_colors[NO_OF_LINEMODES]);
 static dataset_status_t read_vector_dataset (VecReader *reader, Point **p_addr,
                                              int *length, int *no_of_points);
 static dataset_status_t read_vector_point (VecReader *reader, Point *point);
@@ -504,6 +508,16 @@ free_graph_allocations (graph_t *graph)
   free (graph->warnings.text);
   graph->warnings.text = NULL;
   graph->warnings.length = 0;
+
+  {
+    int i;
+
+    for (i = 0; i < NO_OF_LINEMODES; i++)
+      {
+        free (graph->pen_colors[i]);
+        graph->pen_colors[i] = NULL;
+      }
+  }
 
   free_owned_graph_string (&graph->output_format, &graph->owns_output_format);
   free_owned_graph_string (&graph->bg_color, &graph->owns_bg_color);
@@ -1169,14 +1183,19 @@ gupl_page_size_x (SCM s_graph, SCM s_size)
   return SCM_UNSPECIFIED;
 }
 
+/* (pen-colors! graph "1=red:2=blue"): set the graph's pen colors.
+   Returns #f, changing nothing, if the string is malformed.  */
 SCM
-gupl_pen_colors (SCM s_colors)
+gupl_pen_colors_x (SCM s_graph, SCM s_colors)
 {
+  graph_t *c_graph;
   char *c_colors;
   bool parsed;
-  SCM_ASSERT (scm_is_string (s_colors), s_colors, SCM_ARG1, "pen-colors");
+  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "pen-colors!");
+  SCM_ASSERT (scm_is_string (s_colors), s_colors, SCM_ARG2, "pen-colors!");
+  c_graph = _scm_to_graph (s_graph);
   c_colors = scm_to_locale_string (s_colors);
-  parsed = parse_pen_string (c_colors);
+  parsed = parse_pen_string (c_colors, c_graph->pen_colors);
   free (c_colors);
   return scm_from_bool (parsed);
 }
@@ -2082,7 +2101,8 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
             .meta_portable = c_graph->meta_portable,
             .page_size = c_graph->page_size,
             .rotation_angle = c_graph->rotation_angle,
-            .save_screen = c_graph->save_screen
+            .save_screen = c_graph->save_screen,
+            .pen_colors = (const char *const *)c_graph->pen_colors
           };
 
           if ((c_graph->multigrapher = new_multigrapher_with_ports (
@@ -2527,11 +2547,10 @@ gupl_graph_test (SCM s_graph, SCM s_name)
 }
 
 static bool
-parse_pen_string (const char *pen_s)
+parse_pen_string (const char *pen_s, char *pen_colors[NO_OF_LINEMODES])
 {
-  /* which colorstyle[] entries were allocated here (the initial ones are
-     string literals and must not be freed) */
-  static bool owned[NO_OF_LINEMODES];
+  /* Parse into PARSED first, so that a malformed string changes nothing. */
+  char *parsed[NO_OF_LINEMODES] = { NULL };
   const char *charp;
   char name[MAX_COLOR_NAME_LEN];
   int i;
@@ -2550,16 +2569,15 @@ parse_pen_string (const char *pen_s)
         }
       pen_num = 0;
       got_digit = false;
-      while (*charp >= '0' && *charp <= '9')
+      while (*charp >= '0' && *charp <= '9' && pen_num <= NO_OF_LINEMODES)
         {
           pen_num = 10 * pen_num + (int)*charp - (int)'0';
           got_digit = true;
           charp++;
         }
-      if (!got_digit || pen_num < 1 || pen_num > NO_OF_LINEMODES)
-        return false;
-      if (*charp != '=')
-        return false;
+      if (!got_digit || pen_num < 1 || pen_num > NO_OF_LINEMODES
+          || *charp != '=')
+        goto fail;
       charp++;
       for (tmp = charp, i = 0; i < MAX_COLOR_NAME_LEN - 1; tmp++, i++)
         {
@@ -2592,16 +2610,26 @@ parse_pen_string (const char *pen_s)
               charp = tmp;
             }
           else
-            return false; /* color name too long */
+            goto fail; /* color name too long */
         }
 
-      /* replace pen color name by user-specified color name */
-      if (owned[pen_num - 1])
-        free ((char *)colorstyle[pen_num - 1]);
-      colorstyle[pen_num - 1] = xstrdup (name);
-      owned[pen_num - 1] = true;
+      free (parsed[pen_num - 1]);
+      parsed[pen_num - 1] = xstrdup (name);
     }
+
+  /* replace the pens' color names by the user-specified ones */
+  for (i = 0; i < NO_OF_LINEMODES; i++)
+    if (parsed[i])
+      {
+        free (pen_colors[i]);
+        pen_colors[i] = parsed[i];
+      }
   return true;
+
+fail:
+  for (i = 0; i < NO_OF_LINEMODES; i++)
+    free (parsed[i]);
+  return false;
 }
 
 void
@@ -2670,7 +2698,7 @@ gupl_graph_init (void)
                           gupl_frame_line_width_x);
       scm_c_define_gsubr ("max-line-length!", 2, 0, 0, gupl_max_line_length_x);
       scm_c_define_gsubr ("page-size!", 2, 0, 0, gupl_page_size_x);
-      scm_c_define_gsubr ("pen-colors", 1, 0, 0, gupl_pen_colors);
+      scm_c_define_gsubr ("pen-colors!", 2, 0, 0, gupl_pen_colors_x);
       scm_c_define_gsubr ("bg-color!", 2, 0, 0, gupl_bg_color_x);
       scm_c_define_gsubr ("frame-color!", 2, 0, 0, gupl_frame_color_x);
       scm_c_define_gsubr ("auto-abscissa!", 1, 2, 0, gupl_auto_abscissa_x);

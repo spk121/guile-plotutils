@@ -327,4 +327,28 @@ what was written to its error port."
                           #:toggle-log-axis "y" #:test "warnings")
                    "inappropriate point"))
 
+(define (first-line-color . options)
+  "The stroke color of the first polyline in an SVG graph."
+  (let* ((port (mkstemp! (string-copy "/tmp/gupl-test-XXXXXX")))
+         (name (port-filename port)))
+    (apply graph '(1 2 3) '(1 4 9) #:output-format "svg"
+           #:toggle-use-color #t #:outp port options)
+    (close-port port)
+    (let* ((svg (call-with-input-file name (lambda (in) (read-delimited "" in))))
+           (line (string-contains svg "<polyline"))
+           (start (+ 8 (string-contains svg "stroke=\"" line))))
+      (delete-file name)
+      (substring svg start (string-index svg #\" start)))))
+
+(test-equal "pen-colors sets the line color" "blue"
+  (first-line-color #:pen-colors "1=blue"))
+(test-equal "pen-colors doesn't carry over to the next graph" "red"
+  (first-line-color))
+(test-equal "a rejected pen-colors string changes nothing" "red"
+  (begin
+    (catch 'misc-error
+      (lambda () (first-line-color #:pen-colors "1=green:9=x"))
+      (lambda args #f))
+    (first-line-color)))
+
 (test-end "graph.scm")

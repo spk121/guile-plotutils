@@ -325,6 +325,8 @@ struct MultigrapherStruct
   char error_message[256];
   /* where warnings go: the Plotter's error stream */
   FILE *errfile;
+  /* colors of the pens for linemodes 1..NO_OF_LINEMODES */
+  const char *pen_colors[NO_OF_LINEMODES];
   bool tick_warning_printed; /* "too few labelled ticks", once per graph */
 };
 
@@ -878,6 +880,14 @@ new_multigrapher_with_ports (const multigrapher_create_init *init)
   multigrapher->title_font_name = NULL;
   multigrapher->errfile = init->_stderr;
   multigrapher->tick_warning_printed = false;
+  {
+    int i;
+
+    for (i = 0; i < NO_OF_LINEMODES; i++)
+      multigrapher->pen_colors[i]
+          = ((init->pen_colors && init->pen_colors[i]) ? init->pen_colors[i]
+                                                        : colorstyle[i]);
+  }
 
   /* set Plotter parameters */
   plotter_params = pl_newplparams ();
@@ -2654,7 +2664,7 @@ set_line_style (Multigrapher *multigrapher, int style, bool use_color)
       else /* neg. pl_linemode_r (no line will be drawn)*/
         j = (-style - 1) % NO_OF_LINEMODES;
 
-      pl_colorname_r (multigrapher->plotter, colorstyle[j]);
+      pl_colorname_r (multigrapher->plotter, multigrapher->pen_colors[j]);
     }
 }
 

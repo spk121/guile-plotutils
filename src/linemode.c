@@ -34,5 +34,5 @@ const char *linemodes[NO_OF_LINEMODES]
 
 /* following colors are the first five used by the gnuplot X11 driver */
 
-const char *colorstyle[NO_OF_LINEMODES]
+const char *const colorstyle[NO_OF_LINEMODES]
     = { "red", "green", "blue", "magenta", "cyan" };
