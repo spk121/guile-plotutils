@@ -10,7 +10,9 @@
   #:export (bounds->errors
 	        dataset
 	        dataset?
-	        graph))
+	        graph
+	        subgraph
+	        multigraph))
 
 ;; The C library provides the following, which are not currently exported
 
@@ -424,14 +426,21 @@ not given take graph's values; an unset #:line-mode keeps auto-bumping."
 		        rotation title-font-name title-font-size auto-abscissa
 		        toggle-auto-bump line-mode symbol line-width
 		        fill-fraction toggle-use-color symbol-font-name
-		        ;; reposition
                 blankout portable-output
-                x-error y-error
+                x-error y-error reposition
                 (outp (current-output-port))
                 (errp (current-error-port))
-                (test #f))
+                (test #f)
+                ;; internal: return the configured graph, for multigraph
+                (%subgraph #f))
   (let ((gr (new-graph)))
     (unpack-keys)
+    (when reposition
+      (unless (and (list? reposition) (= 3 (length reposition))
+                   (every real? reposition))
+        (error "graph: #:reposition must be a list (x y scale), but got"
+               reposition))
+      (apply reposition! gr reposition))
 
     (cond
      ;; A list of datasets, each with its own style.
@@ -503,10 +512,43 @@ not given take graph's values; an unset #:line-mode keeps auto-bumping."
                     (expand-error-spec "#:x-error" x-error xvalues ydata)
                     (expand-error-spec "#:y-error" y-error xvalues ydata))))))
 
-    (if test
-        (%graph-test gr test)
-        ;; else
-        (generate gr outp errp))))
+    (cond (%subgraph gr)
+          (test (%graph-test gr test))
+          (else (generate gr outp errp)))))
+
+(define (subgraph . arguments)
+  "Configure a graph, taking the arguments graph takes, without drawing
+it; pass a list of these to multigraph to draw them on one page."
+  (apply graph (append arguments (list #:%subgraph #t))))
+
+(define* (multigraph graphs #:key output-format bg-color bitmap-size
+                     emulate-color max-line-length page-size rotation
+                     portable-output save-screen
+                     (outp (current-output-port))
+                     (errp (current-error-port)))
+  "Draw GRAPHS, a list of graphs made by subgraph, on one page.  Each is
+drawn where its #:reposition puts it; each after the first is drawn over
+a blanked-out background.  The page options given here (output format,
+sizes, and so on) apply to the whole page; any not given are taken from
+the first graph."
+  (unless (and (pair? graphs) (every graph? graphs))
+    (error "multigraph: expected a list of graphs made by subgraph, but got"
+           graphs))
+  ;; The page is set up from the first graph's page settings.
+  (let ((first-graph (car graphs)))
+    (when output-format (output-format! first-graph output-format))
+    (when bg-color (bg-color! first-graph bg-color))
+    (when bitmap-size (bitmap-size! first-graph bitmap-size))
+    (when emulate-color (emulate-color! first-graph emulate-color))
+    (when max-line-length (max-line-length! first-graph max-line-length))
+    (when page-size (page-size! first-graph page-size))
+    (when rotation
+      (rotation-angle! first-graph (if (number? rotation)
+                                       (number->string rotation)
+                                       rotation)))
+    (when portable-output (portable-output! first-graph))
+    (when save-screen (save-screen! first-graph)))
+  (generate-multigraph graphs outp errp))
 
 
 (load-extension "libguile-plotutils" "gupl_graph_init")

@@ -865,6 +865,18 @@ new_multigrapher (const multigrapher_create_init *init)
   return new_multigrapher_with_ports (&init_with_ports);
 }
 
+/* Use PEN_COLORS (see multigrapher_create_init) for the graphs drawn from
+   now on.  */
+void
+set_pen_colors (Multigrapher *multigrapher, const char *const *pen_colors)
+{
+  int i;
+
+  for (i = 0; i < NO_OF_LINEMODES; i++)
+    multigrapher->pen_colors[i]
+        = ((pen_colors && pen_colors[i]) ? pen_colors[i] : colorstyle[i]);
+}
+
 Multigrapher *
 new_multigrapher_with_ports (const multigrapher_create_init *init)
 {
@@ -880,14 +892,7 @@ new_multigrapher_with_ports (const multigrapher_create_init *init)
   multigrapher->title_font_name = NULL;
   multigrapher->errfile = init->_stderr;
   multigrapher->tick_warning_printed = false;
-  {
-    int i;
-
-    for (i = 0; i < NO_OF_LINEMODES; i++)
-      multigrapher->pen_colors[i]
-          = ((init->pen_colors && init->pen_colors[i]) ? init->pen_colors[i]
-                                                        : colorstyle[i]);
-  }
+  set_pen_colors (multigrapher, init->pen_colors);
 
   /* set Plotter parameters */
   plotter_params = pl_newplparams ();

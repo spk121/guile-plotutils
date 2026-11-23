@@ -66,5 +66,6 @@ GUPL_API SCM gupl_reposition_x (SCM s_graph, SCM s_trans_x, SCM s_trans_y,
 GUPL_API SCM gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec, SCM s_xerr,
                               SCM s_yerr);
 GUPL_API SCM gupl_generate (SCM s_graph, SCM s_outp, SCM s_errp);
+GUPL_API SCM gupl_generate_multigraph (SCM s_graphs, SCM s_outp, SCM s_errp);
 GUPL_API SCM gupl_graph_test (SCM s_graph, SCM s_name);
 #endif

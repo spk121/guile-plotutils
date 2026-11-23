@@ -456,4 +456,72 @@ what was written to its error port."
       (delete-file name)
       (> size 0))))
 
+;;; Multigraphs
+
+(define (svg-of thunk)
+  "The SVG that THUNK, given an output port, writes."
+  (let* ((port (mkstemp! (string-copy "/tmp/gupl-test-XXXXXX")))
+         (name (port-filename port)))
+    (thunk port)
+    (close-port port)
+    (let ((svg (call-with-input-file name (lambda (in) (read-delimited "" in)))))
+      (delete-file name)
+      svg)))
+
+(define (count-occurrences pattern text)
+  (let loop ((start 0) (n 0))
+    (let ((k (string-contains text pattern start)))
+      (if k (loop (+ k 1) (+ n 1)) n))))
+
+(test-equal "multigraph draws every subgraph on one page"
+  2
+  (count-occurrences
+   "<polyline"
+   (svg-of (lambda (port)
+             (multigraph (list (subgraph '(1 2 3) '(1 4 9))
+                               (subgraph '(1 2 3) '(9 4 1)
+                                         #:reposition '(0.5 0.5 0.4)))
+                         #:output-format "svg" #:outp port)))))
+
+(test-assert "each subgraph keeps its own pen colors"
+  (let ((svg (svg-of (lambda (port)
+                       (multigraph
+                        (list (subgraph '(1 2 3) '(1 4 9) #:toggle-use-color #t
+                                        #:pen-colors "1=blue")
+                              (subgraph '(1 2 3) '(9 4 1) #:toggle-use-color #t
+                                        #:reposition '(0.5 0.5 0.4)))
+                        #:output-format "svg" #:outp port)))))
+    (and (string-contains svg "stroke=\"blue\"")
+         (string-contains svg "stroke=\"red\""))))
+
+(test-assert "graph accepts #:reposition"
+  (string-contains (svg-of (lambda (port)
+                             (graph '(1 2 3) '(1 4 9) #:reposition '(0.25 0.25 0.5)
+                                    #:output-format "svg" #:outp port)))
+                   "<polyline"))
+
+(test-equal "#:reposition must be a list of three numbers"
+  'misc-error
+  (catch #t (lambda () (subgraph '(1 2) '(1 2) #:reposition '(0.5 0.5)) 'no-error)
+    (lambda (key . args) key)))
+(test-equal "the #:reposition scale must be positive"
+  'out-of-range
+  (catch #t (lambda () (subgraph '(1 2) '(1 2) #:reposition '(0 0 0)) 'no-error)
+    (lambda (key . args) key)))
+(test-equal "multigraph needs a list of subgraphs"
+  'misc-error
+  (catch #t (lambda () (multigraph (list "not a graph")) 'no-error)
+    (lambda (key . args) key)))
+(test-assert "an invalid axis in a later subgraph is a Scheme error"
+  (let ((null (open-output-file "/dev/null")))
+    (catch 'misc-error
+      (lambda ()
+        (multigraph (list (subgraph '(1 2 3) '(1 4 9))
+                          (subgraph '(1 2 3) '(1 4 9) #:x-limits '(0 10 0)
+                                    #:reposition '(0.5 0.5 0.4)))
+                    #:output-format "svg" #:outp null)
+        #f)
+      (lambda (key subr message args . rest)
+        (string-contains (apply format #f message args) "spacing")))))
+
 (test-end "graph.scm")

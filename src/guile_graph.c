@@ -1423,132 +1423,6 @@ gupl_symbol_x (SCM s_graph, SCM s_index, SCM s_size)
   return SCM_UNSPECIFIED;
 }
 
-#if 0
-SCM
-gupl_reposition_x (SCM s_graph, SCM s_trans_x, SCM s_trans_y, SCM s_scale)
-{
-  graph_t *c_graph;
-  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "reposition!");
-  SCM_ASSERT (scm_is_real (s_trans_x), s_trans_x, SCM_ARG2, "reposition!");
-  SCM_ASSERT (scm_is_real (s_trans_y), s_trans_y, SCM_ARG3, "reposition!");
-  SCM_ASSERT (scm_is_real (s_scale), s_scale, SCM_ARG4, "reposition!");
-  c_graph = _scm_to_graph (s_graph);
-  c_graph->old_reposition_trans_x = c_graph->reposition_trans_x;
-  c_graph->old_reposition_trans_y = c_graph->reposition_trans_y;
-  c_graph->old_reposition_scale = c_graph->reposition_scale;
-  c_graph->reposition_trans_x = scm_to_double (s_trans_x);
-  c_graph->reposition_trans_y = scm_to_double (s_trans_y);
-  c_graph->reposition_scale = scm_to_double (s_scale);
-
-  if (!c_graph->first_file_of_graph)
-    {
-      if (!c_graph->filter)
-        {
-          array_bounds_init bounds_init = {
-            .p = c_graph->p,
-            .length = c_graph->no_of_points,
-            .transpose_axes = c_graph->final_transpose_axes,
-            .clip_mode = c_graph->clip_mode,
-            .min_x = &(c_graph->final_min_x),
-            .min_y = &(c_graph->final_min_y),
-            .max_x = &(c_graph->final_max_x),
-            .max_y = &(c_graph->final_max_y),
-            .spec_min_x = c_graph->final_spec_min_x,
-            .spec_min_y = c_graph->final_spec_min_y,
-            .spec_max_x = c_graph->final_spec_max_x,
-            .spec_max_y = c_graph->final_spec_max_y
-          };
-
-          array_bounds (&bounds_init);
-          if (c_graph->first_graph_of_multigraph)
-            {
-              multigrapher_create_init init = {
-                .output_format = c_graph->output_format,
-                ._stdout = NULL,
-                ._stderr = NULL,
-                .bg_color = c_graph->bg_color,
-                .bitmap_size = c_graph->bitmap_size,
-                .emulate_color = c_graph->emulate_color,
-                .max_line_length = c_graph->max_line_length,
-                .meta_portable = c_graph->meta_portable,
-                .page_size = c_graph->page_size,
-                .rotation_angle = c_graph->rotation_angle,
-                .save_screen = c_graph->save_screen
-              };
-
-              c_graph->multigrapher = new_multigrapher (&init);
-              if (c_graph->multigrapher == NULL)
-                scm_misc_error ("reposition!",
-                                "the graphing device could not be opened",
-                                SCM_BOOL_F);
-            }
-          begin_graph (c_graph->multigrapher,
-                       c_graph->old_reposition_scale,
-                       c_graph->old_reposition_trans_x,
-                       c_graph->old_reposition_trans_y);
-          if ((c_graph->title_font_name == NULL)
-              && (c_graph->font_name != NULL))
-            c_graph->title_font_name = c_graph->font_name;
-
-          set_graph_parameters_init graph_params = {
-            .multigrapher = c_graph->multigrapher,
-            .frame_line_width = c_graph->frame_line_width,
-            .frame_color = c_graph->frame_color,
-            .title = c_graph->top_label,
-            .title_font_name = c_graph->title_font_name,
-            .title_font_size = c_graph->title_font_size,
-            .tick_size = c_graph->tick_size,
-            .grid_spec = c_graph->grid_spec,
-            .x_min = c_graph->final_min_x,
-            .x_max = c_graph->final_max_x,
-            .x_spacing = c_graph->final_spacing_x,
-            .y_min = c_graph->final_min_y,
-            .y_max = c_graph->final_max_y,
-            .y_spacing = c_graph->final_spacing_y,
-            .spec_x_spacing = c_graph->final_spec_spacing_x,
-            .spec_y_spacing = c_graph->final_spec_spacing_y,
-            .width = c_graph->plot_width,
-            .height = c_graph->plot_height,
-            .up = c_graph->margin_below,
-            .right = c_graph->margin_left,
-            .x_font_name = c_graph->font_name,
-            .x_font_size = c_graph->font_size,
-            .x_label = c_graph->x_label,
-            .y_font_name = c_graph->font_name,
-            .y_font_size = c_graph->font_size,
-            .y_label = c_graph->y_label,
-            .no_rotate_y_label = c_graph->no_rotate_y_label,
-            .log_axis = c_graph->final_log_axis,
-            .round_to_next_tick = c_graph->final_round_to_next_tick,
-            .switch_axis_end = c_graph->switch_axis_end,
-            .omit_ticks = c_graph->omit_ticks,
-            .clip_mode = c_graph->clip_mode,
-            .blankout_fraction = c_graph->blankout_fraction,
-            .transpose_axes = c_graph->final_transpose_axes
-          };
-
-          set_graph_parameters (&graph_params);
-
-          draw_frame_of_graph (c_graph->multigrapher,
-                               (c_graph->first_graph_of_multigraph ? false : true));
-          plot_point_array (c_graph->multigrapher, c_graph->p,
-                            c_graph->no_of_points);
-          free (c_graph->p);
-          c_graph->no_of_points = 0;
-        }
-
-      if (c_graph->frame_on_top)
-        {
-          end_polyline_and_flush (c_graph->multigrapher);
-          draw_frame_of_graph (c_graph->multigrapher, false);
-        }
-      end_graph (c_graph->multigrapher);
-      c_graph->first_graph_of_multigraph = false;
-      c_graph->first_file_of_graph = true;
-    }
-  return SCM_UNSPECIFIED;
-}
-#endif
 
 void
 pre_finalize_axes_parameters (graph_t *c_graph)
@@ -2104,41 +1978,37 @@ dup_fd_to_unbuffered_file (int fd)
   return fp;
 }
 
-SCM
-gupl_generate (SCM s_graph, SCM outp, SCM errp)
+/* Open an unbuffered stdio stream on a duplicate of PORT's file
+   descriptor, for the plotter, after writing out anything buffered in
+   PORT (the plotter bypasses the port's buffer).  */
+static FILE *
+port_to_plotter_file (SCM port, const char *who, FILE *to_close)
 {
-  graph_t *c_graph;
+  int fd;
+  FILE *fp;
 
-  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "generate");
-  SCM_ASSERT (scm_is_true (scm_output_port_p (outp)), outp, SCM_ARG2,
-              "generate");
-  SCM_ASSERT (scm_is_true (scm_output_port_p (errp)), errp, SCM_ARG3,
-              "generate");
-
-  /* The plotter writes to duplicates of the ports' file descriptors,
-     bypassing the ports' buffers, so write out anything already buffered
-     first to keep it ahead of the graph.  */
-  scm_force_output (outp);
-  scm_force_output (errp);
-
-  /* Look up both descriptors before opening anything, since scm_fileno
-     throws for ports that have no file descriptor.  */
-  int c_outp_fileno_orig = scm_to_int (scm_fileno (outp));
-  int c_errp_fileno_orig = scm_to_int (scm_fileno (errp));
-  FILE *c_outp, *c_errp;
-
-  c_outp = dup_fd_to_unbuffered_file (c_outp_fileno_orig);
-  if (c_outp == NULL)
-    scm_misc_error ("generate", "failed to duplicate output port", SCM_EOL);
-  c_errp = dup_fd_to_unbuffered_file (c_errp_fileno_orig);
-  if (c_errp == NULL)
+  scm_force_output (port);
+  fd = scm_to_int (scm_fileno (port));
+  fp = dup_fd_to_unbuffered_file (fd);
+  if (fp == NULL)
     {
-      fclose (c_outp);
-      scm_misc_error ("generate", "failed to duplicate error port", SCM_EOL);
+      if (to_close)
+        fclose (to_close);
+      scm_misc_error (who, "failed to duplicate port ~S", scm_list_1 (port));
     }
+  return fp;
+}
 
-  c_graph = _scm_to_graph (s_graph);
-
+/* Draw the graph C_GRAPH on *MG, the page.  If *MG is NULL, first create
+   it, with C_GRAPH's page settings, writing to C_OUTP and C_ERRP; FIRST
+   says whether C_GRAPH is the first graph on the page (later ones are
+   drawn over a blanked-out background).  A graph with no data draws
+   nothing.  Returns false, with a message in ERROR (of ERROR_LENGTH
+   bytes), if the graph can't be drawn; the caller cleans up.  */
+static bool
+draw_graph (graph_t *c_graph, Multigrapher **mg, FILE *c_outp, FILE *c_errp,
+            bool first, char *error, size_t error_length)
+{
   /* Warnings from reading the data (xy-data! has no port to write to). */
   if (c_graph->warnings.text != NULL)
     {
@@ -2148,174 +2018,243 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
       c_graph->warnings.length = 0;
     }
 
-  c_graph = _scm_to_graph (s_graph);
-  if (c_graph->first_file_of_graph == false)
+  if (c_graph->first_file_of_graph)
+    return true; /* no data */
+
+  /* fill in any of min_? and max_? that user didn't specify (the
+     prefix "final_" means these arguments were finalized at the
+     time the first file of the plot was processed) */
+  array_bounds_init bounds_init = {
+    .p = c_graph->p,
+    .length = c_graph->no_of_points,
+    .transpose_axes = c_graph->final_transpose_axes,
+    .clip_mode = c_graph->clip_mode,
+    .min_x = &(c_graph->final_min_x),
+    .min_y = &(c_graph->final_min_y),
+    .max_x = &(c_graph->final_max_x),
+    .max_y = &(c_graph->final_max_y),
+    .spec_min_x = c_graph->final_spec_min_x,
+    .spec_min_y = c_graph->final_spec_min_y,
+    .spec_max_x = c_graph->final_spec_max_x,
+    .spec_max_y = c_graph->final_spec_max_y
+  };
+  array_bounds (&bounds_init);
+
+  if (*mg == NULL)
+    /* the first graph drawn: open the page */
     {
-      /* fill in any of min_? and max_? that user didn't specify (the
-         prefix "final_" means these arguments were finalized at the
-         time the first file of the plot was processed) */
-      array_bounds_init bounds_init = {
-        .p = c_graph->p,
-        .length = c_graph->no_of_points,
-        .transpose_axes = c_graph->final_transpose_axes,
-        .clip_mode = c_graph->clip_mode,
-        .min_x = &(c_graph->final_min_x),
-        .min_y = &(c_graph->final_min_y),
-        .max_x = &(c_graph->final_max_x),
-        .max_y = &(c_graph->final_max_y),
-        .spec_min_x = c_graph->final_spec_min_x,
-        .spec_min_y = c_graph->final_spec_min_y,
-        .spec_max_x = c_graph->final_spec_max_x,
-        .spec_max_y = c_graph->final_spec_max_y
+      multigrapher_create_init init = {
+        .output_format = c_graph->output_format,
+        ._stdout = c_outp,
+        ._stderr = c_errp,
+        .bg_color = c_graph->bg_color,
+        .bitmap_size = c_graph->bitmap_size,
+        .emulate_color = c_graph->emulate_color,
+        .max_line_length = c_graph->max_line_length,
+        .meta_portable = c_graph->meta_portable,
+        .page_size = c_graph->page_size,
+        .rotation_angle = c_graph->rotation_angle,
+        .save_screen = c_graph->save_screen,
+        .pen_colors = (const char *const *)c_graph->pen_colors
       };
 
-      array_bounds (&bounds_init);
-
-      if (c_graph->first_graph_of_multigraph)
-        /* still haven't created multigrapher, do so now */
+      *mg = new_multigrapher_with_ports (&init);
+      if (*mg == NULL)
         {
-          multigrapher_create_init init = {
-            .output_format = c_graph->output_format,
-            ._stdout = c_outp,
-            ._stderr = c_errp,
-            .bg_color = c_graph->bg_color,
-            .bitmap_size = c_graph->bitmap_size,
-            .emulate_color = c_graph->emulate_color,
-            .max_line_length = c_graph->max_line_length,
-            .meta_portable = c_graph->meta_portable,
-            .page_size = c_graph->page_size,
-            .rotation_angle = c_graph->rotation_angle,
-            .save_screen = c_graph->save_screen,
-            .pen_colors = (const char *const *)c_graph->pen_colors
-          };
-
-          if ((c_graph->multigrapher = new_multigrapher_with_ports (
-                   &init))
-              == NULL)
-            {
-              fclose (c_outp);
-              fclose (c_errp);
-              scm_misc_error ("generate",
-                              "the graphing device could not be opened: ~S",
-                              scm_list_1 (s_graph));
-            }
+          snprintf (error, error_length,
+                    "the graphing device could not be opened");
+          return false;
         }
-
-      /* begin graph: push new libplot drawing state onto stack of
-         states; also concatenate the current transformation matrix
-         with a matrix formed from the repositioning parameters (this
-         will take effect for the duration of the graph) */
-      begin_graph (c_graph->multigrapher, c_graph->reposition_scale,
-                   c_graph->reposition_trans_x, c_graph->reposition_trans_y);
-
-      /* font selection, saves typing.  Don't store the fallback in the
-         graph: font_name may be freed and replaced later. */
-      const char *title_font_name = (c_graph->title_font_name != NULL
-                                         ? c_graph->title_font_name
-                                         : c_graph->font_name);
-
-      set_graph_parameters_init graph_params = {
-        .multigrapher = c_graph->multigrapher,
-        .frame_line_width = c_graph->frame_line_width,
-        .frame_color = c_graph->frame_color,
-        .title = c_graph->top_label,
-        .title_font_name = title_font_name,
-        .title_font_size = c_graph->title_font_size,
-        .tick_size = c_graph->tick_size,
-        .grid_spec = c_graph->grid_spec,
-        .x_min = c_graph->final_min_x,
-        .x_max = c_graph->final_max_x,
-        .x_spacing = c_graph->final_spacing_x,
-        .y_min = c_graph->final_min_y,
-        .y_max = c_graph->final_max_y,
-        .y_spacing = c_graph->final_spacing_y,
-        .spec_x_spacing = c_graph->final_spec_spacing_x,
-        .spec_y_spacing = c_graph->final_spec_spacing_y,
-        .width = c_graph->plot_width,
-        .height = c_graph->plot_height,
-        .up = c_graph->margin_below,
-        .right = c_graph->margin_left,
-        .x_font_name = c_graph->font_name,
-        .x_font_size = c_graph->font_size,
-        .x_label = c_graph->x_label,
-        .y_font_name = c_graph->font_name,
-        .y_font_size = c_graph->font_size,
-        .y_label = c_graph->y_label,
-        .no_rotate_y_label = c_graph->no_rotate_y_label,
-        .log_axis = c_graph->final_log_axis,
-        .round_to_next_tick = c_graph->final_round_to_next_tick,
-        .switch_axis_end = c_graph->switch_axis_end,
-        .omit_ticks = c_graph->omit_ticks,
-        .clip_mode = c_graph->clip_mode,
-        .blankout_fraction = c_graph->blankout_fraction,
-        .transpose_axes = c_graph->final_transpose_axes
-      };
-
-      if (!set_graph_parameters (&graph_params))
-        {
-          /* Undo the graph begun above, and raise the reason as a Scheme
-             error.  Copy the message: it lives in the multigrapher.  */
-          SCM message = scm_from_locale_string (
-              multigrapher_error (c_graph->multigrapher));
-
-          end_graph (c_graph->multigrapher);
-          delete_multigrapher (c_graph->multigrapher);
-          c_graph->multigrapher = NULL;
-          free (c_graph->p);
-          c_graph->p = NULL;
-          free_retired_font_names (c_graph);
-          c_graph->no_of_points = 0;
-          c_graph->first_file_of_graph = true;
-          fclose (c_outp);
-          fclose (c_errp);
-          scm_misc_error ("generate", "~A", scm_list_1 (message));
-        }
-
-      /* draw the graph frame (grid, ticks, etc.); draw a `canvas' (a
-         background opaque white rectangle) only if this isn't the
-         first graph */
-      draw_frame_of_graph (c_graph->multigrapher,
-                           c_graph->first_graph_of_multigraph ? false : true);
-
-      /* plot the laboriously read-in array */
-      plot_point_array (c_graph->multigrapher, c_graph->p,
-                        c_graph->no_of_points);
-
-      /* free points array, and the symbol font names only it used */
-      free (c_graph->p);
-      c_graph->p = NULL;
-      free_retired_font_names (c_graph);
-      c_graph->no_of_points = 0;
-
-      /* draw graph frame on top of graph, if user requested it */
-      if (c_graph->frame_on_top)
-        {
-          end_polyline_and_flush (c_graph->multigrapher);
-          draw_frame_of_graph (c_graph->multigrapher, false);
-        }
-
-      /* end graph: pop drawing state off the stack of drawing states */
-      end_graph (c_graph->multigrapher);
-
-      /* the points array is gone; the next xy-data! starts a new graph */
-      c_graph->first_file_of_graph = true;
-
-    } /* end of nonempty-graph case */
-
-  /* finish up by deleting our multigrapher (one must have been created,
-     since we always read at least stdin) */
-  if (c_graph->multigrapher != NULL)
-    {
-      if (delete_multigrapher (c_graph->multigrapher) < 0)
-        fprintf (c_errp,
-                 "%s: error: the graphing device could not be closed\n",
-                 progname);
-      c_graph->multigrapher = NULL;
     }
 
+  /* begin graph: push new libplot drawing state onto stack of
+     states; also concatenate the current transformation matrix
+     with a matrix formed from the repositioning parameters (this
+     will take effect for the duration of the graph) */
+  begin_graph (*mg, c_graph->reposition_scale, c_graph->reposition_trans_x,
+               c_graph->reposition_trans_y);
+  /* this graph's own pen colors (the page has the first graph's) */
+  set_pen_colors (*mg, (const char *const *)c_graph->pen_colors);
+
+  /* font selection, saves typing.  Don't store the fallback in the
+     graph: font_name may be freed and replaced later. */
+  const char *title_font_name = (c_graph->title_font_name != NULL
+                                     ? c_graph->title_font_name
+                                     : c_graph->font_name);
+
+  set_graph_parameters_init graph_params = {
+    .multigrapher = *mg,
+    .frame_line_width = c_graph->frame_line_width,
+    .frame_color = c_graph->frame_color,
+    .title = c_graph->top_label,
+    .title_font_name = title_font_name,
+    .title_font_size = c_graph->title_font_size,
+    .tick_size = c_graph->tick_size,
+    .grid_spec = c_graph->grid_spec,
+    .x_min = c_graph->final_min_x,
+    .x_max = c_graph->final_max_x,
+    .x_spacing = c_graph->final_spacing_x,
+    .y_min = c_graph->final_min_y,
+    .y_max = c_graph->final_max_y,
+    .y_spacing = c_graph->final_spacing_y,
+    .spec_x_spacing = c_graph->final_spec_spacing_x,
+    .spec_y_spacing = c_graph->final_spec_spacing_y,
+    .width = c_graph->plot_width,
+    .height = c_graph->plot_height,
+    .up = c_graph->margin_below,
+    .right = c_graph->margin_left,
+    .x_font_name = c_graph->font_name,
+    .x_font_size = c_graph->font_size,
+    .x_label = c_graph->x_label,
+    .y_font_name = c_graph->font_name,
+    .y_font_size = c_graph->font_size,
+    .y_label = c_graph->y_label,
+    .no_rotate_y_label = c_graph->no_rotate_y_label,
+    .log_axis = c_graph->final_log_axis,
+    .round_to_next_tick = c_graph->final_round_to_next_tick,
+    .switch_axis_end = c_graph->switch_axis_end,
+    .omit_ticks = c_graph->omit_ticks,
+    .clip_mode = c_graph->clip_mode,
+    .blankout_fraction = c_graph->blankout_fraction,
+    .transpose_axes = c_graph->final_transpose_axes
+  };
+
+  if (!set_graph_parameters (&graph_params))
+    {
+      snprintf (error, error_length, "%s", multigrapher_error (*mg));
+      end_graph (*mg);
+      free (c_graph->p);
+      c_graph->p = NULL;
+      c_graph->no_of_points = 0;
+      free_retired_font_names (c_graph);
+      c_graph->first_file_of_graph = true;
+      return false;
+    }
+
+  /* draw the graph frame (grid, ticks, etc.); draw a `canvas' (a
+     background opaque rectangle) only if this isn't the first graph */
+  draw_frame_of_graph (*mg, first ? false : true);
+
+  /* plot the laboriously read-in array */
+  plot_point_array (*mg, c_graph->p, c_graph->no_of_points);
+
+  /* free points array, and the symbol font names only it used */
+  free (c_graph->p);
+  c_graph->p = NULL;
+  c_graph->no_of_points = 0;
+  free_retired_font_names (c_graph);
+
+  /* draw graph frame on top of graph, if user requested it */
+  if (c_graph->frame_on_top)
+    {
+      end_polyline_and_flush (*mg);
+      draw_frame_of_graph (*mg, false);
+    }
+
+  /* end graph: pop drawing state off the stack of drawing states */
+  end_graph (*mg);
+
+  /* the points array is gone; the next xy-data! starts a new graph */
+  c_graph->first_file_of_graph = true;
+  return true;
+}
+
+/* Close the page: delete MG (if any), then the streams.  */
+static void
+close_page (Multigrapher *mg, FILE *c_outp, FILE *c_errp)
+{
+  if (mg != NULL && delete_multigrapher (mg) < 0)
+    fprintf (c_errp, "%s: error: the graphing device could not be closed\n",
+             progname);
   /* the Plotter has been deleted, so nothing else writes to these */
   fclose (c_outp);
   fclose (c_errp);
+}
+
+SCM
+gupl_generate (SCM s_graph, SCM outp, SCM errp)
+{
+  Multigrapher *mg = NULL;
+  FILE *c_outp, *c_errp;
+  char error[256];
+  bool ok;
+
+  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "generate");
+  SCM_ASSERT (scm_is_true (scm_output_port_p (outp)), outp, SCM_ARG2,
+              "generate");
+  SCM_ASSERT (scm_is_true (scm_output_port_p (errp)), errp, SCM_ARG3,
+              "generate");
+
+  c_outp = port_to_plotter_file (outp, "generate", NULL);
+  c_errp = port_to_plotter_file (errp, "generate", c_outp);
+
+  ok = draw_graph (_scm_to_graph (s_graph), &mg, c_outp, c_errp, true, error,
+                   sizeof error);
+  close_page (mg, c_outp, c_errp);
+  if (!ok)
+    scm_misc_error ("generate", "~A",
+                    scm_list_1 (scm_from_locale_string (error)));
+  return SCM_UNSPECIFIED;
+}
+
+/* (generate-multigraph graphs outp errp): draw the graphs, a list, on one
+   page, each at its own position (see reposition!), with the first
+   graph's page settings (output format, page size, and so on).  */
+SCM
+gupl_generate_multigraph (SCM s_graphs, SCM outp, SCM errp)
+{
+  const char *who = "generate-multigraph";
+  Multigrapher *mg = NULL;
+  FILE *c_outp, *c_errp;
+  char error[256];
+  bool ok = true;
+  SCM rest;
+
+  SCM_ASSERT (scm_is_true (scm_list_p (s_graphs)), s_graphs, SCM_ARG1, who);
+  for (rest = s_graphs; !scm_is_null (rest); rest = scm_cdr (rest))
+    SCM_ASSERT (_scm_is_graph (scm_car (rest)), s_graphs, SCM_ARG1, who);
+  SCM_ASSERT (scm_is_true (scm_output_port_p (outp)), outp, SCM_ARG2, who);
+  SCM_ASSERT (scm_is_true (scm_output_port_p (errp)), errp, SCM_ARG3, who);
+
+  c_outp = port_to_plotter_file (outp, who, NULL);
+  c_errp = port_to_plotter_file (errp, who, c_outp);
+
+  for (rest = s_graphs; ok && !scm_is_null (rest); rest = scm_cdr (rest))
+    ok = draw_graph (_scm_to_graph (scm_car (rest)), &mg, c_outp, c_errp,
+                     mg == NULL, error, sizeof error);
+  close_page (mg, c_outp, c_errp);
+  if (!ok)
+    scm_misc_error (who, "~A", scm_list_1 (scm_from_locale_string (error)));
+  return SCM_UNSPECIFIED;
+}
+
+/* (reposition! graph trans-x trans-y scale): where the graph goes on the
+   page, for generate-multigraph.  The graph is scaled by SCALE and its
+   lower left corner moved to (TRANS-X, TRANS-Y), as fractions of the
+   page size.  */
+SCM
+gupl_reposition_x (SCM s_graph, SCM s_trans_x, SCM s_trans_y, SCM s_scale)
+{
+  graph_t *c_graph;
+  double tx, ty, scale;
+
+  SCM_ASSERT (_scm_is_graph (s_graph), s_graph, SCM_ARG1, "reposition!");
+  SCM_ASSERT (scm_is_real (s_trans_x), s_trans_x, SCM_ARG2, "reposition!");
+  SCM_ASSERT (scm_is_real (s_trans_y), s_trans_y, SCM_ARG3, "reposition!");
+  SCM_ASSERT (scm_is_real (s_scale), s_scale, SCM_ARG4, "reposition!");
+  tx = scm_to_double (s_trans_x);
+  ty = scm_to_double (s_trans_y);
+  scale = scm_to_double (s_scale);
+  if (!isfinite (tx))
+    scm_out_of_range ("reposition!", s_trans_x);
+  if (!isfinite (ty))
+    scm_out_of_range ("reposition!", s_trans_y);
+  if (!(isfinite (scale) && scale > 0.0))
+    scm_out_of_range ("reposition!", s_scale);
+  c_graph = _scm_to_graph (s_graph);
+  c_graph->reposition_trans_x = tx;
+  c_graph->reposition_trans_y = ty;
+  c_graph->reposition_scale = scale;
   return SCM_UNSPECIFIED;
 }
 
@@ -2819,6 +2758,9 @@ gupl_graph_init (void)
       scm_c_define_gsubr ("xy-data!", 3, 2, 0, gupl_xy_data_x);
       scm_c_define_gsubr ("%dataset-style!", 7, 0, 0, gupl_dataset_style_x);
       scm_c_define_gsubr ("generate", 3, 0, 0, gupl_generate);
+      scm_c_define_gsubr ("generate-multigraph", 3, 0, 0,
+                          gupl_generate_multigraph);
+      scm_c_define_gsubr ("reposition!", 4, 0, 0, gupl_reposition_x);
       scm_c_define_gsubr ("%graph-test", 2, 0, 0, gupl_graph_test);
     }
 }

@@ -2158,6 +2158,36 @@ Options}).
 There are a couple dozen optional parameters.
 @end deffn
 
+@deffn Procedure subgraph arguments @dots{}
+Configure a graph without drawing it.  @code{subgraph} takes the
+arguments @code{graph} takes (data and options), and returns the graph,
+to be drawn by @code{multigraph}.
+@end deffn
+
+@deffn Procedure multigraph graphs [options]
+Draw @var{graphs}, a list of graphs made by @code{subgraph}, on one page,
+like GNU @code{graph}'s @option{--reposition} option.  Each graph is
+drawn at the position and scale given by its @samp{#:reposition}
+option, in order; each after the first is drawn over a blanked-out
+background (see @samp{#:blankout}), so it can be an inset.
+
+@lisp
+(multigraph
+ (list (subgraph xs ys #:top-label "Whole range")
+       (subgraph xs2 ys2 #:reposition '(0.55 0.55 0.35)
+                 #:top-label "Detail"))
+ #:output-format "png" #:outp port)
+@end lisp
+
+The options of @code{multigraph} apply to the whole page:
+@samp{#:output-format}, @samp{#:bg-color}, @samp{#:bitmap-size},
+@samp{#:emulate-color}, @samp{#:max-line-length}, @samp{#:page-size},
+@samp{#:rotation}, @samp{#:portable-output}, @samp{#:save-screen},
+@samp{#:outp}, and @samp{#:errp}.  Any not given are taken from the
+first graph.  All other options, such as axis limits and labels, belong
+to each graph.
+@end deffn
+
 @deffn Procedure dataset ylist [options]
 @deffnx Procedure dataset xlist ylist [options]
 @deffnx Procedure dataset yproc xstart xend [xstep] [options]
@@ -2375,6 +2405,13 @@ By default, the label is rotated, so that it is parallel to the
 @w{@math{y} axis}.  But some output devices (e.g., old @w{X Window}
 System displays, and buggy new ones) cannot handle rotated fonts.  So
 if you specify @samp{-T X}, you may also @w{need @samp{-Q}}.
+
+@item #:reposition (@var{x} @var{y} @var{scale})
+(Numbers, default @code{(0 0 1)}.)  Scale the whole graph, including its
+labels, by @var{scale}, and move its lower left corner to (@var{x},
+@var{y}), as fractions of the width and height of the page.  This is
+mostly for placing graphs drawn together by @code{multigraph}, such as
+an inset over a larger graph.  @var{scale} must be positive.
 
 @item #:right-shift @var{right}
 (Float, default 0.2.)  Move the plot to the right by a fractional amount

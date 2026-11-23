@@ -167,6 +167,8 @@ extern void end_graph (Multigrapher *multigrapher);
 
 extern bool set_graph_parameters (const set_graph_parameters_init *init);
 extern const char *multigrapher_error (const Multigrapher *multigrapher);
+extern void set_pen_colors (Multigrapher *multigrapher,
+                            const char *const *pen_colors);
 
 extern void draw_frame_of_graph (Multigrapher *multigrapher, bool draw_canvas);
 
