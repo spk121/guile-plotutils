@@ -1945,6 +1945,12 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
   SCM_ASSERT (scm_is_true (scm_output_port_p (errp)), errp, SCM_ARG3,
               "generate");
 
+  /* The plotter writes to duplicates of the ports' file descriptors,
+     bypassing the ports' buffers, so write out anything already buffered
+     first to keep it ahead of the graph.  */
+  scm_force_output (outp);
+  scm_force_output (errp);
+
   /* Look up both descriptors before opening anything, since scm_fileno
      throws for ports that have no file descriptor.  */
   int c_outp_fileno_orig = scm_to_int (scm_fileno (outp));

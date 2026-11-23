@@ -556,6 +556,17 @@ how @file{libplot} was compiled in the upstrem GNU Plotutils library.
 receive the output produced by the plotter in the format specified by
 @var{type}. @var{errp} will receive error messages.
 
+Both ports must be backed by file descriptors, such as file ports or
+the standard ports; string ports can't be used.  The Plotter writes to
+duplicates of the ports' file descriptors rather than through the
+ports themselves, so to keep output in order, anything buffered in
+either port is written out by @t{newpl}, and again by each plotting
+procedure before it draws.  You can therefore freely mix your own
+output to @var{outp} with the Plotter's, for instance to write a header
+before the graphics.  Closing the ports does not delete the Plotter,
+which keeps its own descriptors until @t{deletepl!} is called or it is
+garbage collected.
+
 @var{param} is an object of type @code{<plparams>} that has set up the
 ``paper'' upon which we are drawing.
 @end deffn
@@ -2077,6 +2088,13 @@ the abcissa.  When called with @var{xstart} and @var{xend} but not
 @var{xstep} a default number of samples will be computed from the
 procedure: a few hundred points.  When @var{xstep} is included, it will
 be the step size of the samples.
+
+The graph is written to the port given by the @code{#:outp} keyword
+argument, and error messages to the port given by @code{#:errp}; they
+default to the current output and error ports.  As with @code{newpl},
+both must be backed by file descriptors, and anything already buffered
+in them is written out before the graph, so output written to the port
+before calling @code{graph} comes first.
 
 There are a couple dozen optional parameters.
 @end deffn

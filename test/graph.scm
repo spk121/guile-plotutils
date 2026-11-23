@@ -1,4 +1,5 @@
 (use-modules (plotutils graph)
+             (ice-9 rdelim)
              (srfi srfi-1)
              (srfi srfi-64))
 
@@ -141,5 +142,16 @@
     (lambda (key subr msg args . rest)
       ;; (error msg . irritants) gives msg as the first format argument
       (string-contains (car args) "expected (graph ylist)"))))
+
+(test-assert "text written before graph precedes the graph"
+  (let* ((port (mkstemp! (string-copy "/tmp/gupl-test-XXXXXX")))
+         (name (port-filename port)))
+    (display "HEADER\n" port)
+    (graph xvalues yvalues #:output-format "svg" #:outp port)
+    (close-port port)
+    (let ((text (call-with-input-file name
+                  (lambda (in) (read-line in)))))
+      (delete-file name)
+      (equal? text "HEADER"))))
 
 (test-end "graph.scm")

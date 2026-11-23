@@ -24,7 +24,29 @@ typedef struct
   plPlotter *plotter;
   FILE *outp;
   FILE *errp;
+  /* The Guile ports the streams were duplicated from.  libplot writes to
+     the duplicated file descriptors directly, bypassing these ports'
+     buffers, so the ports are flushed before every libplot call to keep
+     Scheme output and plotter output in order.  */
+  SCM s_outp;
+  SCM s_errp;
 } gupl_plotter_t;
+
+/* Write out anything buffered in PORT, unless the port has been closed
+   (its file descriptor was duplicated, so the plotter can still write). */
+static void
+flush_port_if_open (SCM port)
+{
+  if (scm_is_false (scm_port_closed_p (port)))
+    scm_force_output (port);
+}
+
+static void
+flush_plotter_ports (gupl_plotter_t *plotter)
+{
+  flush_port_if_open (plotter->s_outp);
+  flush_port_if_open (plotter->s_errp);
+}
 
 static int _scm_is_plparams (SCM x);
 static plPlotterParams *_scm_to_plparams (SCM x);
@@ -179,9 +201,15 @@ _scm_is_plotter (SCM x)
 plPlotter *
 _scm_to_plotter (SCM x)
 {
+  gupl_plotter_t *plotter;
+
   assert (_scm_is_plotter (x));
 
-  return ((gupl_plotter_t *)SCM_SMOB_DATA (x))->plotter;
+  /* Every plotting procedure gets its Plotter here, just before calling
+     libplot, so this is where pending Scheme output is written out.  */
+  plotter = (gupl_plotter_t *)SCM_SMOB_DATA (x);
+  flush_plotter_ports (plotter);
+  return plotter->plotter;
 }
 
 SCM
@@ -218,8 +246,12 @@ equalp_plotter (SCM x1, SCM x2)
 SCM
 mark_plotter (SCM x)
 {
-  // No SCMs in the plotter type: nothing to do here.
-  return (SCM_BOOL_F);
+  gupl_plotter_t *plotter = (gupl_plotter_t *)SCM_SMOB_DATA (x);
+
+  if (plotter == NULL)
+    return SCM_BOOL_F;
+  scm_gc_mark (plotter->s_outp);
+  return plotter->s_errp;
 }
 
 /* Delete the libplot Plotter held by smob X and close its streams, if
@@ -256,8 +288,15 @@ free_plotter (SCM x)
 SCM
 gupl_deletepl_x (SCM s_plotter)
 {
+  gupl_plotter_t *plotter;
+
   SCM_ASSERT (SCM_SMOB_PREDICATE (plotter_tag, s_plotter), s_plotter,
               SCM_ARG1, "deletepl!");
+  /* Deleting may write output, so flush first.  (The garbage collector's
+     free function can't do this: it must not run port code.)  */
+  plotter = (gupl_plotter_t *)SCM_SMOB_DATA (s_plotter);
+  if (plotter != NULL)
+    flush_plotter_ports (plotter);
   return scm_from_int (release_plotter (s_plotter));
 }
 
@@ -311,6 +350,11 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
   SCM_ASSERT (scm_is_true (scm_output_port_p (outp)), outp, SCM_ARG2, "newpl");
   SCM_ASSERT (scm_is_true (scm_output_port_p (errp)), errp, SCM_ARG3, "newpl");
   SCM_ASSERT (_scm_is_plparams (param), param, SCM_ARG4, "newpl");
+
+  /* Write out anything already buffered in the ports, so that it comes
+     before the plotter's output.  */
+  flush_port_if_open (outp);
+  flush_port_if_open (errp);
 
   /* Do everything that can throw before opening any streams.  */
   int c_outp_fileno_orig = scm_to_int (scm_fileno (outp));
@@ -384,6 +428,8 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
   data->plotter = ret;
   data->outp = c_outp;
   data->errp = c_errp;
+  data->s_outp = outp;
+  data->s_errp = errp;
   return _scm_from_plotter (data);
 }
 

@@ -92,4 +92,42 @@
       (close-port port)
       (delete-file name))))
 
+;; Plotters write to a duplicate of the port's file descriptor, bypassing
+;; the port's buffer, so pending Scheme output must be flushed first or it
+;; would land after the plot.
+(test-group "Scheme output and plotter output stay in order"
+  (let-values (((port name) (temp-output-port)))
+    (display "BEFORE-NEWPL\n" port)
+    (let ((p (newpl "svg" port (current-error-port) (newplparams))))
+      (openpl! p)
+      (display "BEFORE-CLOSEPL\n" port)
+      (line! p 0 0 1 1)
+      (closepl! p)
+      (display "AFTER-CLOSEPL\n" port)
+      (deletepl! p)
+      (close-port port)
+      (let* ((text (file->string name))
+             (before-newpl (string-contains text "BEFORE-NEWPL"))
+             (before-closepl (string-contains text "BEFORE-CLOSEPL"))
+             (svg (string-contains text "<svg"))
+             (after-closepl (string-contains text "AFTER-CLOSEPL")))
+        (test-equal "text written before newpl comes first" 0 before-newpl)
+        (test-assert "text written before closepl! precedes the SVG"
+          (< before-closepl svg))
+        (test-assert "text written after closepl! follows the SVG"
+          (< svg after-closepl)))
+      (delete-file name))))
+
+(test-group "deletepl! after the port is closed"
+  (let-values (((port name) (temp-output-port)))
+    (let ((p (newpl "ps" port (current-error-port) (newplparams))))
+      (openpl! p)
+      (line! p 0 0 1 1)
+      (closepl! p)
+      (close-port port)
+      (test-equal "deletepl! still succeeds" 0 (deletepl! p))
+      (test-assert "and still writes the Postscript"
+        (string-contains (file->string name) "%%EOF"))
+      (delete-file name))))
+
 (test-end "plot.scm")
