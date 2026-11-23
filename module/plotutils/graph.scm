@@ -187,6 +187,10 @@ the input lists with #f.  For example,
 	       (error "graph: invalid #:pen-colors string" pen-colors)))
      (if title-font-name
 	     (title-font-name! gr title-font-name))
+     (if rotation
+	     (rotation-angle! gr (if (number? rotation)
+				     (number->string rotation)
+				     rotation)))
      (if auto-abscissa
 	     (cond
 	      ((and (not (list? auto-abscissa)) (eq? auto-abscissa #t))

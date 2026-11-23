@@ -2394,7 +2394,7 @@ unrecognized} name sets the corresponding color to the default.  For
 information on what names are recognized, see @ref{Color Names}.
 
 @item #:rotation @var{angle}
-(Integer, default 0.)  Set the rotation angle of the graphics display
+(Integer or string, default 0.)  Set the rotation angle of the graphics display
 to be @var{angle} degrees.  The rotation is counterclockwise.  The
 environment variable @code{ROTATION} can equally well be used to
 specify the rotation angle.

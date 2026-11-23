@@ -86,4 +86,15 @@
   (graph (lambda (x) (* x x)) 0 0.3 0.1
          #:test "no_of_points"))
 
+(test-equal "rotation given as a number"
+  "90"
+  (graph xvalues yvalues
+         #:rotation 90
+         #:test "rotation_angle"))
+(test-equal "rotation given as a string"
+  "180"
+  (graph xvalues yvalues
+         #:rotation "180"
+         #:test "rotation_angle"))
+
 (test-end "graph.scm")

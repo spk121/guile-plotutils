@@ -2269,6 +2269,13 @@ gupl_graph_test (SCM s_graph, SCM s_name)
   /* graph-specific parameters (may change from graph to graph) */
 #endif
 
+  else if (!strcmp (c_name, "rotation_angle"))
+    {
+      if (c_graph->rotation_angle)
+        ret = scm_from_latin1_string (c_graph->rotation_angle);
+      else
+        ret = SCM_BOOL_F;
+    }
   else if (!strcmp (c_name, "grid_spec"))
     {
       if (c_graph->grid_spec == NO_AXES)
