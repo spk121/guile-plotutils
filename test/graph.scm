@@ -103,4 +103,10 @@
          #:title-font-size 0.12
          #:test "title_font_size"))
 
+(test-equal "blankout"
+  1.0
+  (graph xvalues yvalues
+         #:blankout 1.0
+         #:test "blankout_fraction"))
+
 (test-end "graph.scm")

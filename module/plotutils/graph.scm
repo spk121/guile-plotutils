@@ -187,6 +187,8 @@ the input lists with #f.  For example,
 	       (error "graph: invalid #:pen-colors string" pen-colors)))
      (if title-font-name
 	     (title-font-name! gr title-font-name))
+     (if blankout
+	     (blankout! gr blankout))
      (if title-font-size
 	     (title-font-size! gr title-font-size))
      (if rotation

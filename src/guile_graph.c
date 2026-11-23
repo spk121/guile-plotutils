@@ -2324,6 +2324,8 @@ gupl_graph_test (SCM s_graph, SCM s_name)
 
   else if (!strcmp (c_name, "font_size"))
     ret = scm_from_double (c_graph->font_size);
+  else if (!strcmp (c_name, "blankout_fraction"))
+    ret = scm_from_double (c_graph->blankout_fraction);
   else if (!strcmp (c_name, "title_font_size"))
     ret = scm_from_double (c_graph->title_font_size);
 

@@ -2254,6 +2254,13 @@ do not properly support rotated labels, so that if you specify
 @samp{#:font-name} options can be used to specify the name of the font and the
 size of the font.
 
+@item #:blankout @var{blankout_fraction}
+(Float, default 1.3.)  When drawing a graph over an earlier one, first
+blank out (fill with the background color) a region around the plotting
+area, whose size is @var{blankout_fraction} times the size of the
+plotting area.  Setting @var{blankout_fraction} to 1.0 blanks out only
+the plotting area itself.
+
 @item #:bg-color @var{name}
 (String, default "white".)  Set the color used for the plot background
 to be @var{name}.  This is relevant only to @code{graph @w{#:output-format ``X''}},
