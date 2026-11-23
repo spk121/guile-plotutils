@@ -104,8 +104,8 @@ that describe the output surface upon which graphics will be drawn.
 Create a <plotter> object, initialized with the <plparams> object,
 and then use its methods to draw upon the surface.
 @item
-Use appropriate methods to close the <plotter> object and the port,
-which writes the file.
+Close the <plotter> object with @code{closepl!}, delete it with
+@code{deletepl!}, and then close the port, which completes the file.
 @end enumerate
 
 A simple example could be this below, which opens a bitmap surface,
@@ -125,6 +125,7 @@ completion, a PNG file is created.
 (erase! plotter)
 (move! plotter 600.0 300.0)
 (closepl! plotter)
+(deletepl! plotter)
 (close fp)
 @end lisp
 
@@ -734,7 +735,52 @@ in particular.  Plotters that can output only a single page of graphics
 (PNG, PNM, GIF, SVG, Illustrator, and Fig Plotters) do so immediately
 after the first page is plotted, i.e., when @t{closepl} is invoked for
 the first time.  Postscript and CGM Plotters store all pages of graphics
-internally, and do not produce output until they are deleted.
+internally, and do not produce output until they are deleted
+(@pxref{Control Functions, @t{deletepl!}}).
+@end deffn
+
+@deffn Procedure deletepl! plotter
+@t{deletepl!} deletes a Plotter right away: it closes the Plotter if
+it is still open, lets it write any output it is still holding, closes
+the file descriptors it was writing to, and frees its memory.  It
+returns 0 on success, and a negative value if the Plotter could not be
+deleted cleanly.
+
+Without @t{deletepl!}, a Plotter is deleted only when the garbage
+collector reclaims it, which may be much later or, if the program
+exits first, not at all.  Calling @t{deletepl!} is therefore useful
+whenever the timing matters:
+
+@itemize @bullet
+@item
+Postscript and CGM Plotters write nothing until they are deleted, so
+their output file stays empty until @t{deletepl!} is called (or the
+Plotter happens to be garbage collected).
+
+@item
+Each Plotter holds two file descriptors, duplicated from the ports
+given to @t{newpl}.  A program that makes many Plotters can run out of
+file descriptors if it waits for the garbage collector to close them.
+
+@item
+An X Plotter's window stays on the screen until the Plotter is deleted.
+@end itemize
+
+After @t{deletepl!}, the @code{<plotter>} object can no longer be used:
+@t{plotter?} returns @code{#f} for it, and passing it to any other
+plotting procedure is an error.  Calling @t{deletepl!} again on the
+same object does nothing and returns 0.  The ports given to @t{newpl}
+are not closed; close them as usual once the Plotter is deleted.
+
+@lisp
+(define port (open-output-file "figure.ps"))
+(define plotter (newpl "ps" port (current-error-port) (newplparams)))
+(openpl! plotter)
+(line! plotter 0 0 100 100)
+(closepl! plotter)
+(deletepl! plotter)   ; figure.ps is written here
+(close-port port)
+@end lisp
 @end deffn
 
 @node Drawing Functions, Attribute Functions, Control Functions, The Plotting Library

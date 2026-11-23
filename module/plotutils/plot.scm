@@ -25,6 +25,7 @@
 	    ellarcrel!
 	    ellipse!
 	    ellipserel!
+	    deletepl!
 	    endpath!
 	    endsubpath!
 	    erase!

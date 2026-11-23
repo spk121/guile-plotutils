@@ -222,25 +222,43 @@ mark_plotter (SCM x)
   return (SCM_BOOL_F);
 }
 
+/* Delete the libplot Plotter held by smob X and close its streams, if
+   that hasn't been done already.  Returns pl_deletepl_r's result, or 0 if
+   the plotter was already deleted.  */
+static int
+release_plotter (SCM x)
+{
+  gupl_plotter_t *plotter = (gupl_plotter_t *)SCM_SMOB_DATA (x);
+  int ret;
+
+  if (plotter == NULL)
+    return 0;
+
+  /* Clear the smob first, so the plotter can't be used, or released
+     again, if anything below fails.  */
+  SCM_SET_SMOB_DATA (x, 0);
+
+  /* delete the Plotter first: it may flush output to the streams */
+  ret = pl_deletepl_r (plotter->plotter);
+  fclose (plotter->outp);
+  fclose (plotter->errp);
+  free (plotter);
+  return ret;
+}
+
 size_t
 free_plotter (SCM x)
 {
-  gupl_plotter_t *plotter;
-
-  // assert (SCM_SMOB_PREDICATE (plotter_tag, x));
-
-  plotter = (gupl_plotter_t *)SCM_SMOB_DATA (x);
-  if (plotter != NULL)
-    {
-      /* delete the Plotter first: it may flush output to the streams */
-      pl_deletepl_r (plotter->plotter);
-      fclose (plotter->outp);
-      fclose (plotter->errp);
-      free (plotter);
-      SCM_SET_SMOB_DATA (x, 0);
-    }
-
+  release_plotter (x);
   return 0;
+}
+
+SCM
+gupl_deletepl_x (SCM s_plotter)
+{
+  SCM_ASSERT (SCM_SMOB_PREDICATE (plotter_tag, s_plotter), s_plotter,
+              SCM_ARG1, "deletepl!");
+  return scm_from_int (release_plotter (s_plotter));
 }
 
 int
@@ -517,6 +535,7 @@ gupl_plot_init (void)
       scm_set_smob_equalp (plotter_tag, equalp_plotter);
       scm_c_define_gsubr ("plotter?", 1, 0, 0, gupl_is_plotter_p);
       scm_c_define_gsubr ("newpl", 4, 0, 0, gupl_newpl);
+      scm_c_define_gsubr ("deletepl!", 1, 0, 0, gupl_deletepl_x);
 
       scm_c_define_gsubr ("%alabel!", 4, 0, 0, gupl_alabel_x);
       scm_c_define_gsubr ("arc!", 7, 0, 0, gupl_arc_x);
