@@ -13,10 +13,19 @@
 (define (file->string name)
   (call-with-input-file name get-string-all))
 
-;; Number of open file descriptors, or #f where that can't be counted.
-(define (open-fd-count)
+;; Number of this process's file descriptors open on the file NAME, or #f
+;; where that can't be determined.  Counting only descriptors on one file
+;; keeps the result independent of unrelated ones, such as those of other
+;; tests' plotters, which the garbage collector may close at any time.
+(define (fds-open-on name)
   (and (file-exists? "/proc/self/fd")
-       (length (scandir "/proc/self/fd"))))
+       (let ((target (canonicalize-path name)))
+         (length
+          (filter (lambda (fd)
+                    (equal? target
+                            (false-if-exception
+                             (readlink (string-append "/proc/self/fd/" fd)))))
+                  (scandir "/proc/self/fd"))))))
 
 
 (test-begin "plot.scm")
@@ -52,8 +61,9 @@
 ;; is what produces the output.
 (test-group "deletepl! deletes a Plotter immediately"
   (let-values (((port name) (temp-output-port)))
-    (let* ((fds-before (open-fd-count))
-           (p (newpl "ps" port (current-error-port) (newplparams))))
+    (let* ((fds-before (fds-open-on name))
+           (p (newpl "ps" port (current-error-port) (newplparams)))
+           (fds-with-plotter (fds-open-on name)))
       (openpl! p)
       (space! p 0 0 10 10)
       (line! p 0 0 10 10)
@@ -70,8 +80,10 @@
         'wrong-type-arg
         (catch #t (lambda () (openpl! p) 'no-error) (lambda (key . args) key)))
       (when fds-before
+        (test-equal "the plotter held a descriptor on the output file"
+          (+ fds-before 1) fds-with-plotter)
         (test-equal "its file descriptors are closed"
-          fds-before (open-fd-count)))
+          fds-before (fds-open-on name)))
       (close-port port)
       (delete-file name))))
 
