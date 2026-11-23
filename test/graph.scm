@@ -299,4 +299,32 @@
   #f
   (generate-error-message #:x-limits '(0 10 2)))
 
+(define (errp-output . options)
+  "Generate a graph of points including a negative y value, returning
+what was written to its error port."
+  (let* ((null (open-output-file "/dev/null"))
+         (port (mkstemp! (string-copy "/tmp/gupl-test-XXXXXX")))
+         (name (port-filename port)))
+    (apply graph '(1 2 3) '(-1 10 100) #:output-format "svg"
+           #:outp null #:errp port options)
+    (close-port port)
+    (let ((text (call-with-input-file name
+                  (lambda (in) (read-delimited "" in)))))
+      (delete-file name)
+      (if (eof-object? text) "" text))))
+
+(test-assert "a point dropped from a log plot is reported on #:errp"
+  (string-contains (errp-output #:toggle-log-axis "y")
+                   "inappropriate point (1,-1)"))
+(test-assert "plotter warnings are written to #:errp"
+  (string-contains (errp-output #:x-limits '(1 3 1e-9))
+                   "gives too many ticks"))
+(test-assert "the too-few-ticks warning is given for each graph"
+  (and (string-contains (errp-output #:toggle-log-axis "y") "too few")
+       (string-contains (errp-output #:toggle-log-axis "y") "too few")))
+(test-assert "reading warnings wait for generate"
+  (string-contains (graph '(1 2 3) '(-1 10 100)
+                          #:toggle-log-axis "y" #:test "warnings")
+                   "inappropriate point"))
+
 (test-end "graph.scm")

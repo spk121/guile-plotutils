@@ -2138,8 +2138,11 @@ procedure: a few hundred points.  When @var{xstep} is included, it will
 be the step size of the samples.
 
 The graph is written to the port given by the @code{#:outp} keyword
-argument, and error messages to the port given by @code{#:errp}; they
-default to the current output and error ports.  As with @code{newpl},
+argument, and error messages and warnings (such as a note that a point
+was dropped from a logarithmic plot) to the port given by
+@code{#:errp}; they default to the current output and error ports.
+Invalid settings, such as a zero tick spacing or an infinite axis
+limit, raise a Scheme error instead.  As with @code{newpl},
 both must be backed by file descriptors, and anything already buffered
 in them is written out before the graph, so output written to the port
 before calling @code{graph} comes first.

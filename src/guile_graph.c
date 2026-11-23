@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
+#include <stdarg.h>
 #include "extern.h"
 #include "libcommon.h"
 // #include "sys-defines.h"
@@ -47,8 +48,35 @@ typedef enum
   ENDED_BY_MODE_CHANGE
 } dataset_status_t;
 
+/* Warnings issued while reading data (in xy-data!), kept until generate
+   can write them to the graph's error port.  */
+typedef struct
+{
+  char *text;    /* malloc'd, NUL-terminated; NULL when empty */
+  size_t length; /* strlen (text) */
+} warning_log;
+
+static void
+log_warning (warning_log *log, const char *format, ...)
+{
+  va_list args;
+  int n;
+
+  va_start (args, format);
+  n = vsnprintf (NULL, 0, format, args);
+  va_end (args);
+  if (n <= 0)
+    return;
+  log->text = xrealloc (log->text, log->length + n + 1);
+  va_start (args, format);
+  vsnprintf (log->text + log->length, n + 1, format, args);
+  va_end (args);
+  log->length += n;
+}
+
 struct VecReaderStruct /* point reader datatype */
 {
+  warning_log *warnings; /* where to report dropped points */
   /* parameters which are constant over the lifetime of a Reader, and which
      affect the computation of the returned point structures */
   bool transpose_axes; /* x <-> y ? */
@@ -243,9 +271,8 @@ struct graph
 
   bool need_break;
 
-  /* output */
-  FILE *_stdout;
-  FILE *_stderr;
+  /* warnings from reading data, written out by generate */
+  warning_log warnings;
 };
 
 #define PORT_ERR (-1)
@@ -473,6 +500,10 @@ free_graph_allocations (graph_t *graph)
       free (graph->reader);
       graph->reader = NULL;
     }
+
+  free (graph->warnings.text);
+  graph->warnings.text = NULL;
+  graph->warnings.length = 0;
 
   free_owned_graph_string (&graph->output_format, &graph->owns_output_format);
   free_owned_graph_string (&graph->bg_color, &graph->owns_bg_color);
@@ -1702,7 +1733,7 @@ head:
 
           if (bad_point)
             {
-              fprintf (stderr,
+              log_warning (reader->warnings,
                        "%s: the inappropriate point (%g,%g) is dropped, as "
                        "this is a "
                        "log plot\n",
@@ -1734,7 +1765,7 @@ head:
 
           if (bad_point)
             {
-              fprintf (stderr,
+              log_warning (reader->warnings,
                        "%s: the inappropriate point (%g,%g) is dropped, as "
                        "this is a "
                        "log plot\n",
@@ -1909,6 +1940,7 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec, SCM s_xerr, SCM s_yerr)
           c_graph->symbol_size, c_graph->symbol_font_name,
           c_graph->linemode_index, c_graph->plot_line_width,
           c_graph->fill_fraction, c_graph->use_color);
+      c_graph->reader->warnings = &c_graph->warnings;
 
       c_graph->new_symbol = false;
       c_graph->new_symbol_size = false;
@@ -2000,6 +2032,17 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
     {
       fclose (c_outp);
       scm_misc_error ("generate", "failed to duplicate error port", SCM_EOL);
+    }
+
+  c_graph = _scm_to_graph (s_graph);
+
+  /* Warnings from reading the data (xy-data! has no port to write to). */
+  if (c_graph->warnings.text != NULL)
+    {
+      fputs (c_graph->warnings.text, c_errp);
+      free (c_graph->warnings.text);
+      c_graph->warnings.text = NULL;
+      c_graph->warnings.length = 0;
     }
 
   c_graph = _scm_to_graph (s_graph);
@@ -2158,7 +2201,7 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
   if (c_graph->multigrapher != NULL)
     {
       if (delete_multigrapher (c_graph->multigrapher) < 0)
-        fprintf (stderr,
+        fprintf (c_errp,
                  "%s: error: the graphing device could not be closed\n",
                  progname);
       c_graph->multigrapher = NULL;
@@ -2263,6 +2306,10 @@ gupl_graph_test (SCM s_graph, SCM s_name)
               ret);
         }
     }
+  else if (!strcmp (c_name, "warnings"))
+    ret = (c_graph->warnings.text
+               ? scm_from_locale_string (c_graph->warnings.text)
+               : SCM_BOOL_F);
   else if (!strcmp (c_name, "no_of_points"))
     ret = scm_from_int (c_graph->no_of_points);
   else if (!strcmp (c_name, "first_file_of_graph"))

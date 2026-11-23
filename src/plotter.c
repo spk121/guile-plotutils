@@ -323,6 +323,9 @@ struct MultigrapherStruct
   int linemode;                  /* linemode used for polyline */
   /* why set_graph_parameters() failed, if it did */
   char error_message[256];
+  /* where warnings go: the Plotter's error stream */
+  FILE *errfile;
+  bool tick_warning_printed; /* "too few labelled ticks", once per graph */
 };
 
 /* forward references */
@@ -336,7 +339,8 @@ static void plot_abscissa_log_subsubtick (Multigrapher *multigrapher,
 static void plot_errorbar (Multigrapher *multigrapher, const Point *p);
 static void plot_ordinate_log_subsubtick (Multigrapher *multigrapher,
                                           double xval);
-static bool prepare_axis (Axis *axisp, Transform *trans, double min,
+static bool prepare_axis (FILE *errfile, Axis *axisp, Transform *trans,
+                          double min,
                           double max, double spacing, const char *font_name,
                           double font_size, const char *label,
                           double subsubtick_spacing,
@@ -596,7 +600,8 @@ tick_counts_fit (double min, double max, double spacing)
    switch_axis_end = intersection w/ other axis in alt. pos.?
    omit_ticks = suppress all ticks and tick labels? */
 static bool
-prepare_axis (Axis *axisp, Transform *trans, double min, double max,
+prepare_axis (FILE *errfile, Axis *axisp, Transform *trans, double min,
+              double max,
               double spacing, const char *font_name, double font_size,
               const char *label, double subsubtick_spacing,
               bool user_specified_subsubticks, bool round_to_next_tick,
@@ -628,12 +633,12 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
                            subsubtick_spacing))
     {
       if (subsubtick_spacing > 0.0)
-        fprintf (stderr,
+        fprintf (errfile,
                  "%s: the tick spacing %g on a logarithmic axis gives too "
                  "many ticks, so it is ignored\n",
                  progname, subsubtick_spacing);
       else
-        fprintf (stderr,
+        fprintf (errfile,
                  "%s: the tick spacing %g on a logarithmic axis is not "
                  "positive, so it is ignored\n",
                  progname, subsubtick_spacing);
@@ -666,7 +671,7 @@ prepare_axis (Axis *axisp, Transform *trans, double min, double max,
         }
       else
         {
-          fprintf (stderr,
+          fprintf (errfile,
                    "%s: the tick spacing %g gives too many ticks, so it "
                    "is ignored\n",
                    progname, spacing);
@@ -871,6 +876,8 @@ new_multigrapher_with_ports (const multigrapher_create_init *init)
   multigrapher = (Multigrapher *)xmalloc (sizeof (Multigrapher));
   multigrapher->title = NULL;
   multigrapher->title_font_name = NULL;
+  multigrapher->errfile = init->_stderr;
+  multigrapher->tick_warning_printed = false;
 
   /* set Plotter parameters */
   plotter_params = pl_newplparams ();
@@ -1134,7 +1141,7 @@ set_graph_parameters (const set_graph_parameters_init *init)
     }
   if (x_max == x_min)
     {
-      fprintf (stderr,
+      fprintf (multigrapher->errfile,
                "%s: identical upper and lower x limits are separated\n",
                progname);
       /* separate them */
@@ -1155,7 +1162,7 @@ set_graph_parameters (const set_graph_parameters_init *init)
     }
   if (y_max == y_min)
     {
-      fprintf (stderr,
+      fprintf (multigrapher->errfile,
                "%s: identical upper and lower y limits are separated\n",
                progname);
       /* separate them */
@@ -1250,7 +1257,7 @@ set_graph_parameters (const set_graph_parameters_init *init)
   multigrapher->clip_mode = clip_mode;
 
   /* fill in the Transform and Axis elements for each coordinate */
-  if (!prepare_axis (&multigrapher->x_axis, &multigrapher->x_trans, x_min, x_max,
+  if (!prepare_axis (multigrapher->errfile, &multigrapher->x_axis, &multigrapher->x_trans, x_min, x_max,
                 x_spacing, x_font_name, x_font_size, x_label,
                 x_subsubtick_spacing,
                 (bool)(user_specified_subsubticks & X_AXIS),
@@ -1263,7 +1270,7 @@ set_graph_parameters (const set_graph_parameters_init *init)
                  x_min, x_max);
       return false;
     }
-  if (!prepare_axis (&multigrapher->y_axis, &multigrapher->y_trans, y_min, y_max,
+  if (!prepare_axis (multigrapher->errfile, &multigrapher->y_axis, &multigrapher->y_trans, y_min, y_max,
                 y_spacing, y_font_name, y_font_size, y_label,
                 y_subsubtick_spacing,
                 (bool)(user_specified_subsubticks & Y_AXIS),
@@ -1406,7 +1413,6 @@ set_graph_parameters (const set_graph_parameters_init *init)
 void
 draw_frame_of_graph (Multigrapher *multigrapher, bool draw_canvas)
 {
-  static bool tick_warning_printed = false; /* when too few labelled ticks */
 
   /* wrap savestate()--restorestate() around all 9 tasks */
   pl_savestate_r (multigrapher->plotter);
@@ -2356,17 +2362,17 @@ draw_frame_of_graph (Multigrapher *multigrapher, bool draw_canvas)
 
   if (multigrapher->grid_spec != NO_AXES)
     {
-      if (!tick_warning_printed
+      if (!multigrapher->tick_warning_printed
           && ((!multigrapher->x_axis.omit_ticks
                && multigrapher->x_axis.labelled_ticks <= 2)
               || (!multigrapher->y_axis.omit_ticks
                   && multigrapher->y_axis.labelled_ticks <= 2)))
         {
-          fprintf (stderr,
+          fprintf (multigrapher->errfile,
                    "%s: the tick spacing is adjusted, as there were too few "
                    "labelled axis ticks\n",
                    progname);
-          tick_warning_printed = true;
+          multigrapher->tick_warning_printed = true;
         }
     }
 }
