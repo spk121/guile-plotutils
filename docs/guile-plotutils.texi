@@ -2167,6 +2167,13 @@ Graphics Language (@w{by default}, HP-GL/2), the ReGIS (remote
 graphics instruction set) format developed @w{by DEC}, Tektronix
 format, and device-independent GNU graphics metafile format.
 
+@item #:portable-output
+Write GNU graphics metafile output in its portable, human-readable text
+form rather than the default binary form.  This is relevant only with
+@samp{#:output-format "meta"} (the default).  Portable metafiles can be
+read on any machine, and can be inspected and edited as text.  Any true
+value turns this on, e.g.@: @code{#:portable-output #t}.
+
 @item #:toggle-axis-end @var{x|y}
 (String)
 Set the position of the indicated axis to be on the other end of the

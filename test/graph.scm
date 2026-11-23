@@ -252,4 +252,14 @@
   (list (graph xvalues yvalues #:symbol 3.0 #:test "symbol_index")
         (graph xvalues yvalues #:grid-style 3.0 #:test "grid_spec")))
 
+(test-assert "portable-output writes text metafile output"
+  (let* ((port (mkstemp! (string-copy "/tmp/gupl-test-XXXXXX")))
+         (name (port-filename port)))
+    (graph xvalues yvalues #:portable-output #t #:outp port)
+    (close-port port)
+    (let ((header (call-with-input-file name read-line)))
+      (delete-file name)
+      ;; binary metafiles start with "#PLOT 1", portable ones "#PLOT 2"
+      (equal? header "#PLOT 2"))))
+
 (test-end "graph.scm")
