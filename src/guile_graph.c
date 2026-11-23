@@ -2127,11 +2127,13 @@ gupl_generate (SCM s_graph, SCM outp, SCM errp)
 
   /* finish up by deleting our multigrapher (one must have been created,
      since we always read at least stdin) */
-  if (delete_multigrapher (c_graph->multigrapher) < 0)
+  if (c_graph->multigrapher != NULL)
     {
-      fprintf (stderr, "%s: error: the graphing device could not be closed\n",
-               progname);
-      // return EXIT_FAILURE;
+      if (delete_multigrapher (c_graph->multigrapher) < 0)
+        fprintf (stderr,
+                 "%s: error: the graphing device could not be closed\n",
+                 progname);
+      c_graph->multigrapher = NULL;
     }
   return SCM_UNSPECIFIED;
 }
