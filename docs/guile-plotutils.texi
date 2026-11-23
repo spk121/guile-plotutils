@@ -2103,7 +2103,29 @@ both must be backed by file descriptors, and anything already buffered
 in them is written out before the graph, so output written to the port
 before calling @code{graph} comes first.
 
+Each point may have an error bar along either axis, or both, given by
+the @samp{#:x-error} and @samp{#:y-error} options (@pxref{Plot
+Options}).
+
 There are a couple dozen optional parameters.
+@end deffn
+
+@deffn Procedure bounds->errors data lows highs
+Error bars are often known as absolute limits, such as the ends of a
+confidence interval, rather than as distances from each point.
+@code{bounds->errors} converts them: given a list of @var{data} values
+and lists of the @var{lows} and @var{highs} of their error bars, it
+returns a list of @code{(@var{lower} . @var{upper})} pairs, the
+distances from each value down to its low and up to its high, suitable
+for @samp{#:x-error} or @samp{#:y-error}.  @w{If a} value, low, or high
+is @code{#f}, that point gets no bar.  The three lists must have the
+same length, and each low must not exceed its value, nor the value its
+high.
+
+@lisp
+(bounds->errors '(10 20) '(8 15) '(11 26))   @result{} ((2 . 1) (5 . 6))
+(graph xs ys #:y-error (bounds->errors ys lows highs))
+@end lisp
 @end deffn
 
 @menu
@@ -2267,10 +2289,9 @@ Transpose the abscissa and ordinate.  This causes the axes to be
 interchanged, and the options that apply to each axis to be applied to
 the opposite axis.  That is, data points are read in as @math{(y, x)}
 pairs, and such options as @samp{-x} and @samp{-X} apply to the
-@w{@math{y} axis} rather than the @w{@math{x} axis}.  @w{If the}
-@samp{#:input-format e} option is in force, so that the data points are read with
-error bars, the orientation of the error bars will be switched between
-vertical and horizontal.
+@w{@math{y} axis} rather than the @w{@math{x} axis}.  Error bars given with @samp{#:x-error} and
+@samp{#:y-error} are transposed along with the data, so they switch
+between horizontal and vertical.
 
 @item #:upward-shift @var{up}
 (Float, default 0.2.)  Move the plot up by a fractional amount @var{up}
@@ -2665,6 +2686,63 @@ alternative source of symbols, becomes available.  For a list of all
 fonts, see @ref{Text Fonts}.  The GNU plotutils @code{plotfont} utility will produce a
 character map of any available font..
 
+@end table
+
+The following options draw error bars on the data points.
+
+@table @samp
+@item #:y-error @var{errors}
+Draw a vertical error bar on each data point.  @var{errors} may take
+any of these forms:
+
+@table @asis
+@item a number @var{e}
+Every point gets a bar from @math{y-e} to @math{y+e}.
+
+@item a pair @code{(@var{lower} . @var{upper})}
+Every point gets a bar from @math{y-@var{lower}} to
+@math{y+@var{upper}}.
+
+@item a list
+One element per data point, each either a number, a
+@code{(@var{lower} . @var{upper})} pair, or @code{#f} for no bar on that
+point.  The list must have exactly as many elements as the data list.
+When the data are built with @code{merge}, build the error list with
+@code{merge} too, so that its @code{#f} separators line up with the
+data's.
+
+@item a procedure
+Called as @code{(@var{procedure} @var{x} @var{y})} for each point, it
+returns that point's bar in any of the list-element forms above.  This
+is convenient for function plots, or for errors proportional to the
+value.
+@end table
+
+All amounts must be nonnegative.  To give absolute limits instead of
+amounts, use @code{bounds->errors} (@pxref{The Graphing Library}).
+
+Note the difference between a pair and a list of two numbers:
+@code{'(0.2 . 0.7)} gives every point a bar from @math{y-0.2} to
+@math{y+0.7}, while @code{'(0.2 0.7)} is a list giving the first of two
+points a bar of plus or minus 0.2 and the second plus or minus 0.7.
+
+@lisp
+(graph xs ys #:y-error 0.5)                       ; +/-0.5 everywhere
+(graph xs ys #:y-error '(0.2 . 0.7))              ; -0.2, +0.7 everywhere
+(graph '(1 2 3) '(10 20 30)
+       #:y-error '(1 (2 . 4) #f))                 ; per point
+(graph xs ys #:y-error (lambda (x y) (* 0.05 y))) ; 5% of each value
+@end lisp
+
+Error bars are clipped to the plotting area; an end cap is drawn only
+at an end of a bar that is not clipped.  When the axis limits are
+computed from the data, they are widened to include the error bars.  On
+a logarithmic axis, a point whose error bar reaches zero or below is
+still plotted, with the bar clipped at the bottom of the axis.
+
+@item #:x-error @var{errors}
+Draw a horizontal error bar on each data point.  @var{errors} takes the
+same forms as for @samp{#:y-error}, with @math{x} in place of @math{y}.
 @end table
 @node graph Environment,  , The Graphing Library, Reference Guide
 @section Environment variables
