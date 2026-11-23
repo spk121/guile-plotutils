@@ -1598,6 +1598,7 @@ alter_vec_reader_parameters (
   reader->xvec = s_xvec;
   reader->yvec = s_yvec;
   reader->yerrvec = s_yerrvec;
+  reader->i_vec = 0; /* start at the beginning of the new lists */
   reader->format_type = format_type;
   reader->auto_abscissa = auto_abscissa;
   reader->delta_x = delta_x;
