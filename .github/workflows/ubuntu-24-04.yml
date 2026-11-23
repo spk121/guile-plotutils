@@ -14,6 +14,13 @@ jobs:
   build:
     runs-on: ubuntu-24.04
 
+    # GitHub's "bash" shell runs with -eo pipefail.  The default for run
+    # steps is "bash -e {0}", without pipefail, so "cmd | tee log" would
+    # report tee's exit status and hide a failing cmd.
+    defaults:
+      run:
+        shell: bash
+
     steps:
     - uses: actions/checkout@v6
 
@@ -25,14 +32,13 @@ jobs:
     - name: Configure
       run: |
         autoreconf -vif
-        ./configure --prefix="$(pwd)/dist" 2>&1 | tee config.log
+        ./configure --prefix="$(pwd)/dist" 2>&1 | tee configure.log
 
     - name: Build
       run: make 2>&1 | tee build.log
 
     - name: Test
       run: make check 2>&1 | tee test.log
-      shell: bash {0}
 
     - name: Upload logs
       if: always()
@@ -40,6 +46,7 @@ jobs:
       with:
         name: logs
         path: |
+          configure.log
           config.log
           build.log
           test.log
