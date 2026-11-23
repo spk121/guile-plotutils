@@ -293,7 +293,8 @@ the input lists with #f.  For example,
 	    (xy-data! gr xdata ydata)))
 
      (else
-      (error "blammo!")))
+      (error "graph: expected (graph ylist), (graph xlist ylist), (graph proc xmin xmax), or (graph proc xmin xmax step), but got"
+             (filter identity (list arg1 arg2 arg3 arg4)))))
 
     (if test
         (%graph-test gr test)

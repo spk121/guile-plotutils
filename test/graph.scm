@@ -135,4 +135,11 @@
                 #:test key))
        '("spec_min_x" "min_x" "spec_max_x" "max_x" "spec_spacing_x" "spacing_x")))
 
+(test-assert "bad arguments give a descriptive error"
+  (catch 'misc-error
+    (lambda () (graph "not a list") #f)
+    (lambda (key subr msg args . rest)
+      ;; (error msg . irritants) gives msg as the first format argument
+      (string-contains (car args) "expected (graph ylist)"))))
+
 (test-end "graph.scm")
