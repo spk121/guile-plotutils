@@ -39,6 +39,7 @@
 	    label!
 	    labelwidth!
 	    line!
+	    linemod!
 	    linerel!
 	    linewidth!
 	    marker!

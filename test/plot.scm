@@ -15,4 +15,7 @@
   (let ((p (newpl "png" (current-output-port) (current-error-port) (newplparams))))
     (eq? p p)))
 
+(test-assert "linemod! is exported"
+  (procedure? linemod!))
+
 (test-end "plot.scm")
