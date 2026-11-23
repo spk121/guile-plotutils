@@ -18,7 +18,7 @@ dnl Process this file with autoconf to produce a configure script
 ################
 # Package Info
 
-AC_INIT([Guile Plotutils], [1.0.3], [spk121@yahoo.com], [guile_plotutils])
+AC_INIT([Guile Plotutils], [1.1.0], [spk121@yahoo.com], [guile_plotutils])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([src/guile_plot.c])
@@ -32,8 +32,13 @@ AC_CONFIG_MACRO_DIR([m4])
 
 ################
 # Libtool versioning
+#
+# current:revision:age of the extension library's interface (its gupl_*
+# symbols), following libtool's rules.  3:0:0 in 1.1.0: gupl_pen_colors
+# was removed and gupl_xy_data_x's signature changed (an incompatible
+# change, so current was bumped and age reset), besides added symbols.
 
-LIBGUILE_PLOTUTILS_INTERFACE="2:0:0"
+LIBGUILE_PLOTUTILS_INTERFACE="3:0:0"
 AC_SUBST([LIBGUILE_PLOTUTILS_INTERFACE])
 
 ################

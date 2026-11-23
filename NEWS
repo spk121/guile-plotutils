@@ -1,5 +1,103 @@
 Guile-Plotutils NEWS - History of user-visible changes
 
+Changes in 1.1.0 (since 1.0.3)
+
+* New features
+
+** Error bars.  graph's new #:x-error and #:y-error options draw error
+   bars.  Each takes a number or a (lower . upper) pair for every point,
+   a list with one bar (or #f for none) per point, or a procedure of x
+   and y.  The new bounds->errors procedure converts absolute limits,
+   such as confidence intervals, into error amounts.  Bars are clipped
+   to the plotting area, and axis limits computed from the data include
+   them.
+
+** Per-dataset styles.  The new dataset procedure makes a set of data
+   with its own linemode, symbol, line width, fill fraction, color,
+   symbol font, and error bars; pass graph a list of them:
+     (graph (list (dataset xs ys) (dataset xs zs #:symbol 3)))
+   graph's options are the defaults for every dataset.
+
+** Several graphs on one page.  The new multigraph and subgraph
+   procedures, and graph's new #:reposition option, place graphs on one
+   page, as GNU graph's --reposition option does, e.g. for insets.
+
+** Font listing.  The new list-fonts procedure in (plotutils plot)
+   returns the fonts an output format, or a plotter, supports.
+
+** (plotutils plot) has new procedures deletepl!, to delete a plotter
+   at once rather than when it is garbage collected (Postscript and CGM
+   output is written only then); linedash!, taking a list of dash
+   lengths; and closepath!.  linemod! is now exported.
+
+* Changes in behaviour
+
+** graph's default output format is now "meta", as documented, instead
+   of "X".
+
+** Invalid settings, such as a zero tick spacing or an infinite or NaN
+   axis limit, now raise a Scheme error.  A zero tick spacing used to end
+   the whole Guile process, and infinite or NaN limits drew garbage.
+   A nonpositive limit on a logarithmic axis is now an error too.
+
+** graph's warnings now go to its #:errp port, not the process's
+   standard error.
+
+** #:pen-colors now applies to one graph only, rather than to every
+   later graph too.  A malformed colors string is an error.
+
+** Text written to a port before or between plotting calls now stays in
+   order with the plotter's output on that port.
+
+** On a logarithmic axis, a point whose error bar reaches zero or below
+   is now kept, with the bar clipped at the axis, rather than dropped.
+
+** Integer arguments accept integer-valued reals, such as 1.0.
+
+** A tick spacing that would give too many ticks is ignored, with a
+   warning, rather than overflowing.
+
+** Importing (plotutils graph) no longer warns that merge overrides a
+   core binding; it is declared as a replacement.
+
+** Reading graph data takes linear time: large data sets are much
+   faster (20,000 points took 2.6 s, now about 3 ms).
+
+* Bug fixes
+
+** Fixed double frees when a data list contains a non-number, and when
+   a label or other string can't be converted to the locale's encoding.
+
+** Fixed file descriptor and memory leaks in newpl and graph.
+
+** graph's #:pen-colors option always raised an error; #:symbol N was
+   ignored; #:rotation, #:title-font-size, and #:blankout were silently
+   ignored.
+
+** A function graphed over a range now includes the upper end of the
+   range.
+
+** #:x-limits and #:y-limits can now give an upper limit or spacing
+   without a lower limit, using #f, e.g. #:x-limits '(#f 10).
+
+** Linemodes -1 to -5 now use all five colors; cyan was never used.
+
+* Documentation
+
+** New manual entries for all of the above, and corrections to many
+   entries and examples.
+
+** The gallery images are regenerated.  The Postscript versions of the
+   plot examples were empty, and the Gaussian histogram, golden spiral,
+   and Koch snowflake examples drew wrongly; all are fixed.  A new
+   example shows error bars.
+
+* Library
+
+** The extension library's libtool version is now 3:0:0, so its soname
+   is libguile-plotutils.so.3.  The Scheme modules load it themselves;
+   only programs linking to it directly are affected.
+
 Changes in 1.0.3 (since 1.0.2)
 * Fixed 'make dist' and 'make distcheck', which failed because
   removed helper scripts were still listed in EXTRA_DIST.
