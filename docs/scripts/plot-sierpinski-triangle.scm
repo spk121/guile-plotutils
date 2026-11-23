@@ -67,6 +67,9 @@
         (sierpinski 8 x1 y1 x2 y2 x3 y3))
 
       (closepl! plotter)
+      ;; Delete the plotter before closing the port: Postscript (.eps)
+      ;; output is written only when the plotter is deleted.
+      (deletepl! plotter)
       (close fp))))
 
 (main (command-line))

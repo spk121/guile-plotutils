@@ -98,6 +98,9 @@
       (alabel! plotter 'l 'c "Golden Spiral — Fibonacci Rectangles")
 
       (closepl! plotter)
+      ;; Delete the plotter before closing the port: Postscript (.eps)
+      ;; output is written only when the plotter is deleted.
+      (deletepl! plotter)
       (close fp))))
 
 (main (command-line))

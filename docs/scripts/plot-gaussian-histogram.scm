@@ -123,6 +123,9 @@
       (draw-labels! plotter x-min x-max y-max)
 
       (closepl! plotter)
+      ;; Delete the plotter before closing the port: Postscript (.eps)
+      ;; output is written only when the plotter is deleted.
+      (deletepl! plotter)
       (close fp))))
 
 (main (command-line))
