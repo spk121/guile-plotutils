@@ -520,7 +520,16 @@ equalp_graph (SCM x1, SCM x2)
 SCM
 mark_graph (SCM x)
 {
-  // No SCMs in the graph type: nothing to do here.
+  graph_t *graph = (graph_t *)SCM_SMOB_DATA (x);
+
+  /* The vector reader holds the data lists most recently passed to
+     xy-data!; keep them alive for as long as the reader refers to them. */
+  if (graph != NULL && graph->reader != NULL)
+    {
+      scm_gc_mark (graph->reader->xvec);
+      scm_gc_mark (graph->reader->yvec);
+      scm_gc_mark (graph->reader->yerrvec);
+    }
   return (SCM_BOOL_F);
 }
 
@@ -1926,7 +1935,10 @@ gupl_xy_data_x (SCM s_graph, SCM s_xvec, SCM s_yvec)
   if (c_graph->first_file_of_graph)
     {
       free (c_graph->p);
+      c_graph->p = NULL;
+      /* clear before allocating: a GC here runs mark_graph on the reader */
       free (c_graph->reader);
+      c_graph->reader = NULL;
       c_graph->no_of_points = 0;
       c_graph->p = scm_malloc (c_graph->points_length * sizeof (Point));
 
