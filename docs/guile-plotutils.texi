@@ -1310,15 +1310,13 @@ available fonts, see @ref{Text Fonts}, or call @t{list-fonts}.
 @end deffn
 
 @deffn Procedure list-fonts output-format
-@deffnx Procedure list-fonts plotter
 Return a list of the names of the fonts supported by Plotters of type
 @var{output-format}, a string such as @code{"svg"} or @code{"png"} (the
-same strings @t{newpl} accepts), or by the existing @var{plotter}.  The
-names are listed in the order of GNU @code{graph --list-fonts}: the
-Hershey vector fonts, then the HP vector fonts, the @w{PCL 5} fonts, and
-the Postscript fonts, as far as the Plotter supports each.  Any of them
-may be passed to @t{fontname!}, or to @code{graph}'s
-@samp{#:font-name}.
+same strings @t{newpl} accepts).  The names are listed in the order of
+GNU @code{graph --list-fonts}: the Hershey vector fonts, then the HP
+vector fonts, the @w{PCL 5} fonts, and the Postscript fonts, as far as
+the Plotter supports each.  Any of them may be passed to
+@t{fontname!}, or to @code{graph}'s @samp{#:font-name}.
 
 @lisp
 (list-fonts "png")
@@ -1328,11 +1326,47 @@ may be passed to @t{fontname!}, or to @code{graph}'s
 (member "Times-Roman" (list-fonts "png"))           @result{} #f
 @end lisp
 
-The list is of the built-in fonts only: X Plotters can also use most
-core X Window System fonts, such as @code{"charter-medium-r-normal"}.
-An unknown @var{output-format} is an error.  Asking about an output
-format creates a temporary Plotter, which writes nothing.
+The names come from @t{plotter-fonts}, filtered by the classes of font
+that a temporary Plotter of type @var{output-format} reports, as
+@t{havecap} would, that it supports; the temporary Plotter writes
+nothing.  The list is of the
+built-in fonts only: X Plotters can also use most core X Window System
+fonts, such as @code{"charter-medium-r-normal"}.  An unknown
+@var{output-format} is an error.
 @end deffn
+
+@defvr Variable plotter-fonts
+A list of the 120 fonts built into libplot (@pxref{Text Fonts}), in the
+order of GNU @code{graph --list-fonts}.  Each element is a pair
+@code{(@var{name} . @var{class})}, where @var{class} is one of these
+symbols:
+
+@table @code
+@item hershey
+A Hershey vector font, which every Plotter supports (the
+@code{"HERSHEY_FONTS"} capability).
+@item hp-vector
+An HP vector font, which HP-GL and @w{PCL 5} Plotters support
+(@code{"STICK_FONTS"}).
+@item hp-vector-extra
+One of the extra HP vector fonts marked with an asterisk in @ref{Text
+Fonts}, available only for HP-GL/2 output, which an @code{"hpgl"}
+Plotter produces by default.
+@item pcl
+A @w{PCL 5} font (@code{"PCL_FONTS"}).
+@item ps
+A Postscript font (@code{"PS_FONTS"}).
+@end table
+
+A Metafile Plotter supports every font.  @code{"Courier"},
+@code{"Courier-Bold"} and @code{"Symbol"} each appear twice, as a
+@w{PCL 5} font and as a Postscript font.
+
+@lisp
+(car plotter-fonts)                        @result{} ("HersheySerif" . hershey)
+(assoc "Univers" plotter-fonts)            @result{} ("Univers" . pcl)
+@end lisp
+@end defvr
 
 @deffn Procedure fontsize! plotter size
 @t{fontsize!} takes a single argument, interpreted as

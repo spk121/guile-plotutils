@@ -13,8 +13,7 @@ env:
 jobs:
   build:
     # Test on the release workflow's runner (ubuntu-latest) too, whose
-    # libraries can differ: e.g. Ubuntu 26.04's libplot, built with GCC 15,
-    # changed the layout of structures that fontlist.c reads.
+    # libraries can differ: e.g. Ubuntu 26.04's libplot is built with GCC 15.
     strategy:
       fail-fast: false
       matrix:

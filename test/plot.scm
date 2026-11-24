@@ -187,6 +187,20 @@
     (closepl! p)
     (deletepl! p)))
 
+(test-group "plotter-fonts"
+  (test-equal "has the 120 documented fonts" 120 (length plotter-fonts))
+  (test-assert "each is a (name . class) pair"
+    (every (lambda (font)
+             (and (string? (car font))
+                  (memq (cdr font)
+                        '(hershey hp-vector hp-vector-extra pcl ps))))
+           plotter-fonts))
+  (test-equal "the documented number in each class"
+    '(22 8 10 45 35)
+    (map (lambda (class)
+           (count (lambda (font) (eq? (cdr font) class)) plotter-fonts))
+         '(hershey hp-vector hp-vector-extra pcl ps))))
+
 (test-group "list-fonts"
   (let ((png (list-fonts "png"))
         (svg (list-fonts "svg")))
@@ -201,18 +215,18 @@
       (member "Times-Roman" svg))
     (test-assert "PCL has the PCL fonts"
       (member "Univers" (list-fonts "pcl")))
-    (test-equal "a plotter gives the same list as its output format"
-      svg
-      (let* ((p (newpl "svg" (open-output-file "/dev/null")
-                       (current-error-port) (newplparams)))
-             (fonts (list-fonts p)))
-        (deletepl! p)
-        fonts))
+    (test-equal "HP-GL has the extra HP vector fonts, PCL does not"
+      '(#t #f)
+      (list (and (member "ArcANK" (list-fonts "hpgl")) #t)
+            (and (member "ArcANK" (list-fonts "pcl")) #t)))
+    (test-equal "a Metafile Plotter supports every font"
+      (map car plotter-fonts)
+      (list-fonts "meta"))
     (test-equal "an unknown output format is an error"
       'misc-error
       (catch #t (lambda () (list-fonts "no-such-format") 'no-error)
         (lambda (key . args) key)))
-    (test-equal "a deleted plotter is an error"
+    (test-equal "a plotter is not an output format"
       'wrong-type-arg
       (let ((p (newpl "svg" (open-output-file "/dev/null")
                       (current-error-port) (newplparams))))
