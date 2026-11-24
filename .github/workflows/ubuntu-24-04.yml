@@ -1,4 +1,4 @@
-name: Ubuntu 24.04
+name: Ubuntu
 
 on:
   push:
@@ -12,7 +12,14 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    # Test on the release workflow's runner (ubuntu-latest) too, whose
+    # libraries can differ: e.g. Ubuntu 26.04's libplot, built with GCC 15,
+    # changed the layout of structures that fontlist.c reads.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
 
     # GitHub's "bash" shell runs with -eo pipefail.  The default for run
     # steps is "bash -e {0}", without pipefail, so "cmd | tee log" would
@@ -44,7 +51,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v6
       with:
-        name: logs
+        name: logs-${{ matrix.os }}
         path: |
           configure.log
           config.log

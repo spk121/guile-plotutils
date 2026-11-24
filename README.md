@@ -1,6 +1,6 @@
 # Guile Plotutils
 
-[![Ubuntu 24.04](https://github.com/spk121/guile-plotutils/actions/workflows/ubuntu-24-04.yml/badge.svg)](https://github.com/spk121/guile-plotutils/actions/workflows/ubuntu-24-04.yml)
+[![Ubuntu](https://github.com/spk121/guile-plotutils/actions/workflows/ubuntu-24-04.yml/badge.svg)](https://github.com/spk121/guile-plotutils/actions/workflows/ubuntu-24-04.yml)
 
 This is a library for [GNU Guile](https://gnu.org/software/guile) to
 use the plotting and graphing functionality provided by
