@@ -46,9 +46,7 @@ ___BEGIN_DECLS
 
 /* Call CALLBACK with the name of each font that PLOTTER supports, and
    DATA, in the order GNU graph --list-fonts uses.  Returns the number of
-   fonts, or -1 if libplot's font tables have a layout this code doesn't
-   recognize.  (Most X Plotters can also use many core X fonts not
-   listed.) */
+   fonts.  (Most X Plotters can also use many core X fonts not listed.) */
 extern int foreach_plotter_font (plPlotter *plotter,
                                  void (*callback) (const char *name,
                                                    void *data),
