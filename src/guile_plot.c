@@ -476,9 +476,14 @@ gupl_list_fonts (SCM s_target)
       temporary = true;
     }
 
-  foreach_plotter_font (plotter, cons_font_name, &list);
+  int count = foreach_plotter_font (plotter, cons_font_name, &list);
   if (temporary)
     pl_deletepl_r (plotter);
+  if (count < 0)
+    scm_misc_error ("list-fonts",
+                    "cannot read this libplot's font tables (unrecognized "
+                    "layout)",
+                    SCM_EOL);
   return scm_reverse_x (list, SCM_EOL);
 }
 
