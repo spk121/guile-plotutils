@@ -9,7 +9,6 @@
 
 #include <libguile.h>
 
-#include "fontlist.h"
 #include "guile_plot.h"
 #include "plot.h"
 
@@ -437,49 +436,34 @@ gupl_newpl (SCM type, SCM outp, SCM errp, SCM param)
 }
 
 /* foreach_plotter_font callback: push NAME onto the list *DATA.  */
-static void
-cons_font_name (const char *name, void *data)
-{
-  SCM *list = (SCM *)data;
-
-  *list = scm_cons (scm_from_latin1_string (name), *list);
-}
-
-/* (list-fonts output-format-or-plotter): the names of the fonts that a
-   Plotter of the given output format (a string such as "svg"), or the
-   given Plotter, supports.  */
+/* (%format-havecap output-format capability): pl_havecap_r for a Plotter
+   of the given output format (a string such as "svg").  list-fonts, in
+   plot.scm, uses it to ask which font classes the format supports.  */
 SCM
-gupl_list_fonts (SCM s_target)
+gupl_format_havecap (SCM s_type, SCM s_cap)
 {
+  plPlotterParams *params;
   plPlotter *plotter;
-  bool temporary = false;
-  SCM list = SCM_EOL;
+  char *c_type, *c_cap;
+  int ret;
 
-  if (_scm_is_plotter (s_target))
-    plotter = _scm_to_plotter (s_target);
-  else
-    {
-      plPlotterParams *params;
-      char *c_type;
-
-      SCM_ASSERT (scm_is_string (s_target), s_target, SCM_ARG1, "list-fonts");
-      c_type = scm_to_locale_string (s_target);
-      /* A Plotter just for asking: with no output or error stream, it
-         writes nothing, even when deleted.  */
-      params = pl_newplparams ();
-      plotter = pl_newpl_r (c_type, NULL, NULL, NULL, params);
-      pl_deleteplparams (params);
-      free (c_type);
-      if (plotter == NULL)
-        scm_misc_error ("list-fonts", "unknown output format: ~S",
-                        scm_list_1 (s_target));
-      temporary = true;
-    }
-
-  foreach_plotter_font (plotter, cons_font_name, &list);
-  if (temporary)
-    pl_deletepl_r (plotter);
-  return scm_reverse_x (list, SCM_EOL);
+  SCM_ASSERT (scm_is_string (s_type), s_type, SCM_ARG1, "%format-havecap");
+  SCM_ASSERT (scm_is_string (s_cap), s_cap, SCM_ARG2, "%format-havecap");
+  c_type = scm_to_locale_string (s_type);
+  /* A Plotter just for asking: with no output or error stream, it
+     writes nothing, even when deleted.  */
+  params = pl_newplparams ();
+  plotter = pl_newpl_r (c_type, NULL, NULL, NULL, params);
+  pl_deleteplparams (params);
+  free (c_type);
+  if (plotter == NULL)
+    scm_misc_error ("list-fonts", "unknown output format: ~S",
+                    scm_list_1 (s_type));
+  c_cap = scm_to_locale_string (s_cap);
+  ret = pl_havecap_r (plotter, c_cap);
+  free (c_cap);
+  pl_deletepl_r (plotter);
+  return scm_from_int (ret);
 }
 
 static int
@@ -693,7 +677,7 @@ gupl_plot_init (void)
       scm_c_define_gsubr ("plotter?", 1, 0, 0, gupl_is_plotter_p);
       scm_c_define_gsubr ("newpl", 4, 0, 0, gupl_newpl);
       scm_c_define_gsubr ("deletepl!", 1, 0, 0, gupl_deletepl_x);
-      scm_c_define_gsubr ("list-fonts", 1, 0, 0, gupl_list_fonts);
+      scm_c_define_gsubr ("%format-havecap", 2, 0, 0, gupl_format_havecap);
 
       scm_c_define_gsubr ("%alabel!", 4, 0, 0, gupl_alabel_x);
       scm_c_define_gsubr ("arc!", 7, 0, 0, gupl_arc_x);

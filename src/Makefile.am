@@ -16,7 +16,6 @@ guileextension_LTLIBRARIES = libguile-plotutils.la
 
 libguile_plotutils_la_c_sources = \
   compat.c \
-  fontlist.c \
   guile_graph.c \
   guile_plot.c \
   linemode.c \
@@ -27,7 +26,6 @@ libguile_plotutils_la_c_sources = \
 
 libguile_plotutils_la_internal_headers = \
   extern.h \
-  fontlist.h \
   guile_graph.h \
   guile_plot.h \
   libcommon.h \

@@ -23,7 +23,9 @@ Changes in 1.1.0 (since 1.0.3)
    page, as GNU graph's --reposition option does, e.g. for insets.
 
 ** Font listing.  The new list-fonts procedure in (plotutils plot)
-   returns the fonts an output format, or a plotter, supports.
+   returns the fonts an output format supports, and the new
+   plotter-fonts variable lists all 120 built-in fonts with their
+   classes.
 
 ** (plotutils plot) has new procedures deletepl!, to delete a plotter
    at once rather than when it is garbage collected (Postscript and CGM
